@@ -1,6 +1,9 @@
 # ConvoLab Android agent instructions
 
 - Build the native Android client with Kotlin and Jetpack Compose.
+- Initial port scope is Journal and reduced Settings only. Keep WaniKani sync; omit daily vocabulary transfer options, calendar sync, Satori Reader shortcut detection, and downloaded-media management.
+- Do not implement Study, Readings, Daily Audio, Manage Cards, Time, or their settings unless Andrew explicitly expands scope. Their admin-only availability elsewhere does not make them part of this port.
+- Preserve audio functionality needed by Journal. Omitting downloaded-media management does not prohibit internal Journal media caching.
 - Use the existing learning-os API. Preserve its wire contracts and stable retry identifiers.
 - Device builds must use https://convo-lab.com. Never ship localhost or staging to Andrew's Pixel.
 - Keep credentials out of Git, build artifacts, logs, and plain preferences. Use Android Keystore-backed storage when authentication is implemented.

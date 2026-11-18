@@ -5,9 +5,20 @@ Shares the production learning-os API with the iOS app.
 
 ## Current scope
 
-A buildable welcome screen using ConvoLab's navy and cream palette. Authentication,
-study, offline sync, and audio are not implemented yet. No account requests or
-review mutations are made by this foundation.
+A buildable welcome screen using ConvoLab's navy and cream palette. Authentication
+and Journal functionality are not implemented yet. This foundation makes no account
+requests or user-data mutations.
+
+## Initial product scope
+
+Build **Journal** and a reduced **Settings** section. Study, Readings, Daily Audio,
+Manage Cards, and Time are disabled for non-admin users in the product and are out
+of scope for this initial Android port, including their related settings.
+
+Keep account settings, Journal-related settings, and **WaniKani sync**. Omit daily
+vocabulary transfer options, calendar sync, Satori Reader shortcut detection,
+and the downloaded-media management section.
+This does not remove audio playback or caching needed by Journal itself.
 
 ## Local development
 
@@ -35,12 +46,12 @@ Build and run static checks:
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 ./gradlew assembleDebug lintDebug testDebugUnitTest
 ```
 
 There are no unit tests yet because this slice has no business logic. Add meaningful
-behavioral tests alongside authentication, sync, and scheduling implementations.
+behavioral tests alongside authentication, Journal, and WaniKani sync implementations.
 
 ## Pixel testing
 
@@ -71,7 +82,7 @@ The SDK and a physical Pixel are also enough for local builds and testing.
   fork PRs cannot access the credential. Uses the `CLAUDE_CODE_OAUTH_TOKEN` secret.
 - **CodeScene:** the Android repository is included in the existing `convo-lab`
   project alongside iOS, web, and backend. Automated PR checks require the existing
-  CodeScene Access GitHub app to include this repository.
+  CodeScene Access GitHub app, now enabled for this repository.
 
 Local source changes also require CodeScene MCP file reviews, staged safeguards,
 and branch change-set analysis as described in `AGENTS.md`. CodeScene does not
@@ -79,11 +90,11 @@ support Gradle `.kts` scripts; Gradle compilation and Android Lint cover those.
 
 ## Port sequence
 
-1. Account authentication and secure token storage against the existing API.
-2. Account-scoped local storage, card sync, and a basic review session.
-3. Retry-safe offline review/card outboxes and cross-device consistency tests.
-4. Card presentation, furigana, audio caching, and Daily Audio playback.
-5. Remaining current iOS features, with a fresh parity inventory from iOS `main`.
+1. Inventory current iOS Journal flows and the Settings subset above against iOS `main`.
+2. Account authentication, secure token storage, and account-scoped Journal state.
+3. Journal screens and their existing backend contracts, including Journal audio.
+4. Reduced Settings and WaniKani sync, without vocabulary transfer options.
+5. Pixel testing of Journal editing, Japanese input, playback, and account lifecycle.
 
 Use the current iOS main branch and backend contracts as references, not a stale
 local iOS checkout. Port behavior and contract test cases, not Apple-specific APIs.
