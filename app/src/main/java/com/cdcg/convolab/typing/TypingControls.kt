@@ -16,6 +16,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,6 +56,12 @@ fun PlaygroundToolbar(state: TypingState, progress: String?, model: TypingViewMo
 
 @Composable
 fun CandidateStrip(state: TypingState, onCommit: (String) -> Unit, modifier: Modifier = Modifier) {
+    if (state.error != null) {
+        Text(state.error, modifier.height(52.dp).padding(4.dp).semantics {
+            liveRegion = LiveRegionMode.Polite
+        }, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+        return
+    }
     Row(modifier.height(52.dp).horizontalScroll(rememberScrollState()).testTag("candidates")) {
         val conversion = state.conversion
         if (conversion != null) {
@@ -64,7 +73,7 @@ fun CandidateStrip(state: TypingState, onCommit: (String) -> Unit, modifier: Mod
             }
         } else {
             Text(if (state.busy) "Converting…" else "Candidates appear here",
-                modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                modifier = Modifier.padding(12.dp).semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

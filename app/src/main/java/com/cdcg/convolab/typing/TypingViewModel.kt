@@ -24,9 +24,9 @@ class TypingViewModel(application: Application) : AndroidViewModel(application) 
 
     fun benchmark() {
         if (mutableProgress.value != null || !session.state.value.ready) return
+        mutableProgress.value = "Preparing benchmark…"
         session.edit("")
         viewModelScope.launch {
-            mutableProgress.value = "Preparing benchmark…"
             try {
                 mutableReport.value = TypingBenchmark(getApplication(), engine).run(session.state.value.preloadMs) { done, total ->
                     mutableProgress.value = "Benchmark $done / $total"

@@ -48,6 +48,8 @@ class TypingSession(private val engine: TypingEngine, private val scope: Corouti
             mutable.update { it.copy(error = "Use one phrase of up to ${TypingLimits.MAX_INPUT} characters.") }
             return
         }
+        // IMEs may echo the accepted text after a rejected paste or selection change.
+        if (text == state.value.input) return
         request?.cancel()
         val ticket = ++revision
         mutable.update { it.copy(input = text, conversion = null, busy = text.isNotBlank(), error = null) }

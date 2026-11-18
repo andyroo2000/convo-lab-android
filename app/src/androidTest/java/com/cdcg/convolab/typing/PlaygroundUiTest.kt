@@ -4,6 +4,7 @@ import android.view.WindowInsets
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -40,6 +41,10 @@ class PlaygroundUiTest {
             compose.onNodeWithTag("romaji").performClick()
             awaitCandidate()
             assertVisibleAboveKeyboard("landscape-keyboard")
+            compose.onNodeWithTag("romaji").performTextInput("x".repeat(121))
+            compose.waitForIdle()
+            assertTrue(device.takeScreenshot(TestOutput.file("landscape-input-limit.png")))
+            compose.onNodeWithText("Use one phrase of up to 120 characters.").assertIsDisplayed()
         } finally {
             device.setOrientationNatural()
             device.unfreezeRotation()

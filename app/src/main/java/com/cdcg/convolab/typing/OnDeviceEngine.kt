@@ -50,6 +50,7 @@ class OnDeviceEngine(context: Context) : TypingEngine {
     }
 
     companion object {
+        // Native backend configuration and asset installation are process-wide.
         private val mutex = Mutex()
     }
 

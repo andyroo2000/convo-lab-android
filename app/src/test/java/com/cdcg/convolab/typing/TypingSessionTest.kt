@@ -73,6 +73,8 @@ class TypingSessionTest {
         session.edit("x".repeat(TypingLimits.MAX_INPUT + 1))
         assertEquals("nihon", session.state.value.input)
         assertNotNull(session.state.value.error)
+        session.edit("nihon") // Selection/composition update from the IME.
+        assertNotNull(session.state.value.error)
         assertFalse(TypingLimits.accepts("a\nb"))
         assertFalse(TypingLimits.accepts("a\u0000b"))
         assertTrue(TypingLimits.accepts("日本😊"))

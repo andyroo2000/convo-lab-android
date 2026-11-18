@@ -26,6 +26,8 @@ data class TimingSummary(val p50: Double, val p95: Double, val maximum: Double) 
 
 class TypingBenchmark(private val context: Context, private val engine: TypingEngine) {
     suspend fun run(preloadMs: Double, progress: (Int, Int) -> Unit): String = withContext(Dispatchers.IO) {
+        // Acquire the engine lock before timing to drain any cancelled in-flight typing.
+        engine.prepare()
         val fixtures = JSONArray(context.assets.open("typing/fixtures.json").bufferedReader().use { it.readText() })
         val samples = JSONArray()
         val durations = mutableListOf<Double>()
