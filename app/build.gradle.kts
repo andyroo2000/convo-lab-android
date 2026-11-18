@@ -6,11 +6,14 @@ plugins {
 android {
     namespace = "com.cdcg.convolab"
     compileSdk = 37
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "com.cdcg.convolab"
         minSdk = 28
         targetSdk = 37
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 1
         versionName = "0.1.0"
         buildConfigField("String", "API_BASE_URL", "\"https://convo-lab.com\"")
@@ -50,4 +53,28 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.4.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+// Fail before packaging if the reproducible native preparation step was missed.
+val verifyTypingAssets by tasks.registering {
+    doLast {
+        for (abi in listOf("arm64-v8a", "x86_64")) {
+            check(file("src/main/jniLibs/$abi/libtyping_jni.so").isFile) {
+                "Prepare typing first: see docs/typing-playground.md"
+            }
+        }
+        check(file("src/main/assets/typing/model.gguf").length() == 72298816L)
+        check(file("src/main/assets/typing/Dictionary/louds/charID.chid").isFile)
+    }
+}
+tasks.named("preBuild") { dependsOn(verifyTypingAssets) }

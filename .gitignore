@@ -8,3 +8,12 @@ local.properties
 *.keystore
 .env
 .env.*
+
+# Reproducibly prepared native engine and model
+native/Vendor/
+native/.build/
+app/src/main/jniLibs/
+app/src/main/assets/typing/Dictionary/
+app/src/main/assets/typing/model.gguf
+
+__pycache__/
