@@ -93,4 +93,25 @@ class TypingSessionTest {
         session.edit("")
         assertNull(session.state.value.error)
     }
+    @Test fun preparationCanRetryAndDoesNotRestartOnceReady() = runTest {
+        var attempts = 0
+        val engine = object : TypingEngine {
+            override suspend fun prepare() { if (++attempts == 1) error("Temporary failure") }
+            override suspend fun close() = Unit
+            override suspend fun convert(text: String) = Conversion(text, emptyList(), 0.0)
+        }
+        val session = TypingSession(engine, backgroundScope)
+        session.prepare()
+        runCurrent()
+        assertFalse(session.state.value.ready)
+        assertNotNull(session.state.value.error)
+        session.prepare()
+        runCurrent()
+        assertTrue(session.state.value.ready)
+        assertNull(session.state.value.error)
+        session.prepare()
+        runCurrent()
+        assertEquals(2, attempts)
+    }
+
 }

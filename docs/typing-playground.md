@@ -1,6 +1,7 @@
 # Android Japanese typing playground
 
-The starter app opens a standalone typing lab. It does not require login or use
+Debug builds open a standalone typing lab; release keeps the welcome screen and
+does not package the native engine, dictionary, model or fixtures. It does not require login or use
 Journal data. Use an English keyboard in **Romaji**, then tap a candidate, tap
 **かな**, or press the keyboard's Done button to append the first candidate to the
 scratchpad. Edit/copy the scratchpad with normal Android text controls. Scratchpad
@@ -11,8 +12,11 @@ The final Journal layout is intentionally deferred until the iOS design is ready
 Conversion is entirely on-device: AzooKey v0.11.2
 `80b8204f1cdfb364bb2ed355cf52c7ebb2519a0c`, llama.cpp b4846
 `10131b23ee0dbd9d03dfc618cec9fe3402919277`, and the same unchanged Zenz v3 small
-Q5_K_M model used on iOS. The download is SHA-256 verified. The model and dictionary
-are packaged in the APK, then copied to app-private, non-backed-up storage. No
+Q5_K_M model used on iOS. The download and extracted model are SHA-256 verified; startup validates the
+marker, model size/hash and dictionary index files. Interrupted or damaged copies
+are rebuilt in a staging directory and atomically renamed. Startup failures expose
+a Retry action. The model and dictionary
+are packaged in debug APKs, then copied to app-private, non-backed-up storage. No
 runtime download is needed. Personal learning and emoji prediction are disabled.
 **Credits** includes the model's CC BY-SA 4.0 attribution and dependency licenses.
 
@@ -51,8 +55,8 @@ On Andrew's Mac, set `TYPING_SWIFT` to
 `/Users/andrewlandry/Library/Developer/Toolchains/swift-6.4.2-RELEASE.xctoolchain/usr/bin/swift`
 for the Python build commands. The installed Swift SDK is already prepared.
 Native libraries, dictionary, model and vendor checkouts are generated/ignored;
-a missing preparation step fails the Android build instead of producing a broken
-playground. Both ARM64 (Pixel / Apple Silicon emulator) and x86_64 (CI emulator)
+a missing preparation step fails debug APK packaging instead of producing a broken
+playground. JVM-only tests and release builds do not require these assets. Both ARM64 (Pixel / Apple Silicon emulator) and x86_64 (CI emulator)
 are built. Native libraries use 16 KB-compatible alignment.
 
 The upstream conversion source is unchanged. `native/cpu_model.cpp` wraps the

@@ -42,6 +42,8 @@ class TypingViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
+        // Wait for any synchronous native conversion before disposal. Process death
+        // reclaims these allocations even if this cleanup coroutine cannot finish.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { engine.close() }
     }
 }

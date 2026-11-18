@@ -7,7 +7,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / 'native/Vendor'
-ASSETS = ROOT / 'app/src/main/assets/typing'
+ASSETS = ROOT / 'app/src/debug/assets/typing'
 MODEL_SHA = '501f605d088f5b988791a00ae19ed46985ed7c48144f364b2f3f1f951c9b2083'
 
 

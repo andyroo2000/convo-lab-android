@@ -69,12 +69,14 @@ dependencies {
 val verifyTypingAssets by tasks.registering {
     doLast {
         for (abi in listOf("arm64-v8a", "x86_64")) {
-            check(file("src/main/jniLibs/$abi/libtyping_jni.so").isFile) {
+            check(file("src/debug/jniLibs/$abi/libtyping_jni.so").isFile) {
                 "Prepare typing first: see docs/typing-playground.md"
             }
         }
-        check(file("src/main/assets/typing/model.gguf").length() == 72298816L)
-        check(file("src/main/assets/typing/Dictionary/louds/charID.chid").isFile)
+        check(file("src/debug/assets/typing/model.gguf").length() == 72298816L)
+        check(file("src/debug/assets/typing/Dictionary/louds/charID.chid").isFile)
     }
 }
-tasks.named("preBuild") { dependsOn(verifyTypingAssets) }
+tasks.matching { it.name in listOf("mergeDebugAssets", "mergeDebugNativeLibs") }.configureEach {
+    dependsOn(verifyTypingAssets)
+}

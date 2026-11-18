@@ -7,14 +7,25 @@ import java.security.MessageDigest
 internal class EngineAssets(private val context: Context) {
     fun prepare(): File {
         val directory = File(context.noBackupFilesDir, "typing-v1")
-        if (File(directory, "ready").exists()) return directory
+        if (isPrepared(directory)) return directory
+        val staging = File(context.noBackupFilesDir, "typing-v1.pending")
+        staging.deleteRecursively()
+        check(staging.mkdirs()) { "Could not prepare the typing engine" }
+        copyAsset("typing/Dictionary", File(staging, "Dictionary"))
+        copyAsset("typing/model.gguf", File(staging, "model.gguf"))
+        check(modelHash(File(staging, "model.gguf")) == MODEL_SHA) { "Typing model checksum mismatch" }
+        File(staging, "ready").writeText(MODEL_SHA)
         directory.deleteRecursively()
-        check(directory.mkdirs()) { "Could not prepare the typing engine" }
-        copyAsset("typing/Dictionary", File(directory, "Dictionary"))
-        copyAsset("typing/model.gguf", File(directory, "model.gguf"))
-        check(modelHash(File(directory, "model.gguf")) == MODEL_SHA) { "Typing model checksum mismatch" }
-        File(directory, "ready").writeText(MODEL_SHA)
+        check(staging.renameTo(directory)) { "Could not finish preparing the typing engine" }
         return directory
+    }
+
+    private fun isPrepared(directory: File): Boolean {
+        val marker = File(directory, "ready")
+        val model = File(directory, "model.gguf")
+        return marker.isFile && marker.readText() == MODEL_SHA && model.length() == MODEL_SIZE &&
+            File(directory, "Dictionary/louds/charID.chid").isFile &&
+            File(directory, "Dictionary/mm.binary").isFile && modelHash(model) == MODEL_SHA
     }
 
     private fun copyAsset(path: String, destination: File) {
@@ -42,5 +53,6 @@ internal class EngineAssets(private val context: Context) {
 
     companion object {
         const val MODEL_SHA = "501f605d088f5b988791a00ae19ed46985ed7c48144f364b2f3f1f951c9b2083"
+        const val MODEL_SIZE = 72298816L
     }
 }

@@ -28,7 +28,7 @@ jobs:
         with:
           packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;30.0.16248370 cmake;3.31.6
           log-accepted-android-sdk-licenses: false
-      - uses: swift-actions/setup-swift@v2
+      - uses: swift-actions/setup-swift@v3
         with:
           swift-version: '6.4.2'
       - name: Prepare native typing engine

@@ -21,13 +21,33 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+enum class PlaygroundAction { Benchmark, Credits, Retry }
+
 @Composable
-fun PlaygroundHeader(state: TypingState, progress: String?, onBenchmark: () -> Unit, onCredits: () -> Unit) {
+fun PlaygroundHeader(state: TypingState, progress: String?, onAction: (PlaygroundAction) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(if (state.ready) "Japanese typing lab" else "Loading typing engine…",
             style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(vertical = 12.dp))
-        TextButton(onClick = onCredits) { Text("Credits") }
-        TextButton(onClick = onBenchmark, enabled = state.ready && progress == null) { Text("Benchmark") }
+        TextButton(onClick = { onAction(PlaygroundAction.Credits) }) { Text("Credits") }
+        if (!state.ready && state.error != null) {
+            TextButton(onClick = { onAction(PlaygroundAction.Retry) }) { Text("Retry") }
+        } else {
+            TextButton(onClick = { onAction(PlaygroundAction.Benchmark) }, enabled = state.ready && progress == null) {
+                Text("Benchmark")
+            }
+        }
+    }
+}
+
+@Composable
+fun PlaygroundToolbar(state: TypingState, progress: String?, model: TypingViewModel,
+                      onDialog: (PlaygroundAction) -> Unit) {
+    PlaygroundHeader(state, progress) { action ->
+        when (action) {
+            PlaygroundAction.Benchmark -> { model.benchmark(); onDialog(action) }
+            PlaygroundAction.Credits -> onDialog(action)
+            PlaygroundAction.Retry -> model.session.prepare()
+        }
     }
 }
 

@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.Debug
 import android.os.PowerManager
 import com.cdcg.convolab.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import org.json.JSONArray
@@ -23,7 +25,7 @@ data class TimingSummary(val p50: Double, val p95: Double, val maximum: Double) 
 }
 
 class TypingBenchmark(private val context: Context, private val engine: TypingEngine) {
-    suspend fun run(preloadMs: Double, progress: (Int, Int) -> Unit): String {
+    suspend fun run(preloadMs: Double, progress: (Int, Int) -> Unit): String = withContext(Dispatchers.IO) {
         val fixtures = JSONArray(context.assets.open("typing/fixtures.json").bufferedReader().use { it.readText() })
         val samples = JSONArray()
         val durations = mutableListOf<Double>()
@@ -38,7 +40,7 @@ class TypingBenchmark(private val context: Context, private val engine: TypingEn
             }
         }
         val summary = TimingSummary.of(durations)
-        return report(preloadMs, samples).put("p50WallMs", summary.p50)
+        report(preloadMs, samples).put("p50WallMs", summary.p50)
             .put("p95WallMs", summary.p95).put("maxWallMs", summary.maximum)
             .put("targetP95Ms", 150).put("meetsTarget", summary.p95 <= 150).toString(2)
     }

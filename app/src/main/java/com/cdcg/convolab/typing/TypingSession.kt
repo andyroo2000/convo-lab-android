@@ -23,8 +23,15 @@ class TypingSession(private val engine: TypingEngine, private val scope: Corouti
     val state = mutable.asStateFlow()
     private var request: Job? = null
     private var revision = 0L
+    private var preparation: Job? = null
 
-    fun prepare() = scope.launch {
+    fun prepare() {
+        if (preparation?.isActive == true || state.value.ready) return
+        mutable.update { it.copy(error = null) }
+        preparation = scope.launch { prepareEngine() }
+    }
+
+    private suspend fun prepareEngine() {
         val start = System.nanoTime()
         try {
             engine.prepare()
@@ -32,7 +39,7 @@ class TypingSession(private val engine: TypingEngine, private val scope: Corouti
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            mutable.update { it.copy(error = "The typing engine could not start. Reopen the playground to retry.") }
+            mutable.update { it.copy(error = "The typing engine could not start. Tap Retry to try again.") }
         }
     }
 

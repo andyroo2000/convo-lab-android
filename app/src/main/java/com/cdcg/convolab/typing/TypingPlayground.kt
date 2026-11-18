@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -29,14 +30,16 @@ fun TypingPlayground(model: TypingViewModel = viewModel()) {
     val report by model.report.collectAsStateWithLifecycle()
     val notebook by model.notebook.collectAsStateWithLifecycle()
     var showCredits by rememberSaveable { mutableStateOf(false) }
-    var showReport by rememberSaveable { mutableStateOf(false) }
+    var showReport by remember { mutableStateOf(false) }
     Surface(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 12.dp)) {
             val compact = maxHeight < 280.dp
             Column(Modifier.fillMaxSize()) {
                 if (!compact) {
-                    PlaygroundHeader(state, progress, onBenchmark = { model.benchmark(); showReport = true },
-                        onCredits = { showCredits = true })
+                    PlaygroundToolbar(state, progress, model) { action ->
+                        showReport = action == PlaygroundAction.Benchmark
+                        showCredits = action == PlaygroundAction.Credits
+                    }
                     OutlinedTextField(
                         value = notebook, onValueChange = { model.notebook.value = it },
                         label = { Text("Scratchpad · not saved") },
