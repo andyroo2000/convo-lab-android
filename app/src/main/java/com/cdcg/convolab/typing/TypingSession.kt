@@ -24,6 +24,7 @@ class TypingSession(private val engine: TypingEngine, private val scope: Corouti
     private var request: Job? = null
     private var revision = 0L
     private var preparation: Job? = null
+    private val recent = LinkedHashMap<String, Conversion>()
 
     fun prepare() {
         if (preparation?.isActive == true || state.value.ready) return
@@ -52,16 +53,24 @@ class TypingSession(private val engine: TypingEngine, private val scope: Corouti
         if (text == state.value.input) return
         request?.cancel()
         val ticket = ++revision
-        mutable.update { it.copy(input = text, conversion = null, busy = text.isNotBlank(), error = null) }
-        if (text.isBlank()) return
+        if (text.isBlank()) recent.clear()
+        val cached = recent[text]
+        mutable.update { it.copy(input = text, conversion = cached,
+            busy = text.isNotBlank() && cached == null, error = null) }
+        if (text.isBlank() || cached != null) return
         request = scope.launch { convertLatest(text, ticket) }
     }
 
     private suspend fun convertLatest(text: String, ticket: Long) {
         try {
-            delay(80)
+            delay(35)
             val result = engine.convert(text)
-            if (ticket == revision) mutable.update { it.copy(conversion = result, busy = false) }
+            if (ticket == revision) {
+                // Cache only accepted results, for this composition, with bounded memory.
+                recent[text] = result
+                if (recent.size > 32) recent.remove(recent.keys.first())
+                mutable.update { it.copy(conversion = result, busy = false) }
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {

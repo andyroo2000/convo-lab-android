@@ -1,6 +1,6 @@
 package com.cdcg.convolab.typing
 
-data class Conversion(val reading: String, val candidates: List<String>, val engineMs: Double)
+data class Conversion(val reading: String, val candidates: List<String>, val engineMs: Double, val resetMs: Double = 0.0)
 
 interface TypingEngine {
     suspend fun prepare()

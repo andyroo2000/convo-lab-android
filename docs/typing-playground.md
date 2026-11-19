@@ -24,8 +24,10 @@ The Kotlin/Compose app calls a Swift shared library through a small JNI bridge.
 Swift's built-in romaji table handles kana composition; `n'` and `n’` disambiguation
 are normalized before it. All native access and disposal are serialized, including
 across successive screen instances. Conversion never runs on the UI thread.
-An 80 ms debounce coalesces rapid edits, obsolete results are discarded, and old
-candidates disappear immediately when the input changes. Input is limited to one
+A 35 ms debounce coalesces rapid edits and obsolete results are discarded. Up to
+32 exact-input results are retained in memory for the current composition, so
+backspacing and retyping can restore candidates immediately. Clearing or committing
+the composition discards that cache. Uncached input clears old candidates immediately. Input is limited to one
 120-UTF-16-unit phrase (80 converted characters). Longer text belongs in the
 scratchpad, entered in several phrases. No silent dictionary-only fallback is used
 if neural loading fails.
@@ -75,7 +77,7 @@ python3 scripts/test_typing.py
 ```
 
 Unit tests cover request coalescing, stale native results, commit validation,
-input limits, errors, and percentile calculation. Instrumented tests use the actual
+input limits, errors, percentile calculation, cache eviction and immediate cache hits. Instrumented tests use the actual
 bundled engine for doubled consonants, contracted sounds, terminal n, apostrophe
 n, Unicode, reset behavior and the shared 24 iOS fixtures. UI tests exercise a long
 scratchpad, candidate commit, rapid English input and rotation, assert controls
@@ -84,13 +86,17 @@ these tests on API 36 with emulator Wi-Fi and mobile data disabled.
 
 Reports and screenshots are collected under
 `app/build/typing-artifacts/` and uploaded with
-GitHub Actions test results. The test framework's reported edit latency includes
+GitHub Actions test results. `typing-trace.json` measures 114 public romaji edits
+across three phrases, including deletion and retyping. It includes session
+scheduling, debounce and conversion, but excludes keyboard events and drawing.
+The trace asserts that repeated edits preserve candidates and avoid native work.
+The test framework's reported edit latency includes
 synchronization overhead; it is not a physical key-to-photon measurement.
 
 **Benchmark** runs the 24 public phrases three times and copies a JSON report to
 the clipboard on request. It never includes scratchpad text. Reports identify the
 model, upstream revisions, device/ABI, app version, preload, wall/native durations,
-accepted candidate coverage, sampled PSS memory and end-of-run thermal state.
+accepted candidate coverage, native context-reset duration, sampled PSS memory and end-of-run thermal state.
 The first pass and repeated passes remain individually visible. Timing excludes
 keyboard events, debounce and rendering. PSS is sampled, not a true peak.
 
@@ -116,3 +122,32 @@ The UI test measured 350 ms from its final edit to observing candidates and a
 and are useful regression signals, not direct touch responsiveness measurements.
 Portrait and landscape screenshots were inspected with the real English Gboard
 visible; the candidate row and Romaji field were fully above it in both cases.
+
+## Responsiveness comparison (2026-11-19)
+
+Same API 36 ARM64 emulator and unchanged model, 114 settled edits across three
+public phrases. Baseline used the original 80 ms debounce and no result cache;
+the updated session uses 35 ms and a 32-entry composition-local cache.
+
+| Session measurement | Baseline | Updated |
+| --- | ---: | ---: |
+| All edits, median | 141.6 ms | 68.6 ms |
+| All edits, p95 | 165.9 ms | 173.1 ms |
+| Fresh inputs, median | 135.4 ms | 88.8 ms |
+| Fresh inputs, p95 | 185.5 ms | 243.9 ms |
+| Revisited inputs, median | 146.9 ms | 0.18 ms |
+| Revisited inputs, p95 | 165.0 ms | 0.41 ms |
+| Native conversions | 114 | 66 |
+
+These are session-to-result timings, not physical keystroke/display timings.
+The median improves; this first comparison does **not** demonstrate a p95
+improvement for uncached input. Emulator scheduling and host load still affect
+the tail. The separate native benchmark remained similar (median 68.9 → 70.7 ms,
+p95 97.4 → 106.0 ms). All 72 complete candidate lists matched before/after, and
+all 114 trace readings and first candidates matched. Context-reset profiling
+found a median cost of only 4–5 ms, so its existing isolation semantics are retained.
+
+The full offline device suite passed with portrait/landscape keyboard screenshots
+checked. UI-test edit p95 was 264 ms and final-edit-to-candidate observation was
+184 ms, including test synchronization. Real-device latency, sustained typing,
+battery use and thermal behavior still need the Pixel.
