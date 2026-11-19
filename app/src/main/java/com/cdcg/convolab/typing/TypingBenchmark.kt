@@ -57,7 +57,7 @@ class TypingBenchmark(private val context: Context, private val engine: TypingEn
             .put("category", fixture.getString("category")).put("candidates", JSONArray(result.candidates))
             .put("topAccepted", result.candidates.firstOrNull() in accepted)
             .put("anyAccepted", result.candidates.any { it in accepted })
-            .put("engineMs", result.engineMs).put("wallMs", wallMs)
+            .put("engineMs", result.engineMs).put("resetMs", result.resetMs).put("wallMs", wallMs)
             .put("sampledPssKb", Debug.getPss())
     }
 

@@ -46,7 +46,7 @@ class OnDeviceEngine(context: Context) : TypingEngine {
         check(!result.has("error")) { result.optString("error") }
         val candidates = result.getJSONArray("candidates")
         return Conversion(result.getString("reading"), List(candidates.length()) { candidates.getString(it) },
-            result.getDouble("engineMs"))
+            result.getDouble("engineMs"), result.optDouble("resetMs", 0.0))
     }
 
     companion object {

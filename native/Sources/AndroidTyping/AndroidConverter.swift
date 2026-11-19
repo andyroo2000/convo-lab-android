@@ -39,6 +39,8 @@ final class AndroidConverter {
         guard composition.convertTarget.count <= 80 else { throw ConversionFailure.tooLong }
         let start = ContinuousClock.now
         converter.stopComposition()
+        let reset = start.duration(to: .now).components
+        let resetMs = Double(reset.seconds) * 1000 + Double(reset.attoseconds) / 1e15
         let result = converter.requestCandidates(composition, options: options)
         guard converter.zenzStatus == "load \(modelURL.absoluteString)" else {
             throw ConversionFailure.modelUnavailable
@@ -47,7 +49,8 @@ final class AndroidConverter {
         var seen = Set<String>()
         let candidates = result.mainResults.map(\.text).filter { seen.insert($0).inserted }
         return Output(reading: composition.convertTarget, candidates: Array(candidates.prefix(10)),
-                      engineMs: Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1e15)
+                      engineMs: Double(elapsed.seconds) * 1000 + Double(elapsed.attoseconds) / 1e15,
+                      resetMs: resetMs)
     }
 }
 
@@ -60,6 +63,7 @@ struct Output: Encodable {
     let reading: String
     let candidates: [String]
     let engineMs: Double
+    let resetMs: Double
 }
 
 enum ConversionFailure: Error {
