@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.cdcg.convolab.ui.ConvoLabTheme
+import com.cdcg.convolab.typing.TypingPlayground
 import com.cdcg.convolab.ui.WelcomeScreen
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +14,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ConvoLabTheme {
-                WelcomeScreen()
+                if (BuildConfig.DEBUG) TypingPlayground() else WelcomeScreen()
             }
         }
     }

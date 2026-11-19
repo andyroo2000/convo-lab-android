@@ -98,3 +98,10 @@ support Gradle `.kts` scripts; Gradle compilation and Android Lint cover those.
 
 Use the current iOS main branch and backend contracts as references, not a stale
 local iOS checkout. Port behavior and contract test cases, not Apple-specific APIs.
+
+## Japanese typing prototype
+
+The app currently opens the standalone offline typing playground. See
+[setup, tests and benchmark instructions](docs/typing-playground.md) for the
+additional native engine preparation step and emulator testing. Journal's final
+layout remains pending the iOS design update.
