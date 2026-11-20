@@ -7,7 +7,9 @@ import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
 import java.security.KeyStore
-import java.security.GeneralSecurityException
+import java.security.UnrecoverableKeyException
+import android.security.keystore.KeyPermanentlyInvalidatedException
+import javax.crypto.BadPaddingException
 import org.json.JSONException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -16,15 +18,19 @@ import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONObject
 
 /** One encrypted, atomic record keeps the verified profile and bearer token consistent. */
-class KeystoreSessionStorage(context: Context, private val keyAlias: String = "convolab.session.v1") : SessionStorage {
+class KeystoreSessionStorage(
+    context: Context,
+    private val keyAlias: String = "convolab.session.v1",
+    private val keyReader: (() -> SecretKey)? = null,
+) : SessionStorage {
     private val file = AtomicFile(File(context.noBackupFilesDir, "session.enc"))
 
     @Synchronized override fun read(): Session? {
         val bytes = try { file.readFully() } catch (_: FileNotFoundException) { return null }
         return try { decrypt(bytes) }
-        catch (failure: GeneralSecurityException) { throw InvalidSessionStorage(failure) }
-        catch (failure: JSONException) { throw InvalidSessionStorage(failure) }
-        catch (failure: IllegalArgumentException) { throw InvalidSessionStorage(failure) }
+        catch (failure: Exception) {
+            throw if (failure.isInvalidSession()) InvalidSessionStorage(failure) else failure
+        }
     }
 
     private fun decrypt(bytes: ByteArray): Session {
@@ -40,7 +46,7 @@ class KeystoreSessionStorage(context: Context, private val keyAlias: String = "c
         val json = JSONObject().put("version", 1).put("token", session.token).put("id", session.account.id)
             .put("name", session.account.name).put("email", session.account.email)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key())
+        initializeEncryption(cipher)
         check(cipher.iv.size == IV_BYTES)
         val encrypted = cipher.iv + cipher.doFinal(json.toString().toByteArray(Charsets.UTF_8))
         val stream = file.startWrite()
@@ -63,7 +69,19 @@ class KeystoreSessionStorage(context: Context, private val keyAlias: String = "c
         KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(keyAlias)
     }
 
+    private fun initializeEncryption(cipher: Cipher) {
+        try { cipher.init(Cipher.ENCRYPT_MODE, key()) }
+        catch (_: KeyPermanentlyInvalidatedException) { renewEncryptionKey(cipher) }
+        catch (_: UnrecoverableKeyException) { renewEncryptionKey(cipher) }
+    }
+
+    private fun renewEncryptionKey(cipher: Cipher) {
+        KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(keyAlias)
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+    }
+
     private fun key(): SecretKey {
+        keyReader?.let { return it() }
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(keyAlias, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
@@ -76,4 +94,10 @@ class KeystoreSessionStorage(context: Context, private val keyAlias: String = "c
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
     }
+}
+
+private fun Exception.isInvalidSession() = when (this) {
+    is BadPaddingException, is KeyPermanentlyInvalidatedException, is UnrecoverableKeyException,
+    is JSONException, is IllegalArgumentException -> true
+    else -> false
 }
