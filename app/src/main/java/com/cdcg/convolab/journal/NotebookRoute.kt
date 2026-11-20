@@ -8,26 +8,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cdcg.convolab.auth.Account
 import com.cdcg.convolab.auth.SessionController
+import com.cdcg.convolab.network.HttpApiTransport
 
 @Composable
 fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
-    val owner = remember(account.id) { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
-    DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
-    val model = remember(owner) { ViewModelProvider(owner, viewModelFactory {
-        initializer { NotebookViewModel(context, sessions) }
-    })[NotebookViewModel::class.java] }
-    val controller by model.controller.collectAsStateWithLifecycle()
-    val current = controller
+    val factory = remember(context, sessions) { viewModelFactory {
+        initializer { NotebookViewModel(sessions) { session ->
+            JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
+                JournalDiskStore(context.noBackupFilesDir, session.account.id))
+        } }
+    } }
+    val model: NotebookViewModel = viewModel(key = "active-journal", factory = factory)
+    val binding by model.binding.collectAsStateWithLifecycle()
+    val current = binding?.takeIf { it.accountId == account.id }?.controller
     if (current == null) CircularProgressIndicator() else {
         val state by current.state.collectAsStateWithLifecycle()
         FlushOnStop(current)

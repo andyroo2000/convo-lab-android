@@ -49,7 +49,11 @@ class NotebookController(private val repository: JournalRepository, private val 
     fun requestClose() { mutableState.update { it.copy(closePrompt = true) } }
     fun dismissClose() { mutableState.update { it.copy(closePrompt = false) } }
     fun clearError() { mutableState.update { it.copy(error = null) } }
-    fun flush() = action { writer.flush() }
+    fun flush() = scope.launch {
+        try { writer.flush() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { report(failure) }
+    }
     fun refreshContents() = action { writer.flush(); refresh() }
     fun more() = action { refresh(state.value.nextCursor) }
 

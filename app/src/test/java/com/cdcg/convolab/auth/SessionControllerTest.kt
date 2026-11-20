@@ -159,7 +159,7 @@ class SessionControllerTest {
     }
 }
 
-private class MemoryStorage(var saved: Session? = null) : SessionStorage {
+internal class MemoryStorage(var saved: Session? = null) : SessionStorage {
     var failWrites = false
     var failClear = false
     var readFailure: Exception? = null
@@ -174,7 +174,7 @@ private class MemoryStorage(var saved: Session? = null) : SessionStorage {
     }
 }
 
-private class FakeAuth : AuthGateway {
+internal class FakeAuth : AuthGateway {
     var loginResult: suspend () -> Session = { error("Unexpected login") }
     var verifyResult: suspend () -> Account = { error("Unexpected verification") }
     var revokeResult: suspend () -> Unit = {}

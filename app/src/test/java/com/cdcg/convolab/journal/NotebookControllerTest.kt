@@ -91,7 +91,7 @@ class NotebookControllerTest {
     }
 }
 
-private class NotebookMemory : JournalStorage {
+internal class NotebookMemory : JournalStorage {
     val records = mutableMapOf<String, JournalRecord>()
     var failWrites = false
     override fun load() = JournalLoad(records.values.toList(), emptyList())
@@ -103,7 +103,7 @@ private class NotebookMemory : JournalStorage {
     override fun remove(id: String) { records.remove(id) }
 }
 
-private class NotebookGateway : JournalGateway {
+internal class NotebookGateway : JournalGateway {
     var failSaves = false
     var failArchive = false
     override suspend fun archive(cursor: String?): JournalPage {

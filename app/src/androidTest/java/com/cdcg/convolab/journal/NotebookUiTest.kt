@@ -13,6 +13,7 @@ import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.ConvoLabTheme
 import com.cdcg.convolab.ui.AccountMenu
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,7 @@ class NotebookUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private val api = UiJournalGateway()
     private lateinit var controller: NotebookController
 
     @After fun stop() { scope.cancel() }
@@ -42,6 +44,20 @@ class NotebookUiTest {
         compose.onNodeWithTag("journal-save").assertIsDisplayed().assertIsEnabled()
         assertActionsAboveKeyboard()
         screenshot("notebook-long-keyboard")
+    }
+
+    @Test fun pendingSaveVisiblyDisablesEditingUntilAcknowledged() {
+        launchNotebook()
+        compose.onNodeWithTag("journal-editor").performClick().performTextInput("保存中の文章。")
+        api.response = CompletableDeferred()
+        compose.onNodeWithTag("journal-save").performClick()
+        compose.waitUntil(5_000) { controller.state.value.busy }
+        compose.onNodeWithTag("journal-editor").assertIsNotEnabled()
+        compose.onNodeWithTag("journal-save").assertIsNotEnabled()
+        val draft = controller.state.value.draft
+        api.response!!.complete(JournalEntry(draft.id, draft.title, draft.body, draft.entryDate, 1, "created", "updated"))
+        compose.waitUntil(5_000) { !controller.state.value.busy }
+        compose.onNodeWithTag("journal-editor").assertIsEnabled().assertTextContains("保存中の文章。")
     }
 
     @Test fun contentsAndCloseKeepWritingAvailable() {
@@ -64,7 +80,7 @@ class NotebookUiTest {
         val id = JournalIds.newId()
         storage.records[id] = JournalRecord(entry = JournalEntry(id, "A movie night", "昨日は映画を見ました。",
             "2026-11-12", 1, "2026-11-12T12:00:00Z", "2026-11-12T12:00:00Z"))
-        controller = NotebookController(JournalRepository(UiJournalGateway(), storage), scope)
+        controller = NotebookController(JournalRepository(api, storage), scope)
         compose.setContent {
             val state by controller.state.collectAsState()
             ConvoLabTheme { NotebookScreen(state, controller) { AccountMenu("Naomi", {}, null) } }
@@ -100,10 +116,11 @@ private class UiJournalStorage : JournalStorage {
 }
 
 private class UiJournalGateway : JournalGateway {
+    var response: CompletableDeferred<JournalEntry>? = null
     override suspend fun archive(cursor: String?) = JournalPage(emptyList(), null)
     override suspend fun unfinished() = archive(null)
     override suspend fun entry(id: String): JournalEntry = error("Unexpected fixture fetch")
-    override suspend fun save(draft: JournalDraft) = JournalEntry(draft.id, draft.title, draft.body, draft.entryDate,
+    override suspend fun save(draft: JournalDraft) = response?.await() ?: JournalEntry(draft.id, draft.title, draft.body, draft.entryDate,
         draft.expectedVersion + 1, "created", "updated")
     override suspend fun delete(id: String, version: Int) = Unit
 }
