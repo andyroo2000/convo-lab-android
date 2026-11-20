@@ -14,3 +14,14 @@ The standalone typing playground is a separate debug-only activity. Instrumented
 - Use `./gradlew assembleDebug assembleDebugAndroidTest lintDebug testDebugUnitTest` for the build gate, then the connected instrumentation suite on an unlocked device or emulator. Enable the emulator software keyboard. Set ANDROID_SERIAL when more than one device is connected.
 
 The client base URL remains `https://convo-lab.com`. End-to-end production login requires the user's own interactive sign-in; contract tests are not a claim of production-account verification.
+
+## Emulator screenshots
+
+Captured on API 36 with isolated fixture input. Native Android text-field styling and scrolling adapt the iOS reference; the branded colors/fonts are shared. The keyboard-open assertion verifies that the submit button remains above the keyboard. Navigation resets scroll position for each form.
+
+- [Sign in](auth-screenshots/auth-login.png)
+- [Sign in with keyboard](auth-screenshots/auth-login-keyboard.png)
+- [Registration validation](auth-screenshots/auth-registration-validation.png)
+- [Password-reset confirmation](auth-screenshots/auth-reset-confirmation.png)
+
+Validation at this change: 22 JVM tests and 13 emulator tests passed. After the final heading/capture/navigation adjustments, the build/lint/JVM gate and both authentication UI tests passed again. Five authentication contract/storage tests also passed on the Pixel. No physical-device UI pass is claimed while its secure lock screen is active.

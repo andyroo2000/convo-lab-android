@@ -20,6 +20,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +43,12 @@ import com.cdcg.convolab.ui.JournalCover
 fun AuthScreen(state: AuthState, submit: (AuthPage, AuthForm) -> Unit, clearMessage: () -> Unit) {
     var page by rememberSaveable { mutableStateOf(AuthPage.SignIn) }
     val form = remember { AuthForm() }
+    val scroll = rememberScrollState()
+    LaunchedEffect(page, state.resetSent) { scroll.scrollTo(0) }
     val navigate: (AuthPage) -> Unit = { page = it; form.clearSecrets(); clearMessage() }
     BackHandler(page != AuthPage.SignIn && !state.busy) { navigate(AuthPage.SignIn) }
     Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()
-        .verticalScroll(rememberScrollState()).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        .verticalScroll(scroll).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         JournalCover(Modifier.widthIn(max = 540.dp).fillMaxWidth())
         Card(Modifier.widthIn(max = 540.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
