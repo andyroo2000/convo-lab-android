@@ -1,5 +1,6 @@
 package com.cdcg.convolab.journal
 
+import com.cdcg.convolab.network.ApiFailure
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -18,7 +19,7 @@ class JournalRepository(
     private var removalRevision = 0L
 
     suspend fun load(): JournalLoad = disk { storage.load() }
-    suspend fun record(id: String): JournalRecord? = disk { storage.read(id) }
+    suspend fun record(key: JournalId): JournalRecord? = disk { storage.read(key.value) }
 
     suspend fun edit(draft: JournalDraft) = disk {
         val previous = storage.read(draft.id)
@@ -37,7 +38,8 @@ class JournalRepository(
         return page
     }
 
-    suspend fun fetch(id: String): JournalRecord {
+    suspend fun fetch(key: JournalId): JournalRecord {
+        val id = key.value
         val revision = disk { removalRevision }
         val entry = api.entry(id)
         return disk {
@@ -46,9 +48,10 @@ class JournalRepository(
         }
     }
 
-    suspend fun save(id: String): JournalEntry = saves.withLock {
-        val sent = disk { prepareSave(id) } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
-        val received = api.save(sent)
+    suspend fun save(key: JournalId): JournalEntry = saves.withLock {
+        val id = key.value
+        val sent = disk { prepareSave(requireNotNull(storage.read(id))) } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
+        val received = saveRequest(sent)
         disk {
             val current = requireNotNull(storage.read(id)) { "Draft disappeared while saving" }
             storage.write(current.acknowledge(sent, received))
@@ -56,7 +59,8 @@ class JournalRepository(
         received
     }
 
-    suspend fun saveAsNew(id: String): JournalDraft = disk {
+    suspend fun saveAsNew(key: JournalId): JournalDraft = disk {
+        val id = key.value
         val old = requireNotNull(storage.read(id)?.draft)
         val copy = old.copy(id = JournalIds.newId(), expectedVersion = 0, rootEntryId = null)
             .edited(old.body, old.title)
@@ -64,9 +68,10 @@ class JournalRepository(
         copy
     }
 
-    suspend fun delete(id: String) = saves.withLock {
-        val current = disk { prepareDelete(id) }
-        current.entry?.let { api.delete(it.id, it.version) }
+    suspend fun delete(key: JournalId) = saves.withLock {
+        val id = key.value
+        val current = disk { prepareDelete(requireNotNull(storage.read(id))) }
+        deleteRequest(current)
         disk {
             val children = storage.load().records.filter { it.rootEntryId == id }
             children.forEach { storage.remove(it.id) }
@@ -75,8 +80,32 @@ class JournalRepository(
         }
     }
 
-    private fun prepareDelete(id: String): JournalRecord {
-        val current = requireNotNull(storage.read(id))
+    private suspend fun saveRequest(sent: JournalDraft): JournalEntry {
+        try { return api.save(sent) }
+        catch (failure: ApiFailure) {
+            if (failure.isDefinitiveRejection()) disk {
+                val current = requireNotNull(storage.read(sent.id))
+                storage.write(current.copy(pendingSave = null))
+            }
+            throw failure
+        }
+    }
+
+    private suspend fun deleteRequest(current: JournalRecord) {
+        val entry = current.entry ?: return
+        try { api.delete(entry.id, entry.version) }
+        catch (failure: ApiFailure) {
+            if (failure.status == 404) return
+            if (failure.isDefinitiveRejection()) disk {
+                val latest = requireNotNull(storage.read(current.id))
+                storage.write(latest.copy(pendingDelete = false))
+            }
+            throw failure
+        }
+    }
+
+    private fun prepareDelete(current: JournalRecord): JournalRecord {
+        val id = current.id
         check(current.pendingSave == null) { "A save has not been confirmed. Retry it before deleting this entry." }
         val local = storage.load()
         check(local.recoveryFiles.isEmpty()) { "Saved records need recovery before deleting a conversation." }
@@ -97,8 +126,7 @@ class JournalRepository(
         return merged
     }
 
-    private fun prepareSave(id: String): JournalDraft? {
-        val current = requireNotNull(storage.read(id))
+    private fun prepareSave(current: JournalRecord): JournalDraft? {
         check(!current.pendingDelete) { "Deletion is awaiting confirmation. Retry deleting this entry first." }
         val sent = current.pendingSave ?: current.draft ?: return null
         require(sent.body.isNotBlank()) { "Write an entry before saving it." }
@@ -110,3 +138,5 @@ class JournalRepository(
         mutex.withLock { withContext(io) { action() } }
     }
 }
+
+private fun ApiFailure.isDefinitiveRejection() = status in setOf(400, 403, 404, 409, 422)
