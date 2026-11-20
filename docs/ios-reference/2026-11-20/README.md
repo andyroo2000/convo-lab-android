@@ -58,6 +58,8 @@ The capture manifest maps preserved XCTest attachment names to image filenames. 
 
 ### Capture provenance and limitations
 
+The full result bundles are retained locally with the working evidence, not committed to this repository. The attachment manifest supports matching exported images; reproduction requires rerunning the harness. Capture numbers group screens by feature, not test execution order (for example, close-draft 21 is captured immediately after writing 15).
+
 21 unedited PNGs are mapped in [manifest.json](manifest.json). The pinned iOS app source is unchanged; [PortReferenceUITests.swift](PortReferenceUITests.swift) is an additional local capture harness. To reproduce, add it to ConvoLabUITests at the pinned revision, prepare that repository’s native typing dependencies, and run `xcodebuild test -project ConvoLab.xcodeproj -scheme ConvoLab -destination 'platform=iOS Simulator,name=iPhone 16e' -only-testing:ConvoLabUITests/PortReferenceUITests`. Export attachments with `xcrun xcresulttool export attachments`.
 
 Four capture tests passed in ios-portrait.xcresult. The writing/clarification test initially failed because the isolated navigation fixture has no save route for newly generated root-entry IDs; it returns an offline error. That failed clarification image is excluded. The final harness captures writing, relaunches the fixture, and uses its supported conversation route. That rerun passed in ios-conversation.xcresult, producing the remaining references. These are design captures, not a claim that the full iOS regression suite passed.
