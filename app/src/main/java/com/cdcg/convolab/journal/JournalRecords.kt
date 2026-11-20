@@ -41,7 +41,8 @@ data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraf
         require(received.id == id && sent.id == id)
         require(received.version > 0 && received.version >= sent.expectedVersion)
         val remaining = draft?.takeUnless { it.editId == sent.editId }?.copy(expectedVersion = received.version)
-        return copy(entry = received, draft = remaining, pendingSave = null, acknowledgedVersion = received.version)
+        val latest = entry?.takeIf { it.version > received.version } ?: received
+        return copy(entry = latest, draft = remaining, pendingSave = null, acknowledgedVersion = received.version)
     }
 }
 
