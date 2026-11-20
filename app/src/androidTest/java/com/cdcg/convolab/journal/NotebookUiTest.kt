@@ -1,0 +1,109 @@
+package com.cdcg.convolab.journal
+
+import android.view.WindowInsets
+import androidx.activity.ComponentActivity
+import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
+import com.cdcg.convolab.typing.TestOutput
+import com.cdcg.convolab.ui.ConvoLabTheme
+import com.cdcg.convolab.ui.AccountMenu
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class NotebookUiTest {
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private lateinit var controller: NotebookController
+
+    @After fun stop() { scope.cancel() }
+
+    @Test fun writingAndActionsRemainAboveKeyboardForLongEntries() {
+        launchNotebook()
+        screenshot("notebook-empty")
+        compose.onNodeWithTag("journal-editor").performClick().performTextInput("今日は友達と映画を見ました。")
+        assertActionsAboveKeyboard()
+        screenshot("notebook-keyboard")
+        compose.onNodeWithTag("journal-editor").performTextInput("\n次の文章です。".repeat(30))
+        compose.onNodeWithTag("journal-save").assertIsDisplayed().assertIsEnabled()
+        assertActionsAboveKeyboard()
+        screenshot("notebook-long-keyboard")
+    }
+
+    @Test fun contentsAndCloseKeepWritingAvailable() {
+        launchNotebook()
+        compose.onNodeWithTag("journal-editor").performClick().performTextInput("大切な日記です。")
+        device.pressBack()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Keep this draft?").assertIsDisplayed()
+        screenshot("notebook-close-draft")
+        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithText("Contents").performClick()
+        compose.onNodeWithText("A movie night").assertIsDisplayed()
+        screenshot("notebook-contents")
+        compose.onNodeWithText("A movie night").performClick()
+        compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
+    }
+
+    private fun launchNotebook() {
+        val storage = UiJournalStorage()
+        val id = JournalIds.newId()
+        storage.records[id] = JournalRecord(entry = JournalEntry(id, "A movie night", "昨日は映画を見ました。",
+            "2026-11-12", 1, "2026-11-12T12:00:00Z", "2026-11-12T12:00:00Z"))
+        controller = NotebookController(JournalRepository(UiJournalGateway(), storage), scope)
+        compose.setContent {
+            val state by controller.state.collectAsState()
+            ConvoLabTheme { NotebookScreen(state, controller) { AccountMenu("Naomi", {}, null) } }
+        }
+        compose.runOnIdle { controller.start() }
+        compose.waitUntil(5_000) { !controller.state.value.loading }
+    }
+
+    private fun assertActionsAboveKeyboard() {
+        compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        val keyboardTop = compose.runOnIdle {
+            val view = compose.activity.window.decorView
+            view.height - view.rootWindowInsets.getInsets(WindowInsets.Type.ime()).bottom
+        }
+        for (node in listOf(compose.onNodeWithTag("journal-save"), compose.onNodeWithText("Close"))) {
+            assertTrue("Journal action hidden by keyboard", node.fetchSemanticsNode().boundsInWindow.bottom <= keyboardTop + 1)
+        }
+    }
+
+    private fun screenshot(name: String) {
+        compose.waitForIdle()
+        device.waitForIdle()
+        assertTrue(device.takeScreenshot(TestOutput.file("$name.png")))
+    }
+}
+
+private class UiJournalStorage : JournalStorage {
+    val records = mutableMapOf<String, JournalRecord>()
+    override fun load() = JournalLoad(records.values.toList(), emptyList())
+    override fun read(id: String) = records[id]
+    override fun write(record: JournalRecord) { records[record.id] = record }
+    override fun remove(id: String) { records.remove(id) }
+}
+
+private class UiJournalGateway : JournalGateway {
+    override suspend fun archive(cursor: String?) = JournalPage(emptyList(), null)
+    override suspend fun unfinished() = archive(null)
+    override suspend fun entry(id: String): JournalEntry = error("Unexpected fixture fetch")
+    override suspend fun save(draft: JournalDraft) = JournalEntry(draft.id, draft.title, draft.body, draft.entryDate,
+        draft.expectedVersion + 1, "created", "updated")
+    override suspend fun delete(id: String, version: Int) = Unit
+}
