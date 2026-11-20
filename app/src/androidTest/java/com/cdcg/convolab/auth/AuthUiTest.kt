@@ -36,6 +36,7 @@ class AuthUiTest {
                 state.value = state.value.copy(resetSent = page == AuthPage.Reset)
             }, { state.value = AuthState(restoring = false) }) }
         }
+        compose.onNodeWithText("CONVO-LAB").assertIsDisplayed()
         screenshot("auth-login")
         compose.onNodeWithTag("auth-submit").performScrollTo().assertIsNotEnabled()
         input("Email", "sample@example.invalid")
@@ -80,6 +81,7 @@ class AuthUiTest {
 
     private fun screenshot(name: String) {
         compose.waitForIdle()
+        device.waitForIdle()
         assertTrue(device.takeScreenshot(TestOutput.file("$name.png")))
     }
 }

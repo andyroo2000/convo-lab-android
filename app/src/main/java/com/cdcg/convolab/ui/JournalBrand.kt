@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.R
@@ -21,7 +22,8 @@ object JournalBrand {
     val Ink = Color(0xFF11335C)
     val Paper = Color(0xFFFFFDF5)
     val Anton = FontFamily(Font(R.font.anton))
-    val Heading = FontFamily(Font(R.font.nunito))
+    val Heading = FontFamily(Font(R.font.nunito, weight = FontWeight.ExtraBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(800))))
     val Body = FontFamily(Font(R.font.inter))
     val Serif = FontFamily(Font(R.font.crimson_pro))
     val Handwriting = FontFamily(Font(R.font.klee_one))
