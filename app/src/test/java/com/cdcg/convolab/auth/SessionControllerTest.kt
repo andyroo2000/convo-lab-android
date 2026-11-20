@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -46,22 +47,9 @@ class SessionControllerTest {
         controller.signOut()
         response.complete(original)
         login.join()
+        assertEquals(original.token, api.revokedToken)
         assertNull(storage.saved)
         assertNull(controller.state.value.account)
-    }
-
-    @Test fun oldRestoreUnauthorizedResponseCannotEvictNewLogin() = runTest {
-        val response = CompletableDeferred<Account>()
-        val storage = MemoryStorage(original)
-        val api = FakeAuth().apply { verifyResult = { response.await() }; loginResult = { newer } }
-        val controller = SessionController(api, storage, StandardTestDispatcher(testScheduler))
-        val restore = launch { controller.restore() }
-        runCurrent()
-        controller.login("second@example.invalid", "password")
-        response.completeExceptionally(ApiFailure(401))
-        restore.join()
-        assertSame(newer, storage.saved)
-        assertEquals(newer.account, controller.state.value.account)
     }
 
     @Test fun failedReauthenticationPreservesCurrentSession() = runTest {
@@ -84,6 +72,7 @@ class SessionControllerTest {
         assertNull(controller.snapshot())
         assertFalse(controller.state.value.busy)
         assertNotNull(controller.state.value.error)
+        assertEquals(original.token, api.revokedToken)
     }
 
     @Test fun revocationFailureDoesNotUndoLocalSignOut() = runTest {
@@ -107,6 +96,41 @@ class SessionControllerTest {
         assertEquals(original.account, controller.state.value.account)
         assertNotNull(controller.state.value.error)
         assertNull(api.revokedToken)
+    }
+
+    @Test fun delayedRestoreCannotOverrideLoginOrSignOut() = runTest {
+        for (replacement in listOf(null, newer)) {
+            for (unauthorized in listOf(false, true)) checkRestoreRace(replacement, unauthorized)
+        }
+    }
+
+    private suspend fun TestScope.checkRestoreRace(replacement: Session?, unauthorized: Boolean) {
+        val response = CompletableDeferred<Account>()
+        val storage = MemoryStorage(original)
+        val api = FakeAuth().apply { verifyResult = { response.await() }; loginResult = { newer } }
+        val controller = SessionController(api, storage, StandardTestDispatcher(testScheduler))
+        val restore = launch { controller.restore() }
+        runCurrent()
+        if (replacement == null) controller.signOut() else controller.login("second@example.invalid", "password")
+        if (unauthorized) response.completeExceptionally(ApiFailure(401)) else response.complete(original.account)
+        restore.join()
+        assertEquals(replacement?.account, controller.state.value.account)
+        assertEquals(replacement?.token, storage.saved?.token)
+    }
+
+    @Test fun staleRegistrationRevokesOnlyItsUnusedToken() = runTest {
+        val response = CompletableDeferred<Session>()
+        val storage = MemoryStorage()
+        val api = FakeAuth().apply { loginResult = { response.await() } }
+        val controller = SessionController(api, storage, StandardTestDispatcher(testScheduler))
+        val registration = launch { controller.register(Registration("Sample", "sample@example.invalid", "password", "INVITE")) }
+        runCurrent()
+        api.loginResult = { newer }
+        controller.login("second@example.invalid", "password")
+        response.complete(original)
+        registration.join()
+        assertSame(newer, storage.saved)
+        assertEquals(original.token, api.revokedToken)
     }
 
     @Test fun passwordResetReportsSuccessOnlyAfterServerAcknowledgement() = runTest {

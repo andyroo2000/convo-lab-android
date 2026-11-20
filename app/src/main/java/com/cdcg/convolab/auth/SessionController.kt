@@ -91,14 +91,18 @@ class SessionController(
 
     private suspend fun authenticate(request: suspend () -> Session) {
         val operation = begin()
+        var issued: Session? = null
+        var committed = false
         try {
-            commit(operation, request())
+            issued = request()
+            committed = commit(operation, issued)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
             report(operation, failure)
         } finally {
             finish(operation)
+            if (!committed) issued?.let { discard(it) }
         }
     }
 
@@ -109,11 +113,17 @@ class SessionController(
     }
 
     private suspend fun commit(operation: Long, result: Session) = withContext(NonCancellable) { mutex.withLock {
-        if (generation != operation) return@withLock
+        if (generation != operation) return@withLock false
         withContext(io) { storage.write(result) }
         session = result
         mutableState.value = AuthState(restoring = false, account = result.account)
+        true
     } }
+
+    private suspend fun discard(issued: Session) = withContext(NonCancellable) {
+        val inUse = mutex.withLock { session?.token == issued.token }
+        if (!inUse) revoke(issued.token)
+    }
 
     private suspend fun report(operation: Long, failure: Exception) = mutex.withLock {
         if (operation == generation) mutableState.value = mutableState.value.copy(error = failure.userMessage())

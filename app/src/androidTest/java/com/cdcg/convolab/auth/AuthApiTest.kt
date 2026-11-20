@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.cdcg.convolab.network.ApiTransport
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import java.io.IOException
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,25 @@ class AuthApiTest {
         assertEquals("/api/auth/tokens/current", calls[1].path)
         assertEquals("fixture-token", calls[1].token)
         assertNull(calls[1].body)
+    }
+
+    @Test fun verificationFailureRevokesTheNewlyIssuedToken() = runBlocking {
+        val calls = mutableListOf<Call>()
+        val api = AuthApi(recording(calls) { call ->
+            when (call.path) {
+                "/api/auth/tokens" -> """{"data":{"token":"unused-fixture-token"}}"""
+                "/api/me" -> throw IOException("fixture transport failure")
+                else -> ""
+            }
+        })
+        try {
+            api.login("sample@example.invalid", "fixture-password")
+            fail("Verification must fail")
+        } catch (_: IOException) {
+            assertEquals("/api/auth/tokens/current", calls.last().path)
+            assertEquals("unused-fixture-token", calls.last().token)
+            assertEquals("DELETE", calls.last().method)
+        }
     }
 
     private fun recording(calls: MutableList<Call>, respond: (Call) -> String) = object : ApiTransport {

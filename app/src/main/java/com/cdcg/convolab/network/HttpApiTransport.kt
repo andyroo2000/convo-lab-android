@@ -36,8 +36,9 @@ class HttpApiTransport : ApiTransport {
     private fun configure(connection: HttpURLConnection, method: String, token: String?) {
         connection.requestMethod = method
         connection.instanceFollowRedirects = false
-        connection.connectTimeout = 15_000
-        connection.readTimeout = 30_000
+        val revoking = connection.url.path == "/api/auth/tokens/current"
+        connection.connectTimeout = if (revoking) 5_000 else 15_000
+        connection.readTimeout = if (revoking) 5_000 else 30_000
         connection.useCaches = false
         connection.setRequestProperty("Accept", "application/json")
         token?.let { connection.setRequestProperty("Authorization", "Bearer $it") }

@@ -8,8 +8,8 @@ The standalone typing playground is a separate debug-only activity. Instrumented
 
 ## Verification
 
-- Nine JVM session tests cover offline restore, invalid tokens, old login/restore callbacks, failed reauthentication, write/removal failures, revocation failure and password reset acknowledgement.
-- Five isolated instrumented tests verify wire spellings/token handoff and real Android Keystore encryption, reopen, deletion and tamper rejection. These passed on the Pixel 10a (Android 16).
+- Ten JVM session tests cover offline restore, invalid tokens, old login/restore callbacks, failed reauthentication, write/removal failures, revocation failure and password reset acknowledgement.
+- Six isolated instrumented tests verify wire spellings/token handoff and real Android Keystore encryption, reopen, deletion and tamper rejection. These passed on the Pixel 10a (Android 16).
 - UI tests exercise sign-in/reset navigation, registration validation and keyboard visibility using fixture input only. No production account is created, modified or deleted by these tests.
 - Use `./gradlew assembleDebug assembleDebugAndroidTest lintDebug testDebugUnitTest` for the build gate, then the connected instrumentation suite on an unlocked device or emulator. Enable the emulator software keyboard. Set ANDROID_SERIAL when more than one device is connected.
 
@@ -25,3 +25,5 @@ Captured on API 36 with isolated fixture input. Native Android text-field stylin
 - [Password-reset confirmation](auth-screenshots/auth-reset-confirmation.png)
 
 Validation at this change: 22 JVM tests and 13 emulator tests passed. After the final heading/capture/navigation adjustments, the build/lint/JVM gate and both authentication UI tests passed again. Five authentication contract/storage tests also passed on the Pixel. No physical-device UI pass is claimed while its secure lock screen is active.
+
+Review hardening: newly issued tokens are revoked best-effort when verification, credential persistence or generation acceptance fails. Cleanup uses only the unused token and keeps the active session intact. Registration values survive retryable failures; cancellation and successful completion clear secret form fields. The expanded session matrix tests successful and unauthorized restore responses after both login and sign-out. Corrupt credential ciphertext remains intact for diagnosis and is replaced by the next successful sign-in; it is never interpreted as an authenticated session.
