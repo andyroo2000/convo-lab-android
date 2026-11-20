@@ -1,0 +1,149 @@
+[
+  {
+    "file": "01-login.png",
+    "test": "PortReferenceUITests/testAuthenticationReference()",
+    "attachment": "01-login_0_02D841B4-7A61-4242-AA65-D3817C9FAEC4.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "01-login"
+  },
+  {
+    "file": "02-registration.png",
+    "test": "PortReferenceUITests/testAuthenticationReference()",
+    "attachment": "02-registration_0_F297BBE3-D9FF-453C-86CD-FBB9FE03505C.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "02-registration"
+  },
+  {
+    "file": "03-password-reset.png",
+    "test": "PortReferenceUITests/testAuthenticationReference()",
+    "attachment": "03-password-reset_0_C4A7551F-421B-46EC-B1FE-81CCB76C364B.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "03-password-reset"
+  },
+  {
+    "file": "04-empty-notebook.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "04-empty-notebook_0_377AE8DF-8E1F-40A9-9B6B-E28C5A21B465.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "04-empty-notebook"
+  },
+  {
+    "file": "05-account-menu.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "05-account-menu_0_46867BFE-6FFE-44EE-A386-DB845BB57FCD.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "05-account-menu"
+  },
+  {
+    "file": "06-settings.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "06-settings_0_20178DFB-A82A-4580-A48D-36DFD8209E22.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "06-settings"
+  },
+  {
+    "file": "07-profile.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "07-profile_0_E7A4D5AB-59B6-4A52-AA88-2E3B037C611F.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "07-profile"
+  },
+  {
+    "file": "08-wanikani.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "08-wanikani_0_5CF4C62D-279F-44AE-AC6C-C4DA71045A01.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "08-wanikani"
+  },
+  {
+    "file": "09-appearance.png",
+    "test": "PortReferenceUITests/testNotebookAndSettingsReference()",
+    "attachment": "09-appearance_0_819FEC6A-BA59-49DA-835E-D65F614D26CB.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "09-appearance"
+  },
+  {
+    "file": "10-contents.png",
+    "test": "PortReferenceUITests/testReviewedEntryReference()",
+    "attachment": "10-contents_0_1AE2D06B-F7FB-4496-8A44-8163185635A9.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "10-contents"
+  },
+  {
+    "file": "11-draft-feedback.png",
+    "test": "PortReferenceUITests/testReviewedEntryReference()",
+    "attachment": "11-draft-feedback_0_910F1ED4-C0B9-49DA-92DF-687D0C4D16E1.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "11-draft-feedback"
+  },
+  {
+    "file": "12-final-narration.png",
+    "test": "PortReferenceUITests/testReviewedEntryReference()",
+    "attachment": "12-final-narration_0_018FF449-0372-40C0-A5B2-47ECDBF4EFF3.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "12-final-narration"
+  },
+  {
+    "file": "13-final-editor-keyboard.png",
+    "test": "PortReferenceUITests/testReviewedEntryReference()",
+    "attachment": "13-final-editor-keyboard_0_620E2BAD-E07C-41F8-A87E-063669F98038.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "13-final-editor-keyboard"
+  },
+  {
+    "file": "14-narration-voices.png",
+    "test": "PortReferenceUITests/testReviewedEntryReference()",
+    "attachment": "14-narration-voices_0_C3EF5177-05D3-49AC-B4DA-F83E6FF397F8.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "14-narration-voices"
+  },
+  {
+    "file": "15-writing-keyboard.png",
+    "test": "PortReferenceUITests/testWritingAndClarificationReference()",
+    "attachment": "15-writing-keyboard_0_E03A4963-D906-49E9-A2A6-06F4534064A2.png",
+    "resultBundle": "ios-conversation.xcresult",
+    "verifiedState": "15-writing-keyboard"
+  },
+  {
+    "file": "16-clarification.png",
+    "test": "PortReferenceUITests/testWritingAndClarificationReference()",
+    "attachment": "16-clarification_0_FE59A76E-CD23-4585-9C42-5A599F247220.png",
+    "resultBundle": "ios-conversation.xcresult",
+    "verifiedState": "16-clarification"
+  },
+  {
+    "file": "17-clarification-next.png",
+    "test": "PortReferenceUITests/testWritingAndClarificationReference()",
+    "attachment": "17-clarification-next_0_66E7EA60-60C4-44CB-922C-50BAFCAEC9A1.png",
+    "resultBundle": "ios-conversation.xcresult",
+    "verifiedState": "17-clarification-next"
+  },
+  {
+    "file": "18-keyboard-choice.png",
+    "test": "PortReferenceUITests/testKeyboardAndTutorReference()",
+    "attachment": "18-keyboard-choice_0_44ED85CF-AA98-4CE0-95A4-08D6243D8192.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "18-keyboard-choice"
+  },
+  {
+    "file": "19-tutor-picker.png",
+    "test": "PortReferenceUITests/testKeyboardAndTutorReference()",
+    "attachment": "19-tutor-picker_0_B989D2DD-30AB-4DE3-960D-832C47AF0CAD.png",
+    "resultBundle": "ios-portrait.xcresult",
+    "verifiedState": "19-tutor-picker"
+  },
+  {
+    "file": "20-tutor-conversation.png",
+    "test": "PortReferenceUITests/testWritingAndClarificationReference()",
+    "attachment": "20-tutor-conversation_0_1690AEB8-B784-45C1-B194-0525EB93AA6E.png",
+    "resultBundle": "ios-conversation.xcresult",
+    "verifiedState": "20-tutor-conversation"
+  },
+  {
+    "file": "21-close-draft.png",
+    "test": "PortReferenceUITests/testWritingAndClarificationReference()",
+    "attachment": "21-close-draft_0_49EBEEC9-25B8-4CF5-A8D1-4C98A451FD64.png",
+    "resultBundle": "ios-conversation.xcresult",
+    "verifiedState": "21-close-draft"
+  }
+]
