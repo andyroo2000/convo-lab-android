@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.util.UUID
+import java.security.KeyStoreException
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +25,18 @@ class KeystoreSessionStorageTest {
         assertEquals(session.account, restored.account)
         storage.clear()
         assertNull(KeystoreSessionStorage(context, "test.${directory.name}").read())
+    }
+
+    @Test fun transientKeyAccessFailurePreservesTheEncryptedRecord() = isolated { context, directory ->
+        val alias = "test.${directory.name}"
+        val session = Session("fixture-token", Account(42, "Sample", "sample@example.invalid"))
+        KeystoreSessionStorage(context, alias).write(session)
+        val file = File(directory, "session.enc")
+        val before = file.readBytes()
+        val unavailable = KeystoreSessionStorage(context, alias) { throw KeyStoreException("temporarily busy") }
+        assertThrows(KeyStoreException::class.java) { unavailable.read() }
+        assertArrayEquals(before, file.readBytes())
+        assertEquals(session.token, KeystoreSessionStorage(context, alias).read()?.token)
     }
 
     @Test fun corruptCiphertextIsRejectedAndPreserved() = isolated { context, directory ->

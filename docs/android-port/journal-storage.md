@@ -10,9 +10,9 @@ Corrupt or unknown-version files are reported and left intact. Reads, writes and
 
 ## Verification
 
-- Seventeen repository tests cover edits during save, unchanged-save acknowledgement, retry after reopening, failed network/delete/disk writes, newer server caches and copy recovery.
+- Eighteen repository tests cover edits during save, unchanged-save acknowledgement, retry after reopening, failed network/delete/disk writes, newer server caches and copy recovery.
 - Eight Android instrumentation tests exercise actual AtomicFile recovery, account isolation, preserved corrupt/future records, path rejection, exact JSON field names, uppercase-to-canonical IDs, cursor escaping, DELETE versions, and stale-session responses.
-- Build, lint and all 43 JVM tests pass. Instrumentation uses isolated temporary directories and fake network responses; it never changes production Journal data.
+- Build, lint and all 44 JVM tests pass. Instrumentation uses isolated temporary directories and fake network responses; it never changes production Journal data.
 
 Reference contract: `learning-os` origin/main `app/Domain/Journal/Actions/SaveJournalDraft.php`, `Support/JournalDraftInput.php` and `Http/Resources/Journal/JournalEntryResource.php`; iOS reference 6dae16a.
 
@@ -21,3 +21,5 @@ Deletion review: a pending-delete flag is persisted before the server call and s
 Definitive 400/403/404/409/422 write rejections clear only the pending-operation flag and keep the draft; ambiguous I/O, cancellation, session changes and throttling retain exact retries. A missing server entry (DELETE 404) completes local removal. Draft expectedVersion is intentionally not rebased by a remote refresh: doing so could silently overwrite another device’s edits. Only acknowledgement rebases a newer draft; conflicts offer an explicit copy recovery. Public repository lookups take validated canonical JournalId values.
 
 A record also remembers the last version acknowledged by this installation. A delayed editor snapshot can advance to that version, while a server-only refresh never silently advances its editing base. Unchanged cached entries skip disk writes; known unreadable records are skipped during archive refresh so other entries still load.
+
+Acknowledging an older save also preserves a higher server version already refreshed into the cache, while rebasing newer local writing only to the acknowledged version. This ordering is covered by a controlled in-flight-save test.

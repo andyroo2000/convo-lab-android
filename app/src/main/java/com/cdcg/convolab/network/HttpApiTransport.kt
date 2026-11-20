@@ -18,7 +18,9 @@ class HttpApiTransport(
     override suspend fun request(method: String, path: String, token: String?, body: String?): String =
         withContext(Dispatchers.IO) {
             require(path.startsWith("/api/") && !path.contains('#'))
-            val connection = openConnection(URL(BuildConfig.API_BASE_URL + path))
+            val url = URL(BuildConfig.API_BASE_URL + path)
+            require(url.protocol == "https") { "The API requires HTTPS" }
+            val connection = openConnection(url)
             configure(connection, method, token)
             suspendCancellableCoroutine { continuation ->
                 continuation.invokeOnCancellation { connection.disconnect() }

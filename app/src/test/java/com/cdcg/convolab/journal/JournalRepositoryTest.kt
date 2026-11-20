@@ -38,6 +38,26 @@ class JournalRepositoryTest {
         assertEquals(draft.body, record.entry?.body)
     }
 
+    @Test fun acknowledgementCannotDowngradeANewerRefreshedServerCopy() = runTest {
+        val response = CompletableDeferred<JournalEntry>()
+        val storage = MemoryJournal()
+        val api = FakeJournal().apply { saveResult = { response.await() } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        repository.edit(draft)
+        val request = launch { repository.save(draft.key) }
+        runCurrent()
+        val remote = saved(draft).copy(version = 4, body = "別の端末の文章。")
+        api.page = JournalPage(listOf(remote), null)
+        repository.refresh()
+        repository.edit(draft.edited("こちらの新しい文章。"))
+        response.complete(saved(draft))
+        request.join()
+        val record = repository.record(draft.key)!!
+        assertEquals(remote, record.entry)
+        assertEquals(1, record.draft?.expectedVersion)
+        assertEquals(1, record.acknowledgedVersion)
+    }
+
     @Test fun unchangedSaveAcknowledgementMayKeepTheSameServerVersion() = runTest {
         val entry = saved(draft)
         val unchanged = JournalDraft.from(entry)
