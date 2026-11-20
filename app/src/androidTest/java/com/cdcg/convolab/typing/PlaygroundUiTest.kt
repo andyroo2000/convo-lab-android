@@ -11,7 +11,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
-import com.cdcg.convolab.MainActivity
+import com.cdcg.convolab.TypingLabActivity
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PlaygroundUiTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule val compose = createAndroidComposeRule<TypingLabActivity>()
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @Test fun candidatesRemainAboveEnglishKeyboardInPortraitAndLandscape() {
