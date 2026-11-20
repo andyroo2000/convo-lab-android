@@ -50,12 +50,14 @@ class SessionController(
 
     suspend fun register(registration: Registration) = authenticate { api.register(registration) }
 
-    suspend fun resetPassword(email: String) {
+    suspend fun resetPassword(email: String): Boolean {
         val operation = begin()
+        var accepted = false
         try {
             api.resetPassword(email.trim())
             mutex.withLock {
-                if (operation == generation) mutableState.value = mutableState.value.copy(resetSent = true)
+                accepted = operation == generation
+                if (accepted) mutableState.value = mutableState.value.copy(resetSent = true)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -64,6 +66,7 @@ class SessionController(
         } finally {
             finish(operation)
         }
+        return accepted
     }
 
     suspend fun signOut() {
@@ -89,7 +92,7 @@ class SessionController(
         mutableState.value = mutableState.value.copy(error = null, resetSent = false)
     }
 
-    private suspend fun authenticate(request: suspend () -> Session) {
+    private suspend fun authenticate(request: suspend () -> Session): Boolean {
         val operation = begin()
         var issued: Session? = null
         var committed = false
@@ -104,6 +107,7 @@ class SessionController(
             finish(operation)
             if (!committed) issued?.let { discard(it) }
         }
+        return committed
     }
 
     private suspend fun begin(): Long = mutex.withLock {
@@ -143,10 +147,23 @@ class SessionController(
             } catch (_: Exception) {
                 mutableState.value = mutableState.value.copy(error = "Your sign-in expired, but its saved copy could not be removed. Please sign in again.")
             }
+        } else if (failure is InvalidSessionStorage) {
+            resetInvalidStorage()
         } else if (session == null) {
             mutableState.value = AuthState(restoring = false, error = "Your saved sign-in could not be opened. Please sign in again.")
         }
         // Transport failures preserve a cached verified profile for offline writing.
+    }
+
+    private suspend fun resetInvalidStorage() {
+        session = null
+        val message = try {
+            withContext(io + NonCancellable) { storage.resetInvalid() }
+            "Your saved sign-in could not be opened and was reset. Please sign in again."
+        } catch (_: Exception) {
+            "Your saved sign-in could not be reset. Please try again."
+        }
+        mutableState.value = AuthState(restoring = false, error = message)
     }
 
     private suspend fun revoke(token: String) {

@@ -27,4 +27,7 @@ interface SessionStorage {
     fun read(): Session?
     fun write(session: Session)
     fun clear()
+    fun resetInvalid() = clear()
 }
+
+class InvalidSessionStorage(cause: Exception) : Exception("Invalid saved sign-in", cause)

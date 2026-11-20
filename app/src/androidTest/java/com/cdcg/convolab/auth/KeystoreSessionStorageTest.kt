@@ -14,26 +14,31 @@ import org.junit.runner.RunWith
 class KeystoreSessionStorageTest {
     @Test fun encryptedAtomicRecordSurvivesReopenAndClearsTogether() = isolated { context, directory ->
         val session = Session("secret-fixture-token", Account(42, "Sample learner", "sample@example.invalid"))
-        val storage = KeystoreSessionStorage(context)
+        val storage = KeystoreSessionStorage(context, "test.${directory.name}")
         storage.write(session)
         val bytes = File(directory, "session.enc").readBytes().toString(Charsets.ISO_8859_1)
         assertFalse(bytes.contains(session.token))
         assertFalse(bytes.contains(session.account.email))
-        val restored = KeystoreSessionStorage(context).read()!!
+        val restored = KeystoreSessionStorage(context, "test.${directory.name}").read()!!
         assertEquals(session.token, restored.token)
         assertEquals(session.account, restored.account)
         storage.clear()
-        assertNull(KeystoreSessionStorage(context).read())
+        assertNull(KeystoreSessionStorage(context, "test.${directory.name}").read())
     }
 
     @Test fun corruptCiphertextIsRejectedAndPreserved() = isolated { context, directory ->
-        val storage = KeystoreSessionStorage(context)
+        val storage = KeystoreSessionStorage(context, "test.${directory.name}")
         storage.write(Session("fixture-token", Account(42, "Sample", "sample@example.invalid")))
         val file = File(directory, "session.enc")
         val corrupted = file.readBytes().also { it[it.lastIndex] = (it.last().toInt() xor 1).toByte() }
         file.writeBytes(corrupted)
-        assertThrows(Exception::class.java) { storage.read() }
+        assertThrows(InvalidSessionStorage::class.java) { storage.read() }
         assertArrayEquals(corrupted, file.readBytes())
+        storage.resetInvalid()
+        assertNull(storage.read())
+        val replacement = Session("replacement-fixture", Account(43, "New", "new@example.invalid"))
+        storage.write(replacement)
+        assertEquals(replacement.token, storage.read()?.token)
     }
 
     private fun isolated(test: (Context, File) -> Unit) {
@@ -42,6 +47,9 @@ class KeystoreSessionStorageTest {
         val context = object : ContextWrapper(target) {
             override fun getNoBackupFilesDir() = directory
         }
-        try { test(context, directory) } finally { directory.deleteRecursively() }
+        try { test(context, directory) } finally {
+            KeystoreSessionStorage(context, "test.${directory.name}").resetInvalid()
+            directory.deleteRecursively()
+        }
     }
 }

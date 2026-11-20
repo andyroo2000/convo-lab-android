@@ -19,12 +19,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val registration = form.registration()
         viewModelScope.launch {
             try {
-                when (page) {
+                val accepted = when (page) {
                     AuthPage.SignIn -> sessions.login(email, password)
                     AuthPage.Register -> sessions.register(registration)
                     AuthPage.Reset -> sessions.resetPassword(email)
                 }
-                if (sessions.state.value.error == null) form.clearSecrets()
+                if (accepted) form.clearSecrets()
             } catch (cancelled: CancellationException) {
                 form.clearSecrets()
                 throw cancelled

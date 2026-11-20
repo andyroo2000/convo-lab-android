@@ -8,7 +8,7 @@ The standalone typing playground is a separate debug-only activity. Instrumented
 
 ## Verification
 
-- Ten JVM session tests cover offline restore, invalid tokens, old login/restore callbacks, failed reauthentication, write/removal failures, revocation failure and password reset acknowledgement.
+- Eleven JVM session tests cover offline restore, invalid tokens, old login/restore callbacks, failed reauthentication, write/removal failures, revocation failure and password reset acknowledgement.
 - Six isolated instrumented tests verify wire spellings/token handoff and real Android Keystore encryption, reopen, deletion and tamper rejection. These passed on the Pixel 10a (Android 16).
 - UI tests exercise sign-in/reset navigation, registration validation and keyboard visibility using fixture input only. No production account is created, modified or deleted by these tests.
 - Use `./gradlew assembleDebug assembleDebugAndroidTest lintDebug testDebugUnitTest` for the build gate, then the connected instrumentation suite on an unlocked device or emulator. Enable the emulator software keyboard. Set ANDROID_SERIAL when more than one device is connected.
@@ -24,6 +24,8 @@ Captured on API 36 with isolated fixture input. Native Android text-field stylin
 - [Registration validation](auth-screenshots/auth-registration-validation.png)
 - [Password-reset confirmation](auth-screenshots/auth-reset-confirmation.png)
 
-Validation at this change: 22 JVM tests and 13 emulator tests passed. After the final heading/capture/navigation adjustments, the build/lint/JVM gate and both authentication UI tests passed again. Five authentication contract/storage tests also passed on the Pixel. No physical-device UI pass is claimed while its secure lock screen is active.
+Validation: the initial full 13-test emulator suite passed. The final JVM suite contains 26 tests, including cancellation, response-size limits and non-transient credential recovery. After the final heading/capture/navigation adjustments, the build/lint/JVM gate and both authentication UI tests passed again. Six authentication contract/storage tests also passed on the Pixel. No physical-device UI pass is claimed while its secure lock screen is active.
 
-Review hardening: newly issued tokens are revoked best-effort when verification, credential persistence or generation acceptance fails. Cleanup uses only the unused token and keeps the active session intact. Registration values survive retryable failures; cancellation and successful completion clear secret form fields. The expanded session matrix tests successful and unauthorized restore responses after both login and sign-out. Corrupt credential ciphertext remains intact for diagnosis and is replaced by the next successful sign-in; it is never interpreted as an authenticated session.
+Review hardening: newly issued tokens are revoked best-effort when verification, credential persistence or generation acceptance fails. Cleanup uses only the unused token and keeps the active session intact. Registration values survive retryable failures; cancellation and successful completion clear secret form fields. The expanded session matrix tests successful and unauthorized restore responses after both login and sign-out. A failed credential read is never interpreted as an authenticated session.
+
+Review hardening: non-transient credential corruption resets only the saved sign-in and its Keystore key; transient I/O errors preserve the encrypted record. Journal drafts are separate and never removed by this recovery. Cancellation disconnects in-flight HTTP requests. Registration failures offer a sign-in recovery hint for a lost creation response. Sign-out revocation is best effort with bounded timeouts; an offline revocation is not queued and may leave the server token valid until revoked server-side.

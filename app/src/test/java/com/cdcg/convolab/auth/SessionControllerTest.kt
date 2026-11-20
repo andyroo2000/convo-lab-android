@@ -27,6 +27,17 @@ class SessionControllerTest {
         assertFalse(controller.state.value.restoring)
     }
 
+    @Test fun unreadableStorageResetsOnlyNonTransientFailures() = runTest {
+        for (failure in listOf(IOException("temporarily unavailable"), InvalidSessionStorage(IllegalArgumentException()))) {
+            val storage = MemoryStorage(original).apply { readFailure = failure }
+            val controller = SessionController(FakeAuth(), storage, StandardTestDispatcher(testScheduler))
+            controller.restore()
+            assertNull(controller.state.value.account)
+            assertNotNull(controller.state.value.error)
+            assertEquals(failure is InvalidSessionStorage, storage.saved == null)
+        }
+    }
+
     @Test fun unauthorizedRestoreClearsBothCachedProfileAndToken() = runTest {
         val storage = MemoryStorage(original)
         val api = FakeAuth().apply { verifyResult = { throw ApiFailure(401) } }
@@ -57,7 +68,7 @@ class SessionControllerTest {
         val api = FakeAuth().apply { verifyResult = { original.account }; loginResult = { throw ApiFailure(401) } }
         val controller = SessionController(api, storage, StandardTestDispatcher(testScheduler))
         controller.restore()
-        controller.login("second@example.invalid", "wrong")
+        assertFalse(controller.login("second@example.invalid", "wrong"))
         assertEquals(original.account, controller.state.value.account)
         assertEquals(original.token, storage.saved?.token)
         assertNotNull(controller.state.value.error)
@@ -151,7 +162,8 @@ class SessionControllerTest {
 private class MemoryStorage(var saved: Session? = null) : SessionStorage {
     var failWrites = false
     var failClear = false
-    override fun read() = saved
+    var readFailure: Exception? = null
+    override fun read(): Session? { readFailure?.let { throw it }; return saved }
     override fun write(session: Session) {
         if (failWrites) throw IOException("fixture disk failure")
         saved = session

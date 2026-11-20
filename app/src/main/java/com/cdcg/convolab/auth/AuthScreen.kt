@@ -59,7 +59,7 @@ fun AuthScreen(state: AuthState, submit: (AuthPage, AuthForm) -> Unit, clearMess
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 } else {
                     AuthFields(page, form, !state.busy)
-                    state.error?.let { Text(it, color = Color(0xFFB34332), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+                    AuthError(state.error, page)
                     Button(onClick = { submit(page, form) }, enabled = !state.busy && form.valid(page),
                         colors = ButtonDefaults.buttonColors(containerColor = JournalBrand.Blue),
                         modifier = Modifier.align(Alignment.End).testTag("auth-submit")) { Text(page.action()) }
@@ -88,3 +88,12 @@ private fun AuthPage.title() = when (this) {
 }
 
 private fun AuthPage.action() = if (this == AuthPage.Reset) "Send reset link" else title()
+
+@Composable
+private fun AuthError(error: String?, page: AuthPage) {
+    if (error == null) return
+    Text(error, color = Color(0xFFB34332), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+    if (page == AuthPage.Register) {
+        Text("If you already submitted this form, try signing in with the same email and password.")
+    }
+}

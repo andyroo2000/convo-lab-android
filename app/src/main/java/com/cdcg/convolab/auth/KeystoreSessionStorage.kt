@@ -7,6 +7,8 @@ import android.util.AtomicFile
 import java.io.File
 import java.io.FileNotFoundException
 import java.security.KeyStore
+import java.security.GeneralSecurityException
+import org.json.JSONException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -14,11 +16,18 @@ import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONObject
 
 /** One encrypted, atomic record keeps the verified profile and bearer token consistent. */
-class KeystoreSessionStorage(context: Context) : SessionStorage {
+class KeystoreSessionStorage(context: Context, private val keyAlias: String = "convolab.session.v1") : SessionStorage {
     private val file = AtomicFile(File(context.noBackupFilesDir, "session.enc"))
 
     @Synchronized override fun read(): Session? {
         val bytes = try { file.readFully() } catch (_: FileNotFoundException) { return null }
+        return try { decrypt(bytes) }
+        catch (failure: GeneralSecurityException) { throw InvalidSessionStorage(failure) }
+        catch (failure: JSONException) { throw InvalidSessionStorage(failure) }
+        catch (failure: IllegalArgumentException) { throw InvalidSessionStorage(failure) }
+    }
+
+    private fun decrypt(bytes: ByteArray): Session {
         require(bytes.size > IV_BYTES)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, IV_BYTES)))
@@ -49,17 +58,21 @@ class KeystoreSessionStorage(context: Context) : SessionStorage {
         check(!file.baseFile.exists()) { "Could not remove local session" }
     }
 
+    @Synchronized override fun resetInvalid() {
+        clear()
+        KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(keyAlias)
+    }
+
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (store.getKey(keyAlias, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        generator.init(KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+        generator.init(KeyGenParameterSpec.Builder(keyAlias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
         return generator.generateKey()
     }
 
     private companion object {
-        const val KEY_ALIAS = "convolab.session.v1"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
     }
