@@ -26,7 +26,9 @@ class JournalRepository(
         check(previous?.pendingDelete != true) { "Deletion is awaiting confirmation. Retry deleting this entry first." }
         val parent = draft.rootEntryId?.let(storage::read)
         check(parent?.pendingDelete != true) { "This conversation is being deleted. Your writing has been kept in the editor." }
-        val record = JournalRecord(previous?.entry, draft, previous?.pendingSave)
+        val version = maxOf(draft.expectedVersion, previous?.acknowledgedVersion ?: 0)
+        val rebased = draft.copy(expectedVersion = version)
+        val record = previous?.copy(draft = rebased) ?: JournalRecord(draft = rebased)
         storage.write(record)
         record
     }
@@ -34,7 +36,7 @@ class JournalRepository(
     suspend fun refresh(cursor: String? = null): JournalPage {
         val revision = disk { removalRevision }
         val page = api.archive(cursor)
-        disk { if (revision == removalRevision) page.entries.forEach(::mergeEntry) }
+        disk { if (revision == removalRevision) mergePage(page) }
         return page
     }
 
@@ -117,11 +119,17 @@ class JournalRepository(
         return current
     }
 
+    private fun mergePage(page: JournalPage) {
+        val unreadable = storage.load().recoveryFiles.toSet()
+        page.entries.filterNot { "${it.id}.json" in unreadable }.forEach(::mergeEntry)
+    }
+
     private fun mergeEntry(entry: JournalEntry): JournalRecord {
         val current = storage.read(entry.id)
         if (current?.pendingDelete == true) return current
+        if (current?.entry == entry) return current
         if ((current?.entry?.version ?: -1) > entry.version) return current!!
-        val merged = JournalRecord(entry, current?.draft, current?.pendingSave)
+        val merged = current?.copy(entry = entry) ?: JournalRecord(entry = entry)
         storage.write(merged)
         return merged
     }

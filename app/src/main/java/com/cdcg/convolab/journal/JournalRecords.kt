@@ -28,7 +28,7 @@ data class JournalDraft(
 }
 
 /** Acknowledged server content and its optional newer local draft share one atomic record. */
-data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null, val pendingDelete: Boolean = false) {
+data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null, val pendingDelete: Boolean = false, val acknowledgedVersion: Int = 0) {
     init {
         require(entry != null || draft != null)
         require(entry == null || draft == null || entry.id == draft.id)
@@ -41,7 +41,7 @@ data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraf
         require(received.id == id && sent.id == id)
         require(received.version > 0 && received.version >= sent.expectedVersion)
         val remaining = draft?.takeUnless { it.editId == sent.editId }?.copy(expectedVersion = received.version)
-        return copy(entry = received, draft = remaining, pendingSave = null)
+        return copy(entry = received, draft = remaining, pendingSave = null, acknowledgedVersion = received.version)
     }
 }
 

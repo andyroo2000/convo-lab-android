@@ -61,6 +61,41 @@ class JournalRepositoryTest {
         assertEquals(draft.body, record.entry?.body)
     }
 
+    @Test fun lateEditorSnapshotUsesOwnAcknowledgementButNeverARemoteRefreshVersion() = runTest {
+        val storage = MemoryJournal()
+        val api = FakeJournal().apply { saveResult = ::saved }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        repository.edit(draft)
+        repository.save(draft.key)
+        api.page = JournalPage(listOf(saved(draft).copy(version = 4, body = "別の端末の文章。")), null)
+        repository.refresh()
+        repository.edit(draft.edited("こちらの続き。"))
+        assertEquals(1, repository.record(draft.key)?.draft?.expectedVersion)
+        assertEquals(4, repository.record(draft.key)?.entry?.version)
+    }
+
+    @Test fun responseLostAfterServerCommitRetriesWithoutCreatingAnotherVersion() = runTest {
+        val storage = MemoryJournal()
+        var applied: JournalEntry? = null
+        val api = FakeJournal().apply {
+            saveResult = { sent ->
+                val existing = applied
+                if (existing != null) existing else {
+                    applied = saved(sent)
+                    throw IOException("response lost after server commit")
+                }
+            }
+        }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        repository.edit(draft)
+        try { repository.save(draft.key); fail("Expected lost response") } catch (_: IOException) { }
+        assertEquals(1, applied?.version)
+        val received = repository.save(draft.key)
+        assertEquals(1, received.version)
+        assertEquals(listOf(draft, draft), api.saved)
+        assertNull(repository.record(draft.key)?.draft)
+    }
+
     @Test fun unknownSaveOutcomeRetriesTheSameFrozenRequestAfterReopen() = runTest {
         val storage = MemoryJournal()
         val api = FakeJournal().apply { saveResult = { throw IOException("fixture timeout") } }
