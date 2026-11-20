@@ -17,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.ConvoLabTheme
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -29,10 +30,10 @@ class AuthUiTest {
 
     @Test fun signInAndResetRemainReachableWithKeyboard() {
         val state = mutableStateOf(AuthState(restoring = false))
-        var submitted: AuthPage? = null
+        val submitted = AtomicReference<AuthPage?>(null)
         compose.setContent {
             ConvoLabTheme { AuthScreen(state.value, { page, _ ->
-                submitted = page
+                submitted.set(page)
                 state.value = state.value.copy(resetSent = page == AuthPage.Reset)
             }, { state.value = AuthState(restoring = false) }) }
         }
@@ -41,15 +42,17 @@ class AuthUiTest {
         compose.onNodeWithTag("auth-submit").performScrollTo().assertIsNotEnabled()
         input("Email", "sample@example.invalid")
         input("Password", "fixture-password")
-        compose.onNodeWithTag("auth-submit").performScrollTo().assertIsEnabled()
+        revealSubmitWithKeyboard()
+        compose.onNodeWithTag("auth-submit").assertIsEnabled()
         assertSubmitAboveKeyboard()
         screenshot("auth-login-keyboard")
-        compose.onNodeWithTag("auth-submit").performClick()
-        assertEquals(AuthPage.SignIn, submitted)
+        compose.onNodeWithTag("auth-submit").performScrollTo().assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { submitted.get() == AuthPage.SignIn }
+        assertEquals(AuthPage.SignIn, submitted.get())
         compose.onNodeWithText("Forgot password?").performScrollTo().performClick()
         compose.onNodeWithTag("auth-submit").performScrollTo().performClick()
         compose.onNodeWithText("If an account exists for that email, a reset link is on its way.").performScrollTo().assertIsDisplayed()
-        assertEquals(AuthPage.Reset, submitted)
+        assertEquals(AuthPage.Reset, submitted.get())
         screenshot("auth-reset-confirmation")
     }
 
@@ -69,13 +72,20 @@ class AuthUiTest {
         compose.onNodeWithTag("auth-$label").performScrollTo().performClick().performTextInput(value)
     }
 
-    private fun assertSubmitAboveKeyboard() {
+    private fun revealSubmitWithKeyboard() {
         compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        device.waitForIdle()
+        compose.waitForIdle()
+        compose.onNodeWithTag("auth-submit").performScrollTo().assertIsDisplayed()
+    }
+
+    private fun assertSubmitAboveKeyboard() {
         val keyboardTop = compose.runOnIdle {
             val decor = compose.activity.window.decorView
             decor.height - decor.rootWindowInsets.getInsets(WindowInsets.Type.ime()).bottom
         }
         val button = compose.onNodeWithTag("auth-submit").fetchSemanticsNode().boundsInWindow
+        assertTrue("Submit outside the visible window", button.height > 0 && button.top >= 0)
         assertTrue("Submit covered by keyboard", button.bottom <= keyboardTop + 1)
     }
 
