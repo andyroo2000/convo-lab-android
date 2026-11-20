@@ -90,6 +90,45 @@ class JournalRepositoryTest {
         assertEquals(draft, storage.records[draft.id]?.draft)
     }
 
+    @Test fun pendingDeletionRejectsEditsAndRemainsRetryableAfterFailure() = runTest {
+        val response = CompletableDeferred<Unit>()
+        val storage = MemoryJournal().apply { records[draft.id] = JournalRecord(saved(draft)) }
+        val api = FakeJournal().apply { deleteResult = { response.await() } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val deletion = launch { try { repository.delete(draft.id) } catch (_: IOException) { } }
+        runCurrent()
+        try { repository.edit(draft.edited("new")); fail("Delete must block edits") } catch (_: IllegalStateException) { }
+        response.completeExceptionally(IOException("response lost"))
+        deletion.join()
+        assertTrue(storage.records[draft.id]!!.pendingDelete)
+        api.deleteResult = {}
+        repository.delete(draft.id)
+        assertNull(storage.records[draft.id])
+    }
+
+    @Test fun unsavedConversationChildrenBlockDeletionBeforeNetwork() = runTest {
+        val child = JournalDraft.blank().edited("返事。").copy(rootEntryId = draft.id)
+        val storage = MemoryJournal().apply {
+            records[draft.id] = JournalRecord(saved(draft))
+            records[child.id] = JournalRecord(draft = child)
+        }
+        val api = FakeJournal().apply { deleteResult = { fail("Must not delete server conversation") } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        try { repository.delete(draft.id); fail("Unsaved replies must be preserved") } catch (_: IllegalStateException) { }
+        assertFalse(storage.records[draft.id]!!.pendingDelete)
+        assertEquals(child, storage.records[child.id]?.draft)
+    }
+
+    @Test fun newerServerCachePreservesFrozenSaveAndLocalEdit() = runTest {
+        val storage = MemoryJournal().apply { records[draft.id] = JournalRecord(draft = draft, pendingSave = draft) }
+        val api = FakeJournal().apply { page = JournalPage(listOf(saved(draft).copy(version = 4)), null) }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        repository.refresh()
+        assertEquals(4, storage.records[draft.id]?.entry?.version)
+        assertEquals(draft, storage.records[draft.id]?.pendingSave)
+        assertEquals(draft, storage.records[draft.id]?.draft)
+    }
+
     @Test fun serverRefreshCannotOverwriteLocalDraftOrNewerCachedVersion() = runTest {
         val entry = saved(draft).copy(version = 3)
         val storage = MemoryJournal().apply { records[draft.id] = JournalRecord(entry, draft) }

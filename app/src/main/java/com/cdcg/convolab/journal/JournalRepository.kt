@@ -15,26 +15,35 @@ class JournalRepository(
 ) {
     private val mutex = Mutex()
     private val saves = Mutex()
+    private var removalRevision = 0L
 
     suspend fun load(): JournalLoad = disk { storage.load() }
     suspend fun record(id: String): JournalRecord? = disk { storage.read(id) }
 
     suspend fun edit(draft: JournalDraft) = disk {
         val previous = storage.read(draft.id)
+        check(previous?.pendingDelete != true) { "Deletion is awaiting confirmation. Retry deleting this entry first." }
+        val parent = draft.rootEntryId?.let(storage::read)
+        check(parent?.pendingDelete != true) { "This conversation is being deleted. Your writing has been kept in the editor." }
         val record = JournalRecord(previous?.entry, draft, previous?.pendingSave)
         storage.write(record)
         record
     }
 
     suspend fun refresh(cursor: String? = null): JournalPage {
+        val revision = disk { removalRevision }
         val page = api.archive(cursor)
-        disk { page.entries.forEach(::mergeEntry) }
+        disk { if (revision == removalRevision) page.entries.forEach(::mergeEntry) }
         return page
     }
 
     suspend fun fetch(id: String): JournalRecord {
+        val revision = disk { removalRevision }
         val entry = api.entry(id)
-        return disk { mergeEntry(entry) }
+        return disk {
+            check(revision == removalRevision) { "An entry was deleted while loading. Please refresh." }
+            mergeEntry(entry)
+        }
     }
 
     suspend fun save(id: String): JournalEntry = saves.withLock {
@@ -56,20 +65,32 @@ class JournalRepository(
     }
 
     suspend fun delete(id: String) = saves.withLock {
-        val current = disk { requireNotNull(storage.read(id)) }
-        check(current.pendingSave == null) { "A save has not been confirmed. Retry it before deleting this entry." }
+        val current = disk { prepareDelete(id) }
         current.entry?.let { api.delete(it.id, it.version) }
         disk {
-            val latest = storage.read(id)
-            check(latest == current) { "This draft changed while deletion was pending. The local copy was kept." }
             val children = storage.load().records.filter { it.rootEntryId == id }
             children.forEach { storage.remove(it.id) }
             storage.remove(id)
+            removalRevision++
         }
+    }
+
+    private fun prepareDelete(id: String): JournalRecord {
+        val current = requireNotNull(storage.read(id))
+        check(current.pendingSave == null) { "A save has not been confirmed. Retry it before deleting this entry." }
+        val local = storage.load()
+        check(local.recoveryFiles.isEmpty()) { "Saved records need recovery before deleting a conversation." }
+        val children = local.records.filter { it.rootEntryId == id }
+        check(children.none { it.draft != null || it.pendingSave != null }) {
+            "This conversation has unsaved replies. Save or copy them before deleting it."
+        }
+        storage.write(current.copy(pendingDelete = true))
+        return current
     }
 
     private fun mergeEntry(entry: JournalEntry): JournalRecord {
         val current = storage.read(entry.id)
+        if (current?.pendingDelete == true) return current
         if ((current?.entry?.version ?: -1) > entry.version) return current!!
         val merged = JournalRecord(entry, current?.draft, current?.pendingSave)
         storage.write(merged)
@@ -78,6 +99,7 @@ class JournalRepository(
 
     private fun prepareSave(id: String): JournalDraft? {
         val current = requireNotNull(storage.read(id))
+        check(!current.pendingDelete) { "Deletion is awaiting confirmation. Retry deleting this entry first." }
         val sent = current.pendingSave ?: current.draft ?: return null
         require(sent.body.isNotBlank()) { "Write an entry before saving it." }
         storage.write(current.copy(pendingSave = sent))

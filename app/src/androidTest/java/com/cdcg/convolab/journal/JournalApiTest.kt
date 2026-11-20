@@ -42,6 +42,13 @@ class JournalApiTest {
         assertEquals(7, JSONObject(transport.body!!).getInt("expectedVersion"))
     }
 
+    @Test fun malformedSuccessfulResponseHasATypedRecoverableFailure() = runBlocking {
+        val transport = RecordingJournalTransport { "<html>unavailable</html>" }
+        val api = JournalApi(transport, session) { session }
+        try { api.entry(draft.id); fail("Expected malformed response rejection") }
+        catch (_: JournalResponseFailure) { /* pending writes are retained by repository */ }
+    }
+
     @Test fun accountChangeRejectsLateResponsesAndPreventsFurtherRequests() = runBlocking {
         var active: Session? = session
         val transport = RecordingJournalTransport { active = null; entryResponse() }

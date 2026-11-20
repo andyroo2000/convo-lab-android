@@ -28,7 +28,7 @@ data class JournalDraft(
 }
 
 /** Acknowledged server content and its optional newer local draft share one atomic record. */
-data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null) {
+data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null, val pendingDelete: Boolean = false) {
     init {
         require(entry != null || draft != null)
         require(entry == null || draft == null || entry.id == draft.id)

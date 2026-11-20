@@ -22,13 +22,14 @@ object JournalJson {
     fun encode(record: JournalRecord): String = JSONObject().put("schemaVersion", 1)
         .put("entry", record.entry?.let(::encodeEntry) ?: JSONObject.NULL)
         .put("draft", record.draft?.let(::encodeDraft) ?: JSONObject.NULL)
-        .put("pendingSave", record.pendingSave?.let(::encodeDraft) ?: JSONObject.NULL).toString()
+        .put("pendingSave", record.pendingSave?.let(::encodeDraft) ?: JSONObject.NULL)
+        .put("pendingDelete", record.pendingDelete).toString()
 
     fun decode(text: String): JournalRecord {
         val json = JSONObject(text)
         require(json.getInt("schemaVersion") == 1) { "Unsupported Journal record version" }
         return JournalRecord(json.optJSONObject("entry")?.let(::entry), json.optJSONObject("draft")?.let(::draft),
-            json.optJSONObject("pendingSave")?.let(::draft))
+            json.optJSONObject("pendingSave")?.let(::draft), json.optBoolean("pendingDelete", false))
     }
 
     private fun encodeEntry(entry: JournalEntry): JSONObject = JSONObject()
