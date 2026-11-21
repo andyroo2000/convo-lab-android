@@ -46,10 +46,10 @@ final class ConversionLearning {
   }
 
   func clear() throws {
-    defer { preferences = []; readings = []; pools = [:] }
     if let preferenceURL, FileManager.default.fileExists(atPath: preferenceURL.path) {
       try FileManager.default.removeItem(at: preferenceURL)
     }
+    preferences = []; readings = []; pools = [:]
   }
 
   func protectStorage() throws {
