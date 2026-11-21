@@ -5,10 +5,13 @@ import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.network.userMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class ConversationAccess(val api: ConversationGateway, val repository: JournalRepository,
     val workflow: (CoroutineScope) -> WorkflowController, val tutor: TutorController)
-class ReplyBinding(val controller: ReplyController, var node: ConversationNode? = null)
+class ReplyBinding(val controller: ReplyController, val job: Job, var node: ConversationNode? = null)
 data class ConversationState(val replies: List<ReplyBinding> = emptyList(), val composer: ReplyBinding? = null,
     val loading: Boolean = true, val busy: Boolean = false, val error: String? = null)
 
@@ -21,6 +24,8 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
     private var nodes = emptyList<ConversationNode>()
     private var leafWork: Job? = null
     private var leafId: String? = null
+    private val updates = Mutex()
+    private val pendingUpdates = AtomicInteger()
 
     fun start() {
         action {
@@ -32,7 +37,7 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
         }
         scope.launch {
             access.tutor.state.map { it.question }.distinctUntilChanged().collect { question ->
-                if (question?.tutor != null) prepareComposer(question)
+                if (question?.tutor != null) prepareComposer(question) else clearComposer()
             }
         }
     }
@@ -50,7 +55,7 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
 
     suspend fun flush() { bindings.values.toList().forEach { it.controller.flush() } }
     suspend fun checkDeletion() {
-        check(!state.value.busy && !access.tutor.state.value.busy && bindings.values.none { it.controller.state.value.busy || it.controller.workflow.state.value.busy }) {
+        check(pendingUpdates.get() == 0 && !access.tutor.state.value.busy && bindings.values.none { it.controller.state.value.busy || it.controller.workflow.state.value.busy }) {
             "Wait for this conversation to finish before deleting it."
         }
         flush() // JournalRepository's delete guard includes every unsent child draft.
@@ -59,9 +64,13 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
     private suspend fun rebuild() {
         val records = access.repository.load().records.filter { it.rootEntryId == root.id }
         val byId = records.associateBy { it.id }
+        val removed = bindings.keys.filterNot(byId::containsKey)
+        removed.forEach { bindings.remove(it)?.job?.cancelAndJoin() }
         val saved = nodes.mapNotNull { node -> byId[node.entry.id]?.let { binding(it, node) } }
         val unsent = records.filter { it.entry == null && it.draft?.body?.isNotBlank() == true }.map { binding(it, null) }
-        mutableState.update { it.copy(replies = saved + unsent, composer = null, loading = false) }
+        val retained = state.value.composer?.takeIf { byId[it.controller.state.value.record.id]?.entry == null }
+            ?.takeIf { byId.containsKey(it.controller.state.value.record.id) }
+        mutableState.update { it.copy(replies = (saved + unsent).filterNot { reply -> reply === retained }, composer = retained, loading = false) }
         followLeaf(saved.lastOrNull()?.controller?.workflow ?: rootWorkflow)
         access.tutor.state.value.question?.let { prepareComposer(it) }
     }
@@ -69,9 +78,11 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
     private suspend fun binding(record: JournalRecord, node: ConversationNode?): ReplyBinding {
         val existing = bindings[record.id]
         if (existing != null) { existing.node = node ?: existing.node; existing.controller.refreshRecord(); return existing }
-        val workflow = access.workflow(scope)
-        val reply = ReplyController(record, access.repository, workflow, scope) { refresh().join() }
-        return ReplyBinding(reply, node).also { bindings[record.id] = it; reply.start() }
+        val job = SupervisorJob(scope.coroutineContext[Job])
+        val childScope = CoroutineScope(scope.coroutineContext + job)
+        val workflow = access.workflow(childScope)
+        val reply = ReplyController(record, access.repository, workflow, childScope) { refresh().join() }
+        return ReplyBinding(reply, job, node).also { bindings[record.id] = it; reply.start() }
     }
 
     private fun followLeaf(workflow: WorkflowController) {
@@ -90,14 +101,29 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
             val record = access.repository.answerDraft(root, origin)
             if (record.entry != null) return // The acknowledged answer appears in the conversation list.
             val reply = binding(record, null)
-            if (access.tutor.state.value.source != source || access.tutor.state.value.question?.id != question.id) return
-            mutableState.update { it.copy(composer = reply, replies = it.replies.filterNot { old -> old === reply }) }
+            mutableState.update {
+                if (access.tutor.state.value.source != source || access.tutor.state.value.question?.id != question.id) it
+                else it.copy(composer = reply, replies = it.replies.filterNot { old -> old === reply })
+            }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { mutableState.update { it.copy(error = failure.userMessage()) } }
     }
 
-    private fun action(operation: suspend () -> Unit) = scope.launch {
-        if (state.value.busy) return@launch
+    private fun clearComposer() {
+        mutableState.update { current ->
+            val previous = current.composer ?: return@update current
+            val kept = if (previous.controller.state.value.text.isBlank()) current.replies else (current.replies + previous).distinct()
+            current.copy(composer = null, replies = kept)
+        }
+    }
+
+    private fun action(operation: suspend () -> Unit): Job {
+        pendingUpdates.incrementAndGet()
+        return scope.launch { updates.withLock { runUpdate(operation) } }
+            .also { it.invokeOnCompletion { pendingUpdates.decrementAndGet() } }
+    }
+
+    private suspend fun runUpdate(operation: suspend () -> Unit) {
         mutableState.update { it.copy(busy = true, error = null) }
         try { operation() }
         catch (cancelled: CancellationException) { throw cancelled }

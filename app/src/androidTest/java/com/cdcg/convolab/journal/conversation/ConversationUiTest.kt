@@ -35,6 +35,9 @@ class ConversationUiTest {
         launchNotebook()
         val first = composer()
         write(first, "アニメの映画を見ました。")
+        compose.runOnIdle { current().refresh() }
+        compose.waitUntil(5_000) { !current().state.value.busy }
+        compose.onNodeWithTag("conversation-answer-${first.state.value.record.id}").assertIsFocused()
         capture(TestOutput.file("conversation-answer-keyboard.png"))
         submit(first)
         compose.waitUntil(10_000) { current().state.value.replies.size == 1 && current().state.value.composer != null }

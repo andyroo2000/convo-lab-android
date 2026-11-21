@@ -22,6 +22,7 @@ class ReplyController(initial: JournalRecord, private val repository: JournalRep
 
     fun start() { if (!state.value.editing) state.value.record.entry?.let(workflow::open) }
     fun edit(text: String) {
+        if (!scope.isActive) return
         if (state.value.busy || state.value.record.pendingSave != null) return
         try {
             draft = draft.edited(text)
@@ -63,8 +64,13 @@ class ReplyController(initial: JournalRecord, private val repository: JournalRep
     }
 
     suspend fun refreshRecord() {
+        val editId = draft.editId
         writer.flush()
         val record = repository.record(draft.key) ?: return
+        if (draft.editId != editId) {
+            mutableState.update { it.copy(record = record) }
+            return // A keystroke arrived while disk I/O suspended; its writer owns the newer text.
+        }
         draft = record.editableDraft()
         mutableState.update { it.copy(record = record, text = draft.body) }
         val entry = record.entry

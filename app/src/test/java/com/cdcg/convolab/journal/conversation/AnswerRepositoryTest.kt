@@ -61,6 +61,16 @@ class AnswerRepositoryTest {
         assertTrue(storage.records.isEmpty())
     }
 
+    @Test fun pendingRootDeletionCannotHandOutEvenAnExistingComposer() = runTest {
+        val storage = NotebookMemory().apply { records[root.id] = JournalRecord(entry = root) }
+        val repository = JournalRepository(AnswerGateway(), storage, StandardTestDispatcher(testScheduler))
+        val draft = repository.answerDraft(root, origin)
+        storage.records[root.id] = storage.records.getValue(root.id).copy(pendingDelete = true)
+        try { repository.answerDraft(root, origin); fail("Deletion must block the composer") }
+        catch (_: IllegalStateException) { }
+        assertEquals(draft, storage.records[draft.id])
+    }
+
     @Test fun answerConflictKeepsTheOriginalAndCanCreateAnIndependentDraft() = runTest {
         val storage = NotebookMemory()
         val api = AnswerGateway().apply { conflict = true }
