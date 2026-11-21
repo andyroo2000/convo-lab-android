@@ -4,7 +4,7 @@ Implements #14 against the stable iOS reference at `6dae16a`. Settings → Journ
 
 The iOS Journal deliberately forces its light paper palette. Android keeps that treatment and uses dark system-bar icons. Noto Sans JP and Noto Serif JP substitute for Apple-only system Japanese fonts; Klee One is shared. Noto Serif JP is from google/fonts commit `8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5`, `ofl/notoserifjp/NotoSerifJP[wght].ttf`, under the bundled OFL license. SHA-256: `2fd527ba12b6a44ec30d796d633360da0aeba6c5d4af1304ce12bb4dc15a7dfc`.
 
-When the available writing viewport is under 240dp, the decorative header yields space to writing and the action row uses compact spacing. Buttons remain readable above the keyboard. The Compose fixture explicitly uses edge-to-edge and resize-on-keyboard, matching the real Activity.
+When the keyboard is open and the available writing viewport is under 240dp, the decorative header yields space to writing and the action row uses compact spacing. Buttons remain readable above the keyboard. Contents and Settings return when the keyboard closes, even in a short split-screen window. The Compose fixture explicitly uses edge-to-edge and resize-on-keyboard, matching the real Activity.
 
 ## Verification
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -32,7 +33,7 @@ data class NotebookPanels(val feedback: FeedbackPresentation? = null, val tutor:
 fun NotebookScreen(state: NotebookState, controller: NotebookController, panels: NotebookPanels = NotebookPanels(), menu: NotebookMenu) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     BoxWithConstraints(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
-        val compact = maxHeight < 240.dp
+        val compact = maxHeight < 240.dp && WindowInsets.ime.getBottom(LocalDensity.current) > 0
         Column(Modifier.fillMaxSize()) {
             if (!compact) { NotebookHeader(!state.loading, { controller.showContents(true) }, menu) }
             Column(Modifier.weight(1f).background(Color(0xFFFAF9F6))) {

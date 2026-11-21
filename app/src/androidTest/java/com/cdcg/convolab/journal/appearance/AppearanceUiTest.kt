@@ -98,6 +98,10 @@ class AppearanceUiTest {
         capture("journal-large-text-keyboard.png")
         compose.runOnIdle { notebook.flush() }
         assertTrue(notebook.state.value.draft.body.contains("大きな文字"))
+        device.pressBack()
+        compose.waitUntil(10_000) { !compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        compose.onNodeWithText("Contents").assertIsDisplayed()
+
     }
     private fun capture(name: String) { compose.waitForIdle(); device.waitForIdle(); assertTrue(device.takeScreenshot(TestOutput.file(name))) }
 }
