@@ -44,11 +44,12 @@ class AudioCoordinator(private val access: AudioAccess, private val scope: Corou
 
     fun toggle(source: AudioSource) {
         if (state.value.preparing?.key == source.key) { stop(); return }
-        if (state.value.active?.request?.source?.key == source.key) { access.player.toggle(); return }
+        if (state.value.active?.request?.source?.key == source.key && playback.value.error == null) { access.player.toggle(); return }
         val voice = selectedVoice(source) ?: return
         stop()
         val epoch = generation
         val request = AudioRequest(source, voice)
+        access.storage.protect(request)
         mutableState.update { it.copy(preparing = source, errors = it.errors - source.key) }
         work = scope.launch { prepare(request, epoch) }
     }
@@ -90,7 +91,7 @@ class AudioCoordinator(private val access: AudioAccess, private val scope: Corou
         val sentences = state.value.active?.sentences ?: return
         AudioTimeline.adjacent(sentences, playback.value.position / 1000.0, direction)?.let(::seek)
     }
-    fun stop() { generation++; work?.cancel(); access.player.stop(); mutableState.update { it.copy(active = null, preparing = null) } }
+    fun stop() { generation++; work?.cancel(); access.player.stop(); access.storage.protect(null); mutableState.update { it.copy(active = null, preparing = null) } }
     fun close() { stop(); access.player.close() }
     fun stopIfSource(source: AudioSource) {
         if (state.value.active?.request?.source?.key == source.key || state.value.preparing?.key == source.key) stop()

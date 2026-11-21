@@ -6,6 +6,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.media3.common.util.UnstableApi
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import java.io.IOException
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
@@ -39,6 +40,8 @@ class AudioUiTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val lease = PlaybackLease(999997)
     private lateinit var coordinator: AudioCoordinator
+    private var connected: ListenableFuture<MediaController>? = null
+    private var connections = 0
     private val source = AudioSource(JournalId(JournalIds.newId()), AudioContent.Final(JournalId(JournalIds.newId()), 1,
         "今日は晴れです。公園へ行きました。", "今日[きょう]は晴[は]れです。公園[こうえん]へ行[い]きました。", "A day at the park"))
     @After fun stop() {
@@ -93,14 +96,24 @@ class AudioUiTest {
         assertNotNull(coordinator.state.value.active)
     }
 
+    @Test fun releasedControllerCanReconnectAndResumeCachedAudio() {
+        launchAudio()
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.playback.value.playing }
+        compose.runOnIdle { connected!!.get().release(); coordinator.toggle(source) }
+        compose.waitUntil(5_000) { coordinator.playback.value.error != null }
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.playback.value.playing }
+        assertEquals(2, connections)
+    }
+
     private fun launchAudio(failFirstConnection: Boolean = false) {
         PlaybackOwner.active = lease
         val api = AudioUiGateway()
-        var attempts = 0
         val player = AndroidAudioPlayer(context, lease, scope) {
-            attempts++
-            if (failFirstConnection && attempts == 1) Futures.immediateFailedFuture(IOException("Fixture connection failure"))
-            else MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java))).buildAsync()
+            connections++
+            if (failFirstConnection && connections == 1) Futures.immediateFailedFuture(IOException("Fixture connection failure"))
+            else MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java))).buildAsync().also { connected = it }
         }
         coordinator = AudioCoordinator(AudioAccess(api, AudioDiskStore(context.noBackupFilesDir, lease.accountId), player), scope)
         compose.setContent {

@@ -20,9 +20,7 @@ import kotlin.coroutines.resumeWithException
 
 @androidx.annotation.OptIn(UnstableApi::class)
 class AndroidAudioPlayer(private val context: Context, private val owner: PlaybackLease, private val scope: CoroutineScope,
-    private val connection: () -> ListenableFuture<MediaController> = {
-        MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java))).buildAsync()
-    }) : JournalAudioPlayer {
+    private val connection: (() -> ListenableFuture<MediaController>)? = null) : JournalAudioPlayer {
     private val mutableState = MutableStateFlow(AudioPlayback())
     override val state = mutableState.asStateFlow()
     private var future: ListenableFuture<MediaController>? = null
@@ -51,6 +49,7 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
     }
     override fun toggle() {
         val player = controller ?: return
+        if (!player.isConnected) { disconnected(player); return }
         if (player.isPlaying) player.pause() else {
             if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
             if (player.playerError != null) player.prepare()
@@ -80,8 +79,8 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
     }
 
     private suspend fun connect(): MediaController {
-        controller?.let { return it }
-        val pending = future ?: connection().also { future = it }
+        controller?.let { if (it.isConnected) return it else disconnected(it) }
+        val pending = future ?: createConnection().also { future = it }
         val player = suspendCancellableCoroutine { continuation ->
             pending.addListener({
                 if (continuation.isActive) {
@@ -96,6 +95,21 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
         controller = player
         player.addListener(listener)
         return player
+    }
+    private fun createConnection(): ListenableFuture<MediaController> = connection?.invoke()
+        ?: MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java)))
+            .setListener(object : MediaController.Listener {
+                override fun onDisconnected(controller: MediaController) { disconnected(controller) }
+            }).buildAsync()
+
+    private fun disconnected(player: MediaController) {
+        if (controller !== player) return
+        progress?.cancel()
+        controller = null
+        val previous = future
+        future = null
+        previous?.let(MediaController::releaseFuture)
+        mutableState.value = state.value.copy(playing = false, buffering = false, error = "Playback disconnected. Tap Listen to reconnect.")
     }
     private fun updateProgress(player: Player) {
         if (!player.isPlaying) { progress?.cancel(); return }
