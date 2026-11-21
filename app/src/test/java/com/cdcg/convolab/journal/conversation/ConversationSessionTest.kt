@@ -63,6 +63,40 @@ class ConversationSessionTest {
         assertEquals(1, fixture.gateway.nodes.size)
     }
 
+    @Test fun submitQueuesItsRefreshBehindAnOlderInFlightSnapshot() = runTest {
+        val fixture = ConversationFixture(this)
+        fixture.start()
+        val session = fixture.conversation.session.value!!
+        val reply = session.state.value.composer!!.controller
+        reply.edit("新しい答え。")
+        val gate = CompletableDeferred<Unit>()
+        fixture.gateway.nextLoadGate = gate
+        val oldRefresh = session.refresh()
+        runCurrent()
+        val submission = reply.submit()
+        runCurrent()
+        assertFalse(submission.isCompleted)
+        gate.complete(Unit)
+        oldRefresh.join()
+        submission.join()
+        runCurrent()
+        assertEquals(reply, session.state.value.replies.single().controller)
+        assertNotEquals(reply, session.state.value.composer?.controller)
+    }
+
+    @Test fun discardedComposerStopsAcceptingWritesFromItsOldController() = runTest {
+        val fixture = ConversationFixture(this)
+        fixture.start()
+        val old = fixture.conversation.session.value!!.state.value.composer!!.controller
+        old.edit("捨てる前の答え。")
+        old.discardUnsent().join()
+        runCurrent()
+        old.edit("Must not recreate the discarded file")
+        runCurrent()
+        assertNull(fixture.memory.records[old.state.value.record.id])
+        assertNotEquals(old, fixture.conversation.session.value?.state?.value?.composer?.controller)
+    }
+
     @Test fun diskFailureKeepsAnswerVisibleAndBlocksSubmissionUntilRetry() = runTest {
         val fixture = ConversationFixture(this)
         fixture.start()
@@ -136,7 +170,14 @@ private class ConversationJournal(private val tutor: ConversationTutor, private 
     val nodes = mutableListOf<ConversationNode>()
     val answers = mutableListOf<Pair<JournalDraft, AnswerOrigin>>()
     var failResponse = false
-    override suspend fun load(root: JournalId) = nodes.toList()
+    var nextLoadGate: CompletableDeferred<Unit>? = null
+    override suspend fun load(root: JournalId): List<ConversationNode> {
+        val snapshot = nodes.toList()
+        val gate = nextLoadGate
+        nextLoadGate = null
+        gate?.await()
+        return snapshot
+    }
     override suspend fun answer(draft: JournalDraft, origin: AnswerOrigin): JournalEntry {
         answers += draft to origin
         val entry = nodes.firstOrNull { it.entry.id == draft.id }?.entry ?: save(draft)
