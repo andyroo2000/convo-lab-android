@@ -19,7 +19,10 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @androidx.annotation.OptIn(UnstableApi::class)
-class AndroidAudioPlayer(private val context: Context, private val owner: PlaybackLease, private val scope: CoroutineScope) : JournalAudioPlayer {
+class AndroidAudioPlayer(private val context: Context, private val owner: PlaybackLease, private val scope: CoroutineScope,
+    private val connection: () -> ListenableFuture<MediaController> = {
+        MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java))).buildAsync()
+    }) : JournalAudioPlayer {
     private val mutableState = MutableStateFlow(AudioPlayback())
     override val state = mutableState.asStateFlow()
     private var future: ListenableFuture<MediaController>? = null
@@ -27,8 +30,9 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
     private var progress: Job? = null
     private var closed = false
     private val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) { publish(player) }
+        override fun onEvents(player: Player, events: Player.Events) { publish(player); updateProgress(player) }
         override fun onPlayerError(error: PlaybackException) {
+            progress?.cancel()
             mutableState.value = state.value.copy(playing = false, buffering = false, error = "Audio could not be played. Try again.")
         }
     }
@@ -43,8 +47,7 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
         player.prepare()
         player.play()
         mutableState.value = AudioPlayback(buffering = true)
-        progress?.cancel()
-        progress = scope.launch { while (isActive) { publish(player); delay(100) } }
+        updateProgress(player)
     }
     override fun toggle() {
         val player = controller ?: return
@@ -57,7 +60,8 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
     }
     override fun seek(milliseconds: Long) {
         val player = controller ?: return
-        player.seekTo(milliseconds.coerceIn(0, player.duration.coerceAtLeast(0)))
+        val position = AudioTimeline.seekPosition(milliseconds, player.duration) ?: return
+        player.seekTo(position)
         publish(player)
     }
     override fun stop() {
@@ -77,19 +81,26 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
 
     private suspend fun connect(): MediaController {
         controller?.let { return it }
-        val pending = future ?: MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java)))
-            .buildAsync().also { future = it }
+        val pending = future ?: connection().also { future = it }
         val player = suspendCancellableCoroutine { continuation ->
             pending.addListener({
                 if (continuation.isActive) {
                     try { continuation.resume(pending.get()) }
-                    catch (failure: Exception) { continuation.resumeWithException(failure) }
+                    catch (failure: Exception) {
+                        if (future === pending) { MediaController.releaseFuture(pending); future = null }
+                        continuation.resumeWithException(failure)
+                    }
                 }
             }, ContextCompat.getMainExecutor(context))
         }
         controller = player
         player.addListener(listener)
         return player
+    }
+    private fun updateProgress(player: Player) {
+        if (!player.isPlaying) { progress?.cancel(); return }
+        if (progress?.isActive == true) return
+        progress = scope.launch { while (isActive && player.isPlaying) { publish(player); delay(100) } }
     }
     private fun publish(player: Player) {
         mutableState.value = AudioPlayback(player.isPlaying, player.playbackState == Player.STATE_BUFFERING,

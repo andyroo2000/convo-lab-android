@@ -15,6 +15,9 @@ object AudioTimeline {
     private fun validTime(sentence: SentenceTiming) = sentence.start.isFinite() && sentence.end.isFinite() &&
         sentence.start >= 0 && sentence.end > sentence.start && sentence.end <= 86_400
 
+    fun seekPosition(position: Long, duration: Long): Long? =
+        if (duration <= 0) null else position.coerceIn(0, duration)
+
     fun current(sentences: List<SentenceTiming>, seconds: Double): Int? =
         sentences.indexOfLast { seconds >= it.start && seconds < it.end }.takeIf { it >= 0 }
 

@@ -60,6 +60,13 @@ class AudioCoordinatorTest {
         assertTrue(fixture.player.closed)
         assertNull(fixture.player.played)
     }
+    @Test fun chosenButNotYetPlayedVoiceSurvivesReopeningAgainstAnOlderServerPreference() = runTest {
+        val fixture = AudioFixture(this)
+        fixture.storage.options = VoiceOptions(fixture.api.voices, "second")
+        fixture.coordinator.loadVoices(fixture.source).join()
+        assertEquals("second", fixture.coordinator.state.value.options[fixture.source.key]?.selected)
+    }
+
     @Test fun tutorRecordingUsesItsHistoricalQuestionWithoutLoadingNarrationVoices() = runTest {
         val fixture = AudioFixture(this)
         val source = fixture.source.copy(content = AudioContent.Question(JournalId(JournalIds.newId()), "質問。", "質問[しつもん]。", "Tutor"))
