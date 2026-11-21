@@ -76,9 +76,23 @@ class AccountDeletionTest {
         controller.open(); controller.delete("fixture"); advanceUntilIdle()
         assertNull(fixture.sessions.snapshot())
         assertTrue(controller.state.value.pending)
-        assertTrue(fixture.disk.purged.isEmpty())
+        assertEquals(listOf(1L), fixture.disk.purged)
         fixture.disk.failMarker = false
         controller.retry(); advanceUntilIdle()
+        assertFalse(controller.state.value.pending)
+    }
+    @Test fun credentialClearFailureDoesNotPreventConfirmedFileRemoval() = runTest {
+        val fixture = fixture()
+        fixture.credentials.failClear = true
+        val controller = fixture.controller(this)
+        controller.open(); controller.delete("fixture"); advanceUntilIdle()
+        assertNull(fixture.sessions.snapshot())
+        assertNotNull(fixture.credentials.saved)
+        assertEquals(listOf(1L), fixture.disk.purged)
+        assertTrue(controller.state.value.pending)
+        fixture.credentials.failClear = false
+        controller.retry(); advanceUntilIdle()
+        assertNull(fixture.credentials.saved)
         assertFalse(controller.state.value.pending)
     }
     @Test fun unreadableCleanupMarkersBlockStartupRestoreUntilRetry() = runTest {
@@ -109,9 +123,10 @@ private class DeletionFixture(val sessions: SessionController, val credentials: 
 private fun deletionSession(id: Long) = Session("fixture-$id", Account(id, "Fixture", "$id@example.invalid"))
 private class DeletionCredentials : SessionStorage {
     var saved: Session? = deletionSession(1)
+    var failClear = false
     override fun read() = saved
     override fun write(session: Session) { saved = session }
-    override fun clear() { saved = null }
+    override fun clear() { if (failClear) throw IOException(); saved = null }
 }
 private class DeletionAuth : AuthGateway {
     var result = deletionSession(1)

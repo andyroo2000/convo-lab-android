@@ -46,3 +46,12 @@ private fun DeletionConfirmation(state: AccountDeletionState, controller: Accoun
         Text("Permanently delete account", color = MaterialTheme.colorScheme.error)
     }
 }
+
+@Composable
+fun AccountCleanupRetry(state: AccountDeletionState, controller: AccountDeletionController) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), verticalArrangement = Arrangement.Center) {
+        Text("Local account cleanup", style = MaterialTheme.typography.headlineSmall)
+        Text(state.error ?: "Local cleanup needs to finish before sign-in can be restored.")
+        TextButton(onClick = controller::retry) { Text("Retry cleanup") }
+    }
+}

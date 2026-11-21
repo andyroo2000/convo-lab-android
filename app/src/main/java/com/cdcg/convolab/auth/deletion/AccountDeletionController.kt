@@ -5,6 +5,7 @@ import com.cdcg.convolab.network.userMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 data class AccountDeletionState(val showing: Boolean = false, val busy: Boolean = false,
     val confirmed: Boolean = false, val cleanup: Boolean = false, val error: String? = null, val pending: Boolean = false)
@@ -20,14 +21,14 @@ class AccountDeletionController(private val sessions: SessionController, private
         if (mutable.value.busy) return
         if (mutable.value.pending) openCleanup() else mutable.value = AccountDeletionState(showing = true)
     }
-    fun openCleanup() { mutable.value = mutable.value.copy(showing = true, cleanup = true) }
-    fun dismiss() { if (!mutable.value.busy) mutable.value = mutable.value.copy(showing = false) }
+    fun openCleanup() { mutable.update { it.copy(showing = true, cleanup = true) } }
+    fun dismiss() { if (!mutable.value.busy) mutable.update { it.copy(showing = false) } }
     fun delete(password: String) {
         if (mutable.value.busy || mutable.value.confirmed) return
         if (password.isEmpty() || password.length > 1024) {
-            mutable.value = mutable.value.copy(error = "Enter your current password."); return
+            mutable.update { it.copy(error = "Enter your current password.") }; return
         }
-        mutable.value = mutable.value.copy(busy = true, error = null)
+        mutable.update { it.copy(busy = true, error = null) }
         scope.launch {
             performDeletion(password)
         }
@@ -35,48 +36,51 @@ class AccountDeletionController(private val sessions: SessionController, private
     private suspend fun performDeletion(password: String) {
         try {
             val session = sessions.snapshot() ?: error("No signed-in account")
-            api.delete(session, password)
             withContext(NonCancellable) {
+                api.delete(session, password)
                 confirmed.add(session.account.id)
-                mutable.value = mutable.value.copy(confirmed = true, cleanup = true, pending = true)
+                mutable.update { it.copy(confirmed = true, cleanup = true, pending = true) }
                 clean(session.account.id)
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { report(failure) }
-        finally { mutable.value = mutable.value.copy(busy = false) }
+        finally { mutable.update { it.copy(busy = false) } }
     }
 
     fun retry() {
         if (mutable.value.busy) return
+        mutable.update { it.copy(busy = true) }
         scope.launch { recover() }
     }
     suspend fun recover() {
-        mutable.value = mutable.value.copy(busy = true, error = null)
+        mutable.update { it.copy(busy = true, error = null) }
         try {
             confirmed.addAll(storage.pending())
-            if (confirmed.isNotEmpty()) mutable.value = mutable.value.copy(confirmed = true, cleanup = true, pending = true)
+            if (confirmed.isNotEmpty()) mutable.update { it.copy(confirmed = true, cleanup = true, pending = true) }
             for (id in confirmed.toList()) withContext(NonCancellable) { clean(id) }
             recovered()
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { mutable.value = mutable.value.copy(cleanup = true, pending = true,
-            error = "Local account cleanup could not finish. Please retry before signing in.") }
-        finally { mutable.value = mutable.value.copy(busy = false) }
+        catch (_: Exception) { mutable.update { it.copy(cleanup = true, pending = true,
+            error = "Local account cleanup could not finish. Please retry before signing in.") } }
+        finally { mutable.update { it.copy(busy = false) } }
     }
     private suspend fun clean(id: Long) {
         // Even if persisting the marker fails, stop the deleted account immediately.
         val marker = runCatching { storage.markConfirmed(id) }
         sessions.work.stop(id)
-        sessions.forgetDeletedAccount(id)
+        val credentials = runCatching { sessions.forgetDeletedAccount(id) }
+        val files = runCatching { storage.purge(id) }
         marker.getOrThrow()
-        storage.purge(id)
+        credentials.getOrThrow()
+        files.getOrThrow()
         storage.complete(id)
         confirmed.remove(id)
-        mutable.value = mutable.value.copy(pending = confirmed.isNotEmpty())
+        mutable.update { it.copy(pending = confirmed.isNotEmpty()) }
     }
     private fun report(failure: Exception) {
         val cleanup = confirmed.isNotEmpty() || mutable.value.confirmed
-        mutable.value = mutable.value.copy(pending = cleanup,
-            error = if (cleanup) "Your account was deleted. Some local files still need to be removed. Please retry cleanup."
-                else failure.userMessage())
+        mutable.update { it.copy(pending = cleanup,
+            error = if (cleanup) "Your account was deleted. Some local account data still needs cleanup. Please retry cleanup."
+                else failure.userMessage()) }
     }
 }

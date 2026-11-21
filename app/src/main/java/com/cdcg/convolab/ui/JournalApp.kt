@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cdcg.convolab.auth.deletion.AccountCleanupRetry
 import com.cdcg.convolab.auth.deletion.AccountDeletionDialog
 import com.cdcg.convolab.auth.AuthScreen
 import com.cdcg.convolab.auth.AuthViewModel
@@ -29,6 +30,7 @@ fun JournalApp(openTypingLab: (() -> Unit)?, model: AuthViewModel = viewModel())
     val account = state.account
     Box(Modifier.fillMaxSize()) {
     when {
+        state.restoring && deletion.pending && !deletion.busy -> AccountCleanupRetry(deletion, model.deletion)
         state.restoring -> Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
