@@ -1,12 +1,12 @@
 package com.cdcg.convolab
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.cdcg.convolab.ui.ConvoLabTheme
-import com.cdcg.convolab.typing.TypingPlayground
-import com.cdcg.convolab.ui.WelcomeScreen
+import com.cdcg.convolab.ui.JournalApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,7 +14,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ConvoLabTheme {
-                if (BuildConfig.DEBUG) TypingPlayground() else WelcomeScreen()
+                JournalApp(openTypingLab = if (BuildConfig.DEBUG) ({
+                    startActivity(Intent().setClassName(this, "com.cdcg.convolab.TypingLabActivity"))
+                }) else null)
             }
         }
     }
