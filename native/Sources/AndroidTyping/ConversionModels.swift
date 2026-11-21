@@ -39,9 +39,10 @@ struct ConversionOutput: Encodable {
 }
 
 public enum PlaygroundFailure: Error, LocalizedError {
-  case missingModel, modelNotLoaded, invalidReading, invalidBoundary
+  case missingModel, modelNotLoaded, invalidReading, invalidBoundary, cancelled
   public var errorDescription: String? {
     switch self {
+    case .cancelled: "Conversion was cancelled."
     case .missingModel: "The bundled typing model is missing."
     case .modelNotLoaded: "The neural model could not start. No dictionary fallback was used."
     case .invalidReading: "Convert one line of 1–120 characters at a time."

@@ -13,7 +13,7 @@ extension ZenzContext {
     func makeBoundaryBatchScorer() throws -> BoundaryBatchScorer? {
         #if ZenzaiCPU || targetEnvironment(simulator)
         // CPU quantized matrix kernels change rounding with batch shape. Keep
-        // upstream's exact scoring path on CPU instead of weakening parity.
+        // CPU token-prefix scoring preserves the upstream scores exactly.
         return nil
         #else
         var params = Self.ctx_params
@@ -27,9 +27,9 @@ extension ZenzContext {
         #endif
     }
 
-    func boundaryScores(texts: [String], prompt: String, batch: BoundaryBatchScorer?) throws -> [Float] {
+    func boundaryScores(texts: [String], prompt: String, batch: BoundaryBatchScorer?, cancelled: () -> Bool = { false }) throws -> [Float] {
         guard let batch else {
-            return texts.map { evaluate(text: prompt + $0, ignorePrompt: prompt) }
+            return try evaluateCandidatePrefixes(texts, prompt: prompt, cancelled: cancelled)
         }
         let sentences = texts.map { tokenize(text: prompt + $0, add_bos: true, add_eos: true) }
         let promptCount = tokenize(text: prompt, add_bos: true).count
@@ -138,9 +138,7 @@ final class BoundaryBatchScorer {
     }
 
     private func normalization(_ logits: UnsafeMutablePointer<Float>, vocabulary: Int) -> Float {
-        var denominator: Float = 0
-        for word in 0..<vocabulary { denominator += expf(logits[word]) }
-        return logf(denominator)
+        BoundaryNormalization.logarithm(logits, vocabulary: vocabulary)
     }
 
     private func normalizedScores(_ sentences: [[llama_token]], promptCount: Int,

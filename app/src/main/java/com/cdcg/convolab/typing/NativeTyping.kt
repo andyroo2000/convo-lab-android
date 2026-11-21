@@ -5,5 +5,7 @@ internal object NativeTyping {
     init { System.loadLibrary("typing_jni") }
     external fun create(path: ByteArray): Long
     external fun convert(handle: Long, request: ByteArray): ByteArray?
+    external fun beginOperation(handle: Long)
+    external fun cancelOperation(handle: Long)
     external fun destroy(handle: Long)
 }

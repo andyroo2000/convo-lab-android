@@ -25,3 +25,14 @@ public func typingConvert(_ handle: UnsafeMutableRawPointer, _ json: UnsafePoint
 public func typingFree(_ text: UnsafeMutablePointer<CChar>) {
     free(text)
 }
+
+// The owner joins the cancellation watcher before it destroys this handle.
+@_cdecl("typing_begin_operation")
+public func typingBeginOperation(_ handle: UnsafeMutableRawPointer) {
+    Unmanaged<AndroidConverter>.fromOpaque(handle).takeUnretainedValue().beginOperation()
+}
+
+@_cdecl("typing_cancel_operation")
+public func typingCancelOperation(_ handle: UnsafeMutableRawPointer) {
+    Unmanaged<AndroidConverter>.fromOpaque(handle).takeUnretainedValue().cancelOperation()
+}

@@ -1,8 +1,8 @@
 package com.cdcg.convolab.typing
 
 import android.content.Context
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -13,7 +13,7 @@ class OnDeviceEngine(context: Context) : TypingEngine {
     private var closed = false
 
     override suspend fun prepare() = withContext(Dispatchers.IO) {
-        mutex.withLock {
+        NativeOperation.mutex.withLock {
             check(!closed)
             if (handle == 0L) {
                 handle = NativeTyping.create(assets.prepare().absolutePath.toByteArray(Charsets.UTF_8))
@@ -25,9 +25,9 @@ class OnDeviceEngine(context: Context) : TypingEngine {
 
     override suspend fun convert(text: String): Conversion = withContext(Dispatchers.Default) {
         require(text.isNotBlank() && TypingLimits.accepts(text))
-        mutex.withLock {
+        NativeOperation.mutex.withLock {
             check(handle != 0L && !closed)
-            convertLocked(text)
+            NativeOperation.run(handle) { convertLocked(text) }
         }
     }
 
@@ -43,13 +43,8 @@ class OnDeviceEngine(context: Context) : TypingEngine {
             result.getDouble("engineMs"), result.optDouble("resetMs", 0.0))
     }
 
-    companion object {
-        // Native backend configuration and asset installation are process-wide.
-        private val mutex = Mutex()
-    }
-
-    override suspend fun close() = withContext(Dispatchers.IO) {
-        mutex.withLock {
+    override suspend fun close() = withContext(Dispatchers.IO + NonCancellable) {
+        NativeOperation.mutex.withLock {
             if (handle != 0L) NativeTyping.destroy(handle)
             handle = 0L
             closed = true
