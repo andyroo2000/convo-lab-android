@@ -31,6 +31,7 @@ interface JournalAudioGateway {
     suspend fun generate(request: AudioRequest): AudioPayload
 }
 interface AudioStorage {
+    fun protect(request: AudioRequest?) = Unit
     fun read(request: AudioRequest): CachedAudio?
     fun write(request: AudioRequest, payload: AudioPayload): CachedAudio
     fun voices(source: AudioSource): VoiceOptions?

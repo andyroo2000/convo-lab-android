@@ -1,6 +1,13 @@
 package com.cdcg.convolab.journal.audio
 
 import android.content.Intent
+import android.content.ComponentName
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import androidx.media3.common.util.UnstableApi
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import java.io.IOException
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +32,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 
+@androidx.annotation.OptIn(UnstableApi::class)
 class AudioUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -32,6 +40,8 @@ class AudioUiTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val lease = PlaybackLease(999997)
     private lateinit var coordinator: AudioCoordinator
+    private var connected: ListenableFuture<MediaController>? = null
+    private var connections = 0
     private val source = AudioSource(JournalId(JournalIds.newId()), AudioContent.Final(JournalId(JournalIds.newId()), 1,
         "今日は晴れです。公園へ行きました。", "今日[きょう]は晴[は]れです。公園[こうえん]へ行[い]きました。", "A day at the park"))
     @After fun stop() {
@@ -76,10 +86,35 @@ class AudioUiTest {
         compose.runOnIdle { coordinator.close(); PlaybackOwner.active = null }
         assertFalse(coordinator.playback.value.playing)
     }
-    private fun launchAudio() {
+    @Test fun failedServiceConnectionCanRetryWithoutChangingAccounts() {
+        launchAudio(failFirstConnection = true)
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.state.value.errors[source.key] != null }
+        assertNull(coordinator.state.value.active)
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.playback.value.playing }
+        assertNotNull(coordinator.state.value.active)
+    }
+
+    @Test fun releasedControllerCanReconnectAndResumeCachedAudio() {
+        launchAudio()
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.playback.value.playing }
+        compose.runOnIdle { connected!!.get().release(); coordinator.toggle(source) }
+        compose.waitUntil(5_000) { coordinator.playback.value.error != null }
+        compose.onNodeWithText("Listen").performClick()
+        compose.waitUntil(10_000) { coordinator.playback.value.playing }
+        assertEquals(2, connections)
+    }
+
+    private fun launchAudio(failFirstConnection: Boolean = false) {
         PlaybackOwner.active = lease
         val api = AudioUiGateway()
-        val player = AndroidAudioPlayer(context, lease, scope)
+        val player = AndroidAudioPlayer(context, lease, scope) {
+            connections++
+            if (failFirstConnection && connections == 1) Futures.immediateFailedFuture(IOException("Fixture connection failure"))
+            else MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java))).buildAsync().also { connected = it }
+        }
         coordinator = AudioCoordinator(AudioAccess(api, AudioDiskStore(context.noBackupFilesDir, lease.accountId), player), scope)
         compose.setContent {
             ConvoLabTheme { CompositionLocalProvider(LocalJournalAudio provides coordinator) {
