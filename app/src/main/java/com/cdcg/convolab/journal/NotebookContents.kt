@@ -11,7 +11,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -22,8 +26,9 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
     var deleting by remember { mutableStateOf<JournalRecord?>(null) }
     ModalBottomSheet(onDismissRequest = { controller.showContents(false) }, containerColor = JournalBrand.Paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Contents", fontFamily = JournalBrand.Heading, fontSize = 26.sp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                JournalCloseButton("Close contents") { controller.showContents(false) }
+                Text("Contents", fontSize = 18.sp, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
                 TextButton(onClick = { controller.newEntry() }, enabled = !state.busy) { Text("New entry") }
             }
             state.error?.let { Text(it, color = Color(0xFF974634)) }
@@ -49,19 +54,20 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
 @Composable
 private fun ContentsRow(record: JournalRecord, busy: Boolean, select: () -> Unit, command: (String) -> Unit) {
     var menu by remember { mutableStateOf(false) }
-    Card(onClick = select, enabled = !busy, colors = CardDefaults.cardColors(containerColor = Color(0xFFF0EFE6))) {
+    Card(onClick = select, enabled = !busy, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Row(Modifier.fillMaxWidth().padding(14.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(record.displayTitle(), fontFamily = JournalBrand.Heading, fontSize = 20.sp)
-                Text(displayDate(record.displayDate()), color = Color(0xFF747469))
+                Text(record.displayTitle(), fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                Text(displayDate(record.displayDate()), fontFamily = FontFamily.SansSerif, fontSize = 13.sp, color = Color(0xFF747469))
                 if (record.pendingDelete) Text("Deletion pending", color = Color(0xFF974634))
                 else if (record.draft != null) Text("Draft", color = Color(0xFF46764C))
             }
             Box {
                 TextButton(onClick = { menu = true }, enabled = !busy,
                     modifier = Modifier.semantics { contentDescription = "Actions for ${record.displayTitle()}" }) { Text("•••") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    for (action in listOf("Rename", "Delete")) DropdownMenuItem(text = { Text(action) }, onClick = { menu = false; command(action) })
+                PaperMenu(menu, { menu = false }) {
+                    PaperMenuItem("Rename", JournalSymbol.Appearance) { menu = false; command("Rename") }
+                    PaperMenuItem("Delete", JournalSymbol.Trash) { menu = false; command("Delete") }
                 }
             }
         }

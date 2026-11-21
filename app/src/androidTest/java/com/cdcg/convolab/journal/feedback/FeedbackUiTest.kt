@@ -37,7 +37,7 @@ class FeedbackUiTest {
         launchNotebook(submit = true)
         compose.onNodeWithText("Who was driving?").assertIsDisplayed()
         screenshot("feedback-clarification")
-        compose.onNodeWithText("Write my own answer").performScrollTo().performClick()
+        compose.onNodeWithText("Something else").performScrollTo().performClick()
         compose.onNodeWithTag("clarification-answer").performScrollTo().performClick().performTextInput("My friend was driving.")
         compose.onNodeWithTag("clarification-send").performScrollTo()
         assertAboveKeyboard("clarification-send")
@@ -56,10 +56,13 @@ class FeedbackUiTest {
         screenshot("feedback-final")
         compose.onNodeWithContentDescription("More journal options").performScrollTo().performClick()
         compose.onNodeWithText("Edit final").performClick()
+        screenshot("feedback-final-editor")
+        compose.onNodeWithText("Draft").assertIsNotEnabled()
+        compose.onNodeWithText("Contents").assertIsNotEnabled()
         val text = "友達と映画を見ました。\n".repeat(18)
         compose.onNodeWithTag("final-editor").performClick().performTextReplacement(text)
         assertAboveKeyboard("final-save")
-        val heading = compose.onNodeWithText("Edit final").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
+        val heading = compose.onNodeWithText("Draft").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
         assertTrue("Editor heading must remain on screen", heading.top >= 0)
         screenshot("feedback-final-editor-keyboard")
         compose.onNodeWithTag("final-save").performClick()

@@ -10,19 +10,22 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
+import com.cdcg.convolab.ui.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 @Composable
 fun VoicePicker(options: VoiceOptions, busy: Boolean, dismiss: () -> Unit, choose: (NarrationVoice) -> Unit) {
-    AlertDialog(onDismissRequest = dismiss, title = { Text("Narration voice") }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Choose a voice for this final entry.")
-            options.voices.forEach { voice ->
-                OutlinedButton(onClick = { choose(voice) }, enabled = !busy,
-                    modifier = Modifier.fillMaxWidth().semantics { selected = voice.id == options.selected }) {
-                    VoicePortrait(voice, Modifier.size(56.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(voice.name + if (voice.id == options.selected) " · Selected" else "")
+    JournalSheet("Narration voice", dismiss) {
+        Text("Used when you play the corrected version.")
+        options.voices.chunked(2).forEach { voices ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                voices.forEach { voice ->
+                    JournalAvatarChoice(voice.id == options.selected, voice.name, !busy, Modifier.weight(1f), { choose(voice) }) {
+                        VoicePortrait(voice, Modifier.size(80.dp).clearAndSetSemantics {})
+                    }
                 }
+                if (voices.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-    }, confirmButton = { TextButton(onClick = dismiss) { Text("Done") } })
+    }
 }

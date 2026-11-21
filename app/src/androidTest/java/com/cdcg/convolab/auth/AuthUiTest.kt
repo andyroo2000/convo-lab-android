@@ -17,6 +17,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.ConvoLabTheme
+import com.cdcg.convolab.ui.cancelFixtureAutofill
+import org.junit.After
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.*
 import org.junit.Rule
@@ -27,6 +29,8 @@ import org.junit.runner.RunWith
 class AuthUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+
+    @After fun cancelAutofill() { compose.activity.cancelFixtureAutofill() }
 
     @Test fun signInAndResetRemainReachableWithKeyboard() {
         val state = mutableStateOf(AuthState(restoring = false))
@@ -46,6 +50,7 @@ class AuthUiTest {
         compose.onNodeWithTag("auth-submit").assertIsEnabled()
         assertSubmitAboveKeyboard()
         screenshot("auth-login-keyboard")
+        compose.activity.cancelFixtureAutofill()
         compose.onNodeWithTag("auth-submit").performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(5_000) { submitted.get() == AuthPage.SignIn }
         assertEquals(AuthPage.SignIn, submitted.get())

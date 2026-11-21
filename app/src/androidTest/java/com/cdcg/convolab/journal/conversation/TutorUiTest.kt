@@ -17,6 +17,9 @@ import com.cdcg.convolab.auth.Session
 import com.cdcg.convolab.journal.*
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.ConvoLabTheme
+import com.cdcg.convolab.ui.AccountMenu
+import com.cdcg.convolab.ui.LocalTutorPicker
+import androidx.compose.runtime.CompositionLocalProvider
 import com.cdcg.convolab.ui.JournalBrand
 import kotlinx.coroutines.*
 import org.junit.After
@@ -36,21 +39,25 @@ class TutorUiTest {
             val state by controller.state.collectAsState()
             ConvoLabTheme {
                 Column(Modifier.fillMaxSize().background(JournalBrand.Paper).safeDrawingPadding()
-                    .verticalScroll(rememberScrollState()).padding(20.dp)) { TutorCard(TutorPresentation(state, controller)) }
+                    .verticalScroll(rememberScrollState()).padding(20.dp)) {
+                    CompositionLocalProvider(LocalTutorPicker provides { controller.showPicker() }) { AccountMenu("Naomi", {}, null) }
+                    TutorCard(TutorPresentation(state, controller))
+                }
             }
         }
         compose.runOnIdle { controller.open(QuestionSource(JournalId(JournalIds.newId()), JournalId(JournalIds.newId()))) }
         compose.waitUntil(5_000) { controller.state.value.question != null && !controller.state.value.busy }
         compose.onNodeWithContentDescription("Hana, your tutor").assertIsDisplayed()
         compose.onNodeWithText("What did you do today?").assertDoesNotExist()
-        compose.onNodeWithText("Show English").performClick()
+        compose.onNodeWithContentDescription("Show English").performClick()
         compose.onNodeWithText("What did you do today?").assertIsDisplayed()
         capture("tutor-question.png")
-        compose.onNodeWithText("Choose your tutor").performClick()
+        compose.onNodeWithContentDescription("Account menu").performClick()
+        compose.onNodeWithText("Tutor").performClick()
         compose.waitUntil(5_000) { controller.state.value.preferences != null && !controller.state.value.busy }
-        compose.onNodeWithText("Hana · Selected").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Hana").assertIsDisplayed()
         capture("tutor-picker.png")
-        compose.onNodeWithText("Ren", substring = false).performClick()
+        compose.onNodeWithContentDescription("Ren").performClick()
         compose.waitUntil(5_000) { !controller.state.value.choosing && !controller.state.value.busy }
         assertEquals("ren", controller.state.value.preferences?.selectedId)
         compose.onNodeWithContentDescription("Hana, your tutor").assertIsDisplayed()

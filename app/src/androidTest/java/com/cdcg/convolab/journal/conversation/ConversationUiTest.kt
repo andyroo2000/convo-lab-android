@@ -72,6 +72,26 @@ class ConversationUiTest {
         assertEquals(1, transport.children.size)
     }
 
+    @Test fun replyFinalEditorKeepsItsKeyboardActionsVisibleAndConversationMounted() {
+        launchNotebook()
+        val first = composer()
+        write(first, "映画を見ました。")
+        submit(first)
+        compose.waitUntil(10_000) { current().state.value.replies.size == 1 && current().state.value.composer != null }
+        val nextId = composer().state.value.record.id
+        val reply = current().state.value.replies.single().controller
+        compose.waitUntil(5_000) { reply.workflow.state.value.snapshot?.analysis?.status == WorkStatus.Ready }
+        compose.runOnIdle { reply.workflow.beginFinalEdit() }
+        compose.onNodeWithTag("final-editor").performClick().performTextReplacement("友達と映画を見ました。\n".repeat(12))
+        device.waitForIdle()
+        compose.onNodeWithTag("final-save").assertIsDisplayed()
+        capture(TestOutput.file("conversation-final-editor-keyboard.png"))
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitUntil(5_000) { reply.workflow.state.value.finalEdit == null }
+        assertEquals(nextId, composer().state.value.record.id)
+        assertEquals(1, current().state.value.replies.size)
+    }
+
     @Test fun discardRequiresConfirmationAndKeepsTheOriginalOnCancel() {
         launchNotebook()
         val first = composer()

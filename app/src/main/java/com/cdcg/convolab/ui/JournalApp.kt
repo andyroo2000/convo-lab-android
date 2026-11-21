@@ -45,21 +45,3 @@ fun JournalApp(openTypingLab: (() -> Unit)?, model: AuthViewModel = viewModel())
         title = { Text("Account") }, text = { Text(state.error.orEmpty()) },
         confirmButton = { TextButton(onClick = model::clearMessage) { Text("OK") } })
 }
-
-@Composable
-fun AccountMenu(name: String, signOut: () -> Unit, openTypingLab: (() -> Unit)?, settings: (() -> Unit)? = null) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }, modifier = Modifier.semantics { contentDescription = "Account menu" }) {
-            Box(Modifier.size(40.dp).background(JournalBrand.Paper, CircleShape), contentAlignment = Alignment.Center) {
-                Text(name.codePoints().findFirst().orElse(63).let { String(Character.toChars(it)).uppercase() }, color = JournalBrand.Ink, fontFamily = JournalBrand.Anton, fontSize = 24.sp)
-            }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text(name) }, enabled = false, onClick = {})
-            settings?.let { DropdownMenuItem(text = { Text("Settings") }, onClick = { expanded = false; it() }) }
-            openTypingLab?.let { DropdownMenuItem(text = { Text("Japanese typing lab") }, onClick = { expanded = false; it() }) }
-            DropdownMenuItem(text = { Text("Sign out") }, onClick = { expanded = false; signOut() })
-        }
-    }
-}

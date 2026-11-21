@@ -9,21 +9,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.auth.AuthPasswordField
+import com.cdcg.convolab.ui.*
 
 @Composable
 fun AccountDeletionDialog(state: AccountDeletionState, controller: AccountDeletionController) {
     if (!state.showing) return
     val password = remember { TextFieldState() }
-    AlertDialog(onDismissRequest = controller::dismiss,
-        title = { Text(if (state.cleanup) "Account cleanup" else "Delete your account?") },
-        text = { DeletionExplanation(state, password) },
-        confirmButton = { DeletionConfirmation(state, controller, password) },
-        dismissButton = { if (!state.cleanup) TextButton(onClick = controller::dismiss, enabled = !state.busy) { Text("Cancel") } })
+    JournalSheet(if (state.cleanup) "Account cleanup" else "Delete your account?", controller::dismiss) {
+        DeletionExplanation(state, password)
+        DeletionConfirmation(state, controller, password)
+        if (!state.cleanup) JournalDraftButton("Cancel", controller::dismiss, style = DraftButtonStyle(enabled = !state.busy, filled = false))
+    }
 }
 
 @Composable
 private fun DeletionExplanation(state: AccountDeletionState, password: TextFieldState) {
-    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (state.cleanup) Text(if (state.pending) "Removing this account’s data from this device." else "Your account and its local data have been removed.")
         else {
             Text("This permanently deletes your entire ConvoLab / Learning OS account, including your journal and study data. This cannot be undone.")

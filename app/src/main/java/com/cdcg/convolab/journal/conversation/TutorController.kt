@@ -35,7 +35,7 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
     }
     fun close() { generation++; work?.cancel(); mutableState.value = TutorState() }
     fun reload() = action { source, epoch ->
-        val question = api.prepare(source)
+        val question = source?.let { api.prepare(it) } ?: return@action
         publish(epoch) { it.copy(question = question) }
         if (question.tutor == null) loadPicker(epoch)
     }
@@ -51,7 +51,7 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
         val preferences = api.choose(tutor)
         publish(epoch) { it.copy(preferences = preferences, choosing = false,
             notice = "${tutor.name} will teach future questions. Earlier questions keep their original tutor.") }
-        if (state.value.question?.tutor == null) {
+        if (source != null && state.value.question?.tutor == null) {
             val question = api.prepare(source)
             publish(epoch) { it.copy(question = question) }
         }
@@ -63,8 +63,8 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
         publish(epoch) { it.copy(preferences = preferences) }
     }
 
-    private fun action(operation: suspend (QuestionSource, Long) -> Unit) {
-        val source = state.value.source ?: return
+    private fun action(operation: suspend (QuestionSource?, Long) -> Unit) {
+        val source = state.value.source
         if (state.value.busy) return
         val epoch = generation
         mutableState.update { it.copy(busy = true, error = null, notice = null) }

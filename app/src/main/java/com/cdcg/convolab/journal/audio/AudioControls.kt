@@ -1,6 +1,12 @@
 package com.cdcg.convolab.journal.audio
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.cdcg.convolab.ui.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,7 +47,7 @@ private fun SourceAudioControls(presentation: AudioPresentation) {
     val source = presentation.source
     val coordinator = presentation.coordinator
     var choosing by rememberSaveable(source.key) { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.fillMaxWidth().background(Color(0xFFE4EEFC)), verticalArrangement = Arrangement.spacedBy(0.dp)) {
         AudioButtons(presentation) { choosing = true }
         if (presentation.preparing || presentation.loadingVoices) LinearProgressIndicator(Modifier.fillMaxWidth())
         presentation.active?.let { AudioTransport(presentation.playback, it, coordinator) }
@@ -57,11 +63,19 @@ private fun SourceAudioControls(presentation: AudioPresentation) {
 @Composable
 private fun AudioButtons(presentation: AudioPresentation, choose: () -> Unit) {
     val source = presentation.source
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { presentation.coordinator.toggle(source) }, enabled = source.content is AudioContent.Question || presentation.voices != null) {
+    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (source.content is AudioContent.Final) {
+            Surface(onClick = choose, shape = CircleShape, color = Color.Transparent, modifier = Modifier.size(88.dp).semantics { contentDescription = "Voice" }) {
+                presentation.voices?.let { voices -> voices.voices.firstOrNull { it.id == voices.selected }?.let { VoicePortrait(it, Modifier.size(88.dp)) } }
+            }
+        }
+        OutlinedButton(onClick = { presentation.coordinator.toggle(source) }, enabled = source.content is AudioContent.Question || presentation.voices != null,
+            shape = CircleShape, border = BorderStroke(1.dp, Color(0xFFBDD1E8)),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = Color(0xFF6393EF))) {
+            JournalIcon(if (presentation.playing) JournalSymbol.Pause else JournalSymbol.Play, Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
             Text(when { presentation.preparing -> "Cancel audio"; presentation.playing -> "Pause"; else -> "Listen" })
         }
-        if (source.content is AudioContent.Final) TextButton(onClick = choose, enabled = presentation.voices != null) { Text("Voice") }
     }
 }
 
@@ -78,25 +92,41 @@ private tailrec fun Context.audioActivity(): Activity? = when (this) {
     else -> null
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AudioTransport(playback: AudioPlayback, audio: CachedAudio, coordinator: AudioCoordinator) {
     var dragging by remember(audio.request.key) { mutableStateOf<Float?>(null) }
     val maximum = playback.duration.coerceAtLeast(1).toFloat()
-    Slider(value = (dragging ?: playback.position.toFloat()).coerceIn(0f, maximum),
-        onValueChange = { dragging = it }, onValueChangeFinished = { dragging?.let { coordinator.seek(it / 1000.0) }; dragging = null },
-        valueRange = 0f..maximum, enabled = playback.duration > 0,
+    val slider = remember(maximum) { SliderState(trackRange = 0f..maximum) }
+    SideEffect { slider.value = (dragging ?: playback.position.toFloat()).coerceIn(0f, maximum) }
+    Slider(state = slider,
+        onValueChange = { slider.value = it; dragging = it }, onValueChangeFinished = { dragging?.let { coordinator.seek(it / 1000.0) }; dragging = null },
+        enabled = playback.duration > 0,
+        thumb = { PaperSliderThumb(10.dp) }, track = { PaperSliderTrack(it, Color(0xFF6393EF)) },
         modifier = Modifier.semantics {
             contentDescription = "Audio position"
             stateDescription = "${audioTime(playback.position)} of ${audioTime(playback.duration)}"
         })
-    Text("${audioTime(playback.position)} / ${audioTime(playback.duration)}")
-    if (audio.sentences.isNotEmpty()) Row {
-        TextButton(onClick = { coordinator.adjacent(-1) }) { Text("Previous sentence") }
-        TextButton(onClick = { coordinator.adjacent(1) }) { Text("Next sentence") }
-    }
+    PlaybackDetails(playback, audio, coordinator)
 }
 
 private fun audioTime(milliseconds: Long): String {
     val seconds = milliseconds / 1000
     return "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
+}
+
+@Composable
+private fun PlaybackDetails(playback: AudioPlayback, audio: CachedAudio, coordinator: AudioCoordinator) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        TextButton(onClick = { expanded = true }, modifier = Modifier.semantics { contentDescription = "Playback details" }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
+            Text("${audioTime(playback.position)} / ${audioTime(playback.duration)}", fontSize = androidx.compose.ui.unit.TextUnit.Unspecified)
+        }
+        PaperMenu(expanded, { expanded = false }) {
+            if (audio.sentences.isNotEmpty()) {
+                PaperMenuItem("Previous sentence", JournalSymbol.Chevron) { expanded = false; coordinator.adjacent(-1) }
+                PaperMenuItem("Next sentence", JournalSymbol.Chevron) { expanded = false; coordinator.adjacent(1) }
+            }
+        }
+    }
 }

@@ -70,13 +70,14 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
     val choose: (Boolean) -> Unit = { fallback = it; if (entryId.isNotEmpty()) preferences?.select(entryId, it) }
     Column {
     FeedbackToolbar(final, choose, presentation, analysis)
+    if (final) FinalAudio(presentation, analysis, header = true)
     Surface(color = JournalBrand.Paper, shape = NotebookPaperShape, shadowElevation = 3.dp) {
         Column(Modifier.fillMaxWidth().heightIn(min = 280.dp).drawBehind {
             drawLine(Color(0xFFD58B78), Offset(15.dp.toPx(), 0f), Offset(15.dp.toPx(), size.height), 1.dp.toPx())
-        }.padding(start = 28.dp, end = 14.dp, top = 18.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, color = Color(0xFF745340), modifier = Modifier.fillMaxWidth())
-            Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 26.sp, color = Color(0xFF452713))
-            if (final) FinalAudio(presentation, analysis)
+        }.padding(start = 28.dp, end = 14.dp, top = 18.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 18.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
+            Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 30.sp, color = Color(0xFF4B1800), modifier = Modifier.padding(bottom = 18.dp))
+            if (final) FinalAudio(presentation, analysis, header = false)
             else DraftFeedback(analysis, presentation.state.entry?.body.orEmpty())
         }
     }
@@ -84,14 +85,13 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
 }
 
 @Composable
-private fun FinalAudio(presentation: FeedbackPresentation, analysis: Analysis) {
+private fun FinalAudio(presentation: FeedbackPresentation, analysis: Analysis, header: Boolean) {
     val entry = presentation.state.entry ?: return
     val source = remember(entry.id, analysis.id, analysis.replyRevision, analysis.finalText, analysis.finalReading) {
         AudioSource(JournalId(entry.id), AudioContent.Final(JournalId(analysis.id), analysis.replyRevision,
             analysis.finalText.orEmpty(), analysis.finalReading ?: analysis.finalText.orEmpty(), analysis.feedback?.title ?: entry.title ?: "Journal entry"))
     }
-    AudioReading(source)
-    AudioControls(source)
+    if (header) AudioControls(source) else AudioReading(source)
 }
 
 @Composable
@@ -102,6 +102,6 @@ fun FeedbackError(presentation: FeedbackPresentation) {
     }
 }
 
-private fun journalDate(value: String): String = try {
+internal fun journalDate(value: String): String = try {
     LocalDate.parse(value).format(DateTimeFormatter.ofPattern("yyyy年M月d日（E）", Locale.JAPAN))
 } catch (_: java.time.DateTimeException) { value }

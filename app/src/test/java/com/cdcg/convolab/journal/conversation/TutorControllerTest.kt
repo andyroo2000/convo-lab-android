@@ -11,6 +11,21 @@ import org.junit.Test
 class TutorControllerTest {
     private val source = QuestionSource(JournalId(JournalIds.newId()), JournalId(JournalIds.newId()))
 
+    @Test fun accountMenuCanChooseTutorBeforeAnEntryHasFeedback() = runTest {
+        val api = TutorFixture()
+        val controller = TutorController(api, backgroundScope)
+        controller.showPicker()
+        runCurrent()
+        assertTrue(controller.state.value.choosing)
+        assertEquals(2, controller.state.value.preferences?.tutors?.size)
+        controller.choose(api.ren)
+        runCurrent()
+        assertEquals("ren", controller.state.value.preferences?.selectedId)
+        assertNull(controller.state.value.question)
+        assertEquals(0, api.prepared)
+        assertFalse(controller.state.value.choosing)
+    }
+
     @Test fun changingPreferencePreservesExistingQuestionAttribution() = runTest {
         val api = TutorFixture()
         val controller = TutorController(api, backgroundScope)

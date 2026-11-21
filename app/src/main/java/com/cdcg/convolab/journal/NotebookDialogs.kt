@@ -1,31 +1,24 @@
 package com.cdcg.convolab.journal
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloseDraftSheet(state: NotebookState, controller: NotebookController) {
     var confirmingDelete by remember { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = controller::dismissClose, containerColor = JournalBrand.Paper) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Keep this draft?", fontFamily = JournalBrand.Serif, fontSize = 30.sp)
-            Text("Your writing is saved on this device as you type. Keep the draft to save it to your account and return later.", fontFamily = JournalBrand.Serif, fontSize = 20.sp)
-            state.error?.let { Text(it, color = Color(0xFF974634)) }
-            Button(onClick = { controller.keepAndClose() }, enabled = !state.busy) { Text("Keep draft & close") }
-            OutlinedButton(onClick = { confirmingDelete = true }, enabled = !state.busy) { Text("Delete draft") }
-            TextButton(onClick = controller::dismissClose, enabled = !state.busy) { Text("Keep writing") }
-        }
+    JournalSheet("Keep this draft?", controller::dismissClose) {
+        Text("Your writing is saved automatically. You can come back and finish it later.")
+        state.error?.let { Text(it, color = JournalStyle.Red) }
+        JournalDraftButton("Keep draft & close", { controller.keepAndClose() }, style = DraftButtonStyle(enabled = !state.busy))
+        JournalDraftButton("Delete draft", { confirmingDelete = true }, style = DraftButtonStyle(enabled = !state.busy, filled = false, destructive = true))
     }
     if (confirmingDelete) {
         val record = state.records.firstOrNull { it.id == state.draft.id } ?: JournalRecord(draft = state.draft)
@@ -39,16 +32,31 @@ fun CloseDraftSheet(state: NotebookState, controller: NotebookController) {
 @Composable
 fun RenameEntryDialog(record: JournalRecord, dismiss: () -> Unit, enabled: Boolean, save: (String) -> Unit) {
     var title by remember(record.id) { mutableStateOf(record.displayTitle().takeUnless { it == "Untitled entry" }.orEmpty()) }
-    AlertDialog(onDismissRequest = dismiss, title = { Text("Rename entry") },
-        text = { OutlinedTextField(value = title, onValueChange = { if (it.codePointCount(0, it.length) <= 255) title = it }, label = { Text("Title") }) },
-        confirmButton = { TextButton(onClick = { save(title) }, enabled = enabled) { Text("Save") } },
-        dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+    JournalSheet("Rename entry", dismiss) {
+        OutlinedTextField(value = title, onValueChange = { if (it.codePointCount(0, it.length) <= 255) title = it },
+            label = { Text("Title") }, textStyle = LocalJournalTypography.current.style, shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, unfocusedBorderColor = JournalStyle.Border), modifier = Modifier.fillMaxWidth())
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, androidx.compose.ui.Alignment.End)) {
+            JournalDraftButton("Cancel", dismiss, style = DraftButtonStyle(filled = false))
+            JournalDraftButton("Save", { save(title) }, style = DraftButtonStyle(enabled = enabled && title.isNotBlank()))
+        }
+    }
 }
 
 @Composable
 fun DeleteEntryDialog(record: JournalRecord, dismiss: () -> Unit, enabled: Boolean, delete: () -> Unit) {
-    AlertDialog(onDismissRequest = dismiss, title = { Text("Delete entry?") },
-        text = { Text("Delete “${record.displayTitle()}” and its conversation? This cannot be undone.") },
-        confirmButton = { TextButton(onClick = delete, enabled = enabled) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })
+    JournalSheet("Delete this entry?", dismiss) {
+        Text("This entry will be permanently deleted. You can’t undo this action.")
+        Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, JournalStyle.Border)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(record.displayTitle(), style = LocalJournalTypography.current.style)
+                Text(record.displayDate())
+                Text(record.editableDraft().body.ifEmpty { "Empty draft" }, style = LocalJournalTypography.current.style, maxLines = 3)
+            }
+        }
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, androidx.compose.ui.Alignment.End)) {
+            JournalDraftButton("Keep entry", dismiss, style = DraftButtonStyle(filled = false))
+            JournalDraftButton("Delete entry", delete, style = DraftButtonStyle(enabled = enabled, destructive = true))
+        }
+    }
 }

@@ -18,7 +18,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
 
 data class WritingOptions(val label: String, val enabled: Boolean = true, val style: TextStyle = TextStyle.Default, val placeholder: String = "")
 
@@ -31,9 +31,9 @@ fun JournalWritingField(text: String, changed: (String) -> Unit, options: Writin
     if (mode == JournalKeyboard.Choose) {
         OutlinedButton(onClick = { choosing = true }, enabled = options.enabled) { Text("Choose keyboard") }
     } else InputEditorField(editor, options, modifier, mode)
-    if (choosing && session != null) AlertDialog(onDismissRequest = { choosing = false },
-        title = { Text("What keyboard do you use?") }, text = { KeyboardChoices(session.preference, onboarding = true) { choosing = false } },
-        confirmButton = { TextButton(onClick = { choosing = false }) { Text("Close") } })
+    if (choosing && session != null) JournalSheet("What keyboard do you use?", { choosing = false }) {
+        KeyboardChoices(session.preference, onboarding = true) { choosing = false }
+    }
 }
 
 @Composable

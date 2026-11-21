@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,9 +24,9 @@ import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 val LocalKnownKanji = compositionLocalOf<Set<Int>> { emptySet() }
 
-data class RubyAppearance(val size: Int = 20, val font: FontFamily = JournalBrand.Handwriting, val knownKanji: Set<Int> = emptySet())
+data class RubyAppearance(val size: Int = 20, val font: FontFamily = JournalBrand.Handwriting, val knownKanji: Set<Int> = emptySet(), val color: Color = Color(0xFF4B1800), val readingColor: Color = Color(0xFF79776C), val compact: Boolean = false)
 
-class RubyRun(val reading: String, val background: Color = Color.Transparent, val onClick: (() -> Unit)? = null)
+class RubyRun(val reading: String, val background: Color = Color.Transparent, val ink: Color? = null, val onClick: (() -> Unit)? = null)
 
 @Composable
 private fun journalRubyAppearance(): RubyAppearance {
@@ -39,24 +40,24 @@ fun RubyText(value: String, modifier: Modifier = Modifier, appearance: RubyAppea
 }
 
 @Composable
-fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance: RubyAppearance = journalRubyAppearance()) {
+fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance: RubyAppearance = journalRubyAppearance(), onRunBounds: ((Int, Rect) -> Unit)? = null) {
     val (size, font, knownKanji) = appearance
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val style = TextStyle(fontFamily = font, fontSize = size.sp, letterSpacing = 0.sp, lineHeight = (size * 1.8).sp, color = Color(0xFF452713))
+    val style = TextStyle(fontFamily = font, fontSize = size.sp, letterSpacing = 0.sp, lineHeight = (size * 1.8).sp, color = appearance.color)
     val parsed = runs.map { run -> remember(run.reading, knownKanji) { RubyDocument.parse(run.reading, knownKanji) } }
     val inline = mutableMapOf<String, InlineTextContent>()
     val text = buildAnnotatedString {
         runs.forEachIndexed { index, run ->
             if (run.onClick != null) pushLink(LinkAnnotation.Clickable("correction-$index", TextLinkStyles(style = SpanStyle(color = style.color, textDecoration = TextDecoration.None))) { run.onClick.invoke() })
-            pushStyle(SpanStyle(background = run.background))
+            pushStyle(SpanStyle(background = run.background, color = run.ink ?: appearance.color))
             parsed[index].forEachIndexed { tokenIndex, token ->
                 if (token.reading == null) append(token.text) else {
                     val key = "$index-$tokenIndex"
                     val baseWidth = measurer.measure(token.text, style.copy(lineHeight = size.sp)).size.width
                     val rubyWidth = measurer.measure(token.reading, style.copy(fontSize = (size * 0.48).sp)).size.width
                     val width = with(density) { (maxOf(baseWidth, rubyWidth) + 2).toSp() }
-                    inline[key] = InlineTextContent(Placeholder(width, (size * 2).sp, PlaceholderVerticalAlign.TextBottom)) {
+                    inline[key] = InlineTextContent(Placeholder(width, (size * if (appearance.compact) 1.6 else 2.0).sp, PlaceholderVerticalAlign.TextBottom)) {
                         RubyInlineText(token, appearance, run)
                     }
                     appendInlineContent(key, token.text)
@@ -66,7 +67,12 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
             if (run.onClick != null) pop()
         }
     }
-    Text(text, modifier, style = style, inlineContent = inline)
+    Text(text, modifier, style = style, inlineContent = inline, onTextLayout = { layout ->
+        text.getLinkAnnotations(0, text.length).forEach { link ->
+            val index = (link.item as? LinkAnnotation.Clickable)?.tag?.removePrefix("correction-")?.toIntOrNull()
+            if (index != null && link.start < link.end) onRunBounds?.invoke(index, layout.getPathForRange(link.start, link.end).getBounds())
+        }
+    })
 }
 
 @Composable
@@ -74,7 +80,7 @@ private fun RubyInlineText(token: RubyToken, appearance: RubyAppearance, run: Ru
     val (size, font) = appearance
     val click = run.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
     Column(Modifier.fillMaxSize().background(run.background).then(click), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(token.reading.orEmpty(), softWrap = false, letterSpacing = 0.sp, fontSize = (size * 0.48).sp, lineHeight = (size * 0.6).sp, color = Color(0xFF79776C))
-        Text(token.text, fontFamily = font, softWrap = false, letterSpacing = 0.sp, fontSize = size.sp, lineHeight = (size * 1.4).sp, color = Color(0xFF452713))
+        Text(token.reading.orEmpty(), softWrap = false, letterSpacing = 0.sp, fontSize = (size * 0.48).sp, lineHeight = (size * if (appearance.compact) .5 else .6).sp, color = if (appearance.compact) run.ink ?: appearance.readingColor else appearance.readingColor)
+        Text(token.text, fontFamily = font, softWrap = false, letterSpacing = 0.sp, fontSize = size.sp, lineHeight = (size * if (appearance.compact) 1.1 else 1.4).sp, color = run.ink ?: appearance.color)
     }
 }

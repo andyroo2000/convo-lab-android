@@ -1,6 +1,8 @@
 package com.cdcg.convolab.journal.feedback
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import com.cdcg.convolab.ui.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,22 +20,20 @@ fun ClarificationCard(presentation: FeedbackPresentation, clarification: Clarifi
     val question = clarification.question ?: return
     var selected by rememberSaveable(question.id) { mutableStateOf<String?>(null) }
     var other by rememberSaveable(question.id) { mutableStateOf("") }
-    val custom = "Write my own answer"
+    val custom = "Something else"
     val answer = if (selected == custom) other else selected.orEmpty()
     val pending = presentation.state.snapshot?.pendingAnswer != null
     val enabled = !presentation.state.busy && !pending
-    Surface(color = Color(0xFFEDF5FF), shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(question.prompt, fontSize = 21.sp)
+    JournalCard {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(question.prompt, style = JournalStyle.Body, modifier = Modifier.padding(bottom = 12.dp))
             (question.choices + custom).distinct().forEach { choice ->
-                OutlinedButton(onClick = { selected = choice }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
-                    RadioButton(selected = choice == selected, onClick = null)
-                    Text(choice, Modifier.weight(1f).padding(start = 8.dp))
-                }
+                ClarificationOption(choice, choice == selected, enabled) { selected = choice }
             }
             if (selected == custom) CustomAnswer(other, enabled) { other = it }
-            Button(onClick = { presentation.controller.answer(answer) }, enabled = enabled && answer.isNotBlank(),
-                modifier = Modifier.testTag("clarification-send")) { Text("Answer") }
+            JournalDraftButton("Answer", { presentation.controller.answer(answer) }, style = DraftButtonStyle(enabled = enabled && answer.isNotBlank()),
+                modifier = Modifier.testTag("clarification-send"))
+            TextButton(onClick = presentation.controller::cancel) { Text("Back to draft", color = JournalStyle.Green) }
             if (pending) Text("Your answer is saved. Retry to confirm it was received.")
         }
     }
@@ -47,4 +47,14 @@ private fun CustomAnswer(value: String, enabled: Boolean, change: (String) -> Un
         if (!invalid) change(it)
     }, label = { Text("Your answer") }, isError = invalid,
         supportingText = { Text(if (invalid) "Use up to 2,000 characters without null characters." else "${value.codePointCount(0, value.length)} / 2,000") }, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("clarification-answer"))
+}
+
+@Composable
+private fun ClarificationOption(title: String, chosen: Boolean, enabled: Boolean, choose: () -> Unit) {
+    OutlinedButton(onClick = choose, enabled = enabled, modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, if (chosen) JournalStyle.Green else JournalStyle.Border),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = if (chosen) JournalStyle.Sage else Color.White, contentColor = JournalStyle.Ink)) {
+        RadioButton(selected = chosen, onClick = null)
+        Text(title, Modifier.weight(1f).padding(start = 8.dp))
+    }
 }
