@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cdcg.convolab.auth.Session
 import com.cdcg.convolab.auth.SessionController
 import com.cdcg.convolab.journal.feedback.WorkflowController
+import com.cdcg.convolab.journal.conversation.TutorController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 /** Retained by the activity across rotation; account transitions await the previous writer's flush. */
 class NotebookViewModel(sessions: SessionController,
     workflow: ((Session, CoroutineScope) -> WorkflowController)? = null,
+    tutor: ((Session, CoroutineScope) -> TutorController)? = null,
     repository: (Session) -> JournalRepository) : ViewModel() {
     private val mutableBinding = MutableStateFlow<NotebookBinding?>(null)
     val binding = mutableBinding.asStateFlow()
@@ -32,9 +34,13 @@ class NotebookViewModel(sessions: SessionController,
                     if (session != null) coroutineScope {
                         val notebook = NotebookController(repository(session), this)
                         val feedback = workflow?.invoke(session, this)
-                        mutableBinding.value = NotebookBinding(session.account.id, notebook, feedback)
+                        val teacher = tutor?.invoke(session, this)
+                        mutableBinding.value = NotebookBinding(session.account.id, notebook, feedback, teacher)
                         notebook.start()
-                        if (feedback != null) launch { followEntry(notebook, feedback) }
+                        if (feedback != null) {
+                            launch { followEntry(notebook, feedback) }
+                            if (teacher != null) launch { teacher.follow(feedback) }
+                        }
                         awaitCancellation()
                     }
                 }
@@ -49,7 +55,7 @@ class NotebookViewModel(sessions: SessionController,
     }
 }
 
-class NotebookBinding(val accountId: Long, val controller: NotebookController, val workflow: WorkflowController? = null)
+class NotebookBinding(val accountId: Long, val controller: NotebookController, val workflow: WorkflowController? = null, val tutor: TutorController? = null)
 
 private fun NotebookState.savedEntry(): JournalEntry? = records.firstOrNull { it.id == draft.id }?.entry?.takeIf {
     !pendingDelete && it.version == draft.expectedVersion && it.body == draft.body && it.title == draft.title
