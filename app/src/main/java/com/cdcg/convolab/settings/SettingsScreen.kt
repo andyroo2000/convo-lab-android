@@ -115,7 +115,8 @@ private fun SettingsChapter(title: String, icon: JournalSymbol?, expanded: Strin
 @Composable
 fun AccountInitial(name: String, size: Int = 44) {
     Box(Modifier.size(size.dp).background(JournalStyle.Green, CircleShape).padding(3.dp).background(JournalBrand.Paper, CircleShape), contentAlignment = Alignment.Center) {
+        val initialSize = (size * .6 / LocalDensity.current.fontScale).sp
         Text(name.codePoints().findFirst().orElse(63).let { String(Character.toChars(it)).uppercase() },
-            fontFamily = JournalBrand.Anton, fontSize = (size * .6 / LocalDensity.current.fontScale).sp, color = JournalBrand.Ink)
+            fontFamily = JournalBrand.Anton, fontSize = initialSize, lineHeight = initialSize, color = JournalBrand.Ink)
     }
 }
