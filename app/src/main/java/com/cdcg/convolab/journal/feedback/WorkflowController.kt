@@ -59,6 +59,7 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     }
 
     fun changeFinalText(text: String) {
+        if (state.value.busy) return
         if (text.length > 30_000 || text.contains('\u0000')) return
         mutableState.update { it.copy(finalEdit = it.finalEdit?.copy(text = text)) }
     }

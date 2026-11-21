@@ -27,3 +27,10 @@ object JournalPolling {
 }
 
 class WorkflowFailure(message: String) : Exception(message)
+
+class JournalPollBudget(private var remaining: Int = 60) {
+    suspend fun pause(milliseconds: Long) {
+        if (remaining-- <= 0) throw WorkflowFailure("This is taking longer than expected. Your work is saved; retry to check again.")
+        delay(milliseconds)
+    }
+}

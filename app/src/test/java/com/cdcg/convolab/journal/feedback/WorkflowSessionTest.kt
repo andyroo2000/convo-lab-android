@@ -193,6 +193,48 @@ class WorkflowSessionTest {
         assertEquals(1, controller.state.value.finalEdit?.expectedRevision)
     }
 
+    @Test fun aPermanentlyPendingAnalysisStopsAndCanBeRetried() = runTest {
+        val api = FakeFeedback().apply { analysisResult = { AnalysisResponse(entry, analysis().copy(status = WorkStatus.Processing)) } }
+        val session = WorkflowSession(entry, WorkflowAccess(api, MemoryWorkflow(), StandardTestDispatcher(testScheduler))) {}
+        try { session.refresh(); fail("Expected bounded polling") }
+        catch (failure: WorkflowFailure) { assertTrue(failure.message!!.contains("retry")) }
+        assertEquals(61, api.analysisReads)
+        assertTrue(session.snapshot.submissionRequested)
+    }
+
+    @Test fun failedAnalysisRetryReusesItsResolvedClarification() = runTest {
+        val storage = MemoryWorkflow().apply {
+            record = WorkflowSnapshot(JournalId(entry.id), 1, clarification(WorkStatus.Resolved),
+                analysis().copy(status = WorkStatus.Failed), submissionRequested = true)
+        }
+        val api = FakeFeedback().apply { submitResult = { analysis() } }
+        val session = WorkflowSession(entry, WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))) {}
+        session.load()
+        session.resume()
+        assertEquals(0, api.starts)
+        assertEquals(WorkStatus.Ready, session.snapshot.analysis?.status)
+    }
+
+    @Test fun savingFinalTextBlocksAdditionalEditsUntilAcknowledged() = runTest {
+        val response = CompletableDeferred<Analysis>()
+        val api = FakeFeedback().apply {
+            analysisResult = { AnalysisResponse(entry, analysis()) }
+            editResult = { response.await() }
+        }
+        val controller = WorkflowController(WorkflowAccess(api, MemoryWorkflow(), StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        controller.beginFinalEdit()
+        controller.changeFinalText("保存する文章。")
+        controller.saveFinalEdit()
+        runCurrent()
+        controller.changeFinalText("保存中は編集しない。")
+        assertEquals("保存する文章。", controller.state.value.finalEdit?.text)
+        response.complete(analysis("保存する文章。"))
+        runCurrent()
+        assertNull(controller.state.value.finalEdit)
+    }
+
     @Test fun pollingStopsAfterThreeTransportFailures() = runTest {
         var calls = 0
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }
