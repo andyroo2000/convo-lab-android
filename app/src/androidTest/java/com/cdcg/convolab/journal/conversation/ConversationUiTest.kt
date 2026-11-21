@@ -103,8 +103,8 @@ class ConversationUiTest {
             val teacher by tutor.state.collectAsState()
             val active by conversation.session.collectAsState()
             val replies = active?.state?.collectAsState()?.value
-            ConvoLabTheme { NotebookScreen(notebookState, notebook, FeedbackPresentation(feedback, root), TutorPresentation(teacher, tutor),
-                replies?.let { ConversationPresentation(it, active!!) }) {} }
+            ConvoLabTheme { NotebookScreen(notebookState, notebook, NotebookPanels(FeedbackPresentation(feedback, root), TutorPresentation(teacher, tutor),
+                replies?.let { ConversationPresentation(it, active!!) })) {} }
         }
         compose.runOnIdle {
             scope.launch {

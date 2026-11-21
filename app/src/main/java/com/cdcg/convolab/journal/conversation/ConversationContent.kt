@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 class ConversationPresentation(val state: ConversationState, val session: ConversationSession)
 
@@ -76,7 +77,7 @@ private fun ReplyEditor(state: ReplyState, controller: ReplyController, enabled:
     val editable = enabled && !state.busy && state.record.pendingSave == null
     OutlinedTextField(value = state.text, onValueChange = controller::edit, enabled = editable,
         label = { Text("Your answer") }, placeholder = { Text("返事を書く…") }, minLines = 4,
-        textStyle = LocalTextStyle.current.copy(fontFamily = JournalBrand.Handwriting),
+        textStyle = LocalJournalTypography.current.style,
         modifier = Modifier.fillMaxWidth().testTag("conversation-answer-${state.record.id}"))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = { keyboard?.hide(); controller.submit() }, enabled = enabled && !state.busy && state.text.isNotBlank(),

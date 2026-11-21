@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 val LocalKnownKanji = compositionLocalOf<Set<Int>> { emptySet() }
 
@@ -27,12 +28,18 @@ data class RubyAppearance(val size: Int = 20, val font: FontFamily = JournalBran
 class RubyRun(val reading: String, val background: Color = Color.Transparent, val onClick: (() -> Unit)? = null)
 
 @Composable
-fun RubyText(value: String, modifier: Modifier = Modifier, appearance: RubyAppearance = RubyAppearance(knownKanji = LocalKnownKanji.current)) {
+private fun journalRubyAppearance(): RubyAppearance {
+    val typography = LocalJournalTypography.current
+    return RubyAppearance(typography.size, typography.family, LocalKnownKanji.current)
+}
+
+@Composable
+fun RubyText(value: String, modifier: Modifier = Modifier, appearance: RubyAppearance = journalRubyAppearance()) {
     RubyParagraph(listOf(RubyRun(value)), modifier, appearance)
 }
 
 @Composable
-fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance: RubyAppearance = RubyAppearance(knownKanji = LocalKnownKanji.current)) {
+fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance: RubyAppearance = journalRubyAppearance()) {
     val (size, font, knownKanji) = appearance
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current

@@ -50,9 +50,9 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
         val conversation = binding?.conversation?.session?.collectAsStateWithLifecycle()?.value
         val conversationState = conversation?.state?.collectAsStateWithLifecycle()?.value
-        NotebookScreen(state, current, feedback = feedback?.let { FeedbackPresentation(it, workflow) },
+        NotebookScreen(state, current, NotebookPanels(feedback = feedback?.let { FeedbackPresentation(it, workflow) },
             tutor = tutorState?.let { TutorPresentation(it, teacher) },
-            conversation = conversationState?.let { ConversationPresentation(it, conversation) }, menu = menu)
+            conversation = conversationState?.let { ConversationPresentation(it, conversation) }), menu = menu)
     }
 }
 
