@@ -16,6 +16,14 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     private var generation = 0L
     private var closed = false
 
+    val lifetime: Job get() = scope.coroutineContext.job
+    init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try { awaitCancellation() }
+            finally { withContext(NonCancellable) { learning?.join(); engine.close() } }
+        }
+    }
+
     fun prepare() {
         if (preparation != null || closed) return
         preparation = scope.async {
@@ -47,24 +55,24 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
         if (choices.isEmpty() || closed) return
         cancelConversion()
         val previous = learning
-        learning = scope.launch {
+        learning = scope.launch(start = CoroutineStart.UNDISPATCHED) { withContext(NonCancellable) {
             attempt("Your text is saved, but this choice could not be remembered.") {
                 previous?.join()
                 preparation?.await()
                 choices.forEach { engine.learn(it) }
             }
-        }
+        } }
     }
     fun reset() {
         if (closed) return
         cancelConversion()
         val previous = learning
-        learning = scope.launch {
+        learning = scope.launch(start = CoroutineStart.UNDISPATCHED) { withContext(NonCancellable) {
             attempt("Learning could not be reset. Please try again.") {
                 prepare(); previous?.join(); preparation?.await(); engine.reset()
                 status = "Typing learning was reset on this device."
             }
-        }
+        } }
     }
     fun retry() {
         if (preparation?.isCancelled == true) preparation = null
@@ -81,9 +89,8 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     fun close() {
         if (closed) return
         closed = true
-        val job = scope.coroutineContext[Job]
+        cancelConversion()
         scope.cancel()
-        CoroutineScope(Dispatchers.Default).launch { job?.join(); engine.close() }
     }
     private suspend fun attempt(message: String, operation: suspend () -> Unit) {
         try { operation() }
