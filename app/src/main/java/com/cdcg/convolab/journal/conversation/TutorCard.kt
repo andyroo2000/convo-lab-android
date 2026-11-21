@@ -19,6 +19,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.cdcg.convolab.journal.JournalId
+import com.cdcg.convolab.journal.audio.*
 import com.cdcg.convolab.R
 import com.cdcg.convolab.journal.text.RubyText
 import com.cdcg.convolab.ui.JournalBrand
@@ -30,7 +32,7 @@ fun TutorCard(presentation: TutorPresentation) {
     val state = presentation.state
     val question = state.question
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (question != null) TeacherQuestion(question)
+        if (question != null) TeacherQuestion(question, state.source?.entryId)
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         TextButton(onClick = presentation.controller::showPicker, enabled = !state.busy) { Text("Choose your tutor") }
         state.notice?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
@@ -43,18 +45,20 @@ fun TutorCard(presentation: TutorPresentation) {
 }
 
 @Composable
-fun TeacherQuestion(question: TutorQuestion, audio: @Composable RowScope.() -> Unit = {}) {
+fun TeacherQuestion(question: TutorQuestion, parentId: JournalId? = null) {
+    val source = remember(parentId, question) { parentId?.let { AudioSource(it,
+        AudioContent.Question(JournalId(question.id), question.text, question.reading.ifBlank { question.text }, "${question.tutor?.name ?: "Tutor"}'s question")) } }
     var english by rememberSaveable(question.id) { mutableStateOf(false) }
     Surface(color = Color.White, contentColor = JournalBrand.Ink, shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9E6F2))) {
         Column {
             Row(Modifier.fillMaxWidth().background(Color(0xFFE4EFFC)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 question.tutor?.let { TutorPortrait(it, Modifier.size(80.dp)) }
-                audio()
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { english = !english }) { Text(if (english) "Hide English" else "Show English") }
             }
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                RubyText(question.reading.ifBlank { question.text })
+                if (source == null) RubyText(question.reading.ifBlank { question.text })
+                else { AudioReading(source); AudioControls(source) }
                 if (english) Text(question.translation, fontFamily = JournalBrand.Serif)
             }
         }

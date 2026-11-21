@@ -17,6 +17,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cdcg.convolab.journal.feedback.*
+import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.ui.JournalBrand
 
 class ConversationPresentation(val state: ConversationState, val session: ConversationSession)
@@ -28,7 +29,7 @@ fun ConversationContent(presentation: ConversationPresentation, tutor: TutorPres
         state.replies.forEach { binding -> key(binding.controller) {
             Surface(color = Color(0xFFFAFCFF), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFD9E6F2))) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    binding.node?.question?.let { TeacherQuestion(it) }
+                    binding.node?.question?.let { TeacherQuestion(it, binding.node?.parentId?.let(::JournalId)) }
                     ReplyContent(binding.controller, enabled)
                 }
             }

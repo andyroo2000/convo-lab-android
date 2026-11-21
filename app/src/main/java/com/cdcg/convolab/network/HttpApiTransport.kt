@@ -51,14 +51,17 @@ class HttpApiTransport(
         connection.instanceFollowRedirects = false
         val revoking = connection.url.path == "/api/auth/tokens/current"
         connection.connectTimeout = if (revoking) 5_000 else 15_000
-        connection.readTimeout = when (connection.url.path) {
-            "/api/auth/tokens/current" -> 5_000
-            "/api/study/wanikani/sync" -> 120_000
-            else -> 30_000
-        }
+        connection.readTimeout = readTimeout(connection.url.path)
         connection.useCaches = false
         connection.setRequestProperty("Accept", "application/json")
         token?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
+    }
+
+    private fun readTimeout(path: String) = when {
+        path == "/api/auth/tokens/current" -> 5_000
+        path == "/api/study/wanikani/sync" -> 120_000
+        path.startsWith("/api/journal/entries/") && path.endsWith("/audio/timed") -> 120_000
+        else -> 30_000
     }
 
     private fun readLimited(stream: InputStream, limit: Int): ByteArray {
