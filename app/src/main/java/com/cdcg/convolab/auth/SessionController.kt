@@ -109,6 +109,17 @@ class SessionController(
         }
     } }
 
+    suspend fun expire(expected: Session) = withContext(NonCancellable) { mutex.withLock {
+        if (session?.token != expected.token || session?.account?.id != expected.account.id) return@withLock
+        generation++
+        session = null
+        mutableState.value = AuthState(restoring = false,
+            error = "Your sign-in expired. Your writing is kept on this device. Please sign in again.")
+        try { withContext(io) { storage.clear() } }
+        catch (_: Exception) { mutableState.value = mutableState.value.copy(
+            error = "Your sign-in expired. Its saved copy could not be removed; please sign in again. Your writing is kept on this device.") }
+    } }
+
     suspend fun clearMessage() = mutex.withLock {
         mutableState.value = mutableState.value.copy(error = null, resetSent = false)
     }

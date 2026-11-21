@@ -23,7 +23,7 @@ fun FinalEditSheet(presentation: FeedbackPresentation) {
     if (presentation.state.finalEdit == null) return
     val input = remember { JournalInputHost() }
     CompositionLocalProvider(LocalInputHost provides input) {
-        Dialog(onDismissRequest = {}, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false)) {
+        Dialog(onDismissRequest = {}, properties = DialogProperties(decorFitsSystemWindows = false, usePlatformDefaultWidth = false, dismissOnBackPress = false)) {
             Surface(Modifier.fillMaxSize()) { FinalEditorLayout(presentation) }
         }
     }

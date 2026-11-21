@@ -27,7 +27,7 @@ class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typing
 fun SettingsScreen(state: SettingsState, controller: SettingsController, actions: SettingsActions) {
     var page by rememberSaveable(state.account.id) { mutableStateOf(SettingsPage.Overview) }
     val close = { if (page == SettingsPage.Overview) actions.close() else { page = SettingsPage.Overview; controller.clearMessage() } }
-    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = close, properties = DialogProperties(decorFitsSystemWindows = false, usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = JournalBrand.Paper, contentColor = JournalBrand.Ink) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {

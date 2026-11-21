@@ -11,7 +11,7 @@ import kotlinx.coroutines.CancellationException
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val sessions = SessionController(AuthApi(HttpApiTransport()), KeystoreSessionStorage(application))
 
-    val deletion = AccountDeletionController(sessions, AccountDeletionApi(HttpApiTransport()),
+    val deletion = AccountDeletionController(sessions, AccountDeletionApi(HttpApiTransport(), sessions::expire),
         AccountCleanupDiskStore(application.noBackupFilesDir), viewModelScope) {
         if (sessions.state.value.restoring) sessions.restore()
     }

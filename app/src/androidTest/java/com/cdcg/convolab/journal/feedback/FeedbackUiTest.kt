@@ -57,6 +57,8 @@ class FeedbackUiTest {
         val text = "友達と映画を見ました。\n".repeat(18)
         compose.onNodeWithTag("final-editor").performClick().performTextReplacement(text)
         assertAboveKeyboard("final-save")
+        val heading = compose.onNodeWithText("Edit final").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
+        assertTrue("Editor heading must remain on screen", heading.top >= 0)
         screenshot("feedback-final-editor-keyboard")
         compose.onNodeWithTag("final-save").performClick()
         compose.waitUntil(5_000) { workflow.state.value.finalEdit == null }

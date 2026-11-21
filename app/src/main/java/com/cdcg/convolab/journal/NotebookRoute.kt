@@ -26,16 +26,16 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
     val context = LocalContext.current.applicationContext
     val factory = remember(context, sessions) { viewModelFactory {
         initializer { NotebookViewModel(sessions, workflow = { session, scope ->
-            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
+            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)
             WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id)), scope)
         }, tutor = { session, scope ->
-            TutorController(TutorApi(JournalApi(HttpApiTransport(), session, sessions::snapshot)), scope)
+            TutorController(TutorApi(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)), scope)
         }, conversation = { session, repository, tutor ->
-            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
+            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)
             val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id))
             ConversationController(ConversationAccess(ConversationApi(api), repository, { scope -> WorkflowController(workflows, scope) }, tutor))
         }, preferences = { session, scope -> JournalViewPreferences(context.noBackupFilesDir, session.account.id, scope) }) { session ->
-            JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
+            JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire),
                 JournalDiskStore(context.noBackupFilesDir, session.account.id))
         } }
     } }

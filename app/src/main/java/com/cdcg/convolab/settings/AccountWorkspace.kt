@@ -23,7 +23,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     val context = LocalContext.current.applicationContext
     val factory = remember(context, sessions) { viewModelFactory { initializer {
         SettingsViewModel(sessions) { session, scope ->
-            val api = SettingsApi(JournalApi(HttpApiTransport(), session, sessions::snapshot))
+            val api = SettingsApi(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire))
             SettingsController(SettingsAccess(session, api, KnownKanjiDiskStore(context.noBackupFilesDir, session.account.id), sessions), scope)
         }
     } } }
