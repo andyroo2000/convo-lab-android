@@ -5,13 +5,19 @@ Shares the production learning-os API with the iOS app.
 
 ## Current scope
 
-A buildable welcome screen using ConvoLab's navy and cream palette. Authentication
-and Journal functionality are not implemented yet. This foundation makes no account
-requests or user-data mutations.
+The app opens authentication and an account-scoped Journal, with reduced Settings.
+It includes durable drafts, Contents, clarification and corrections, Draft/Final
+editing, tutor conversations, narration, on-device Japanese input, appearance,
+WaniKani known-kanji sync, and account management.
 
-## Initial product scope
+The port follows the [captured iOS reference](docs/ios-reference/2026-11-20/README.md).
+Feature screenshots, contracts and verification notes are in `docs/android-port/`.
+[Acceptance issue #17](https://github.com/andyroo2000/convo-lab-android/issues/17)
+tracks the remaining real-account and human checks.
 
-Build **Journal** and a reduced **Settings** section. Study, Readings, Daily Audio,
+## Product scope
+
+This port contains **Journal** and a reduced **Settings** section. Study, Readings, Daily Audio,
 Manage Cards, and Time are disabled for non-admin users in the product and are out
 of scope for this initial Android port, including their related settings.
 
@@ -26,8 +32,8 @@ Install Android Studio for Apple Silicon and JDK 17. Open this repository in And
 Studio and let Gradle sync. Use JDK 17 for the Gradle JDK in project settings.
 
 The checked-in Gradle wrapper downloads and verifies Gradle 9.9.1. Dependencies are
-pinned: Android Gradle Plugin 9.5.1, Kotlin 2.2.21, and Compose BOM 2026.09.00.
-The app supports Android 9+ (API 28) and currently compiles/targets API 37.
+pinned: Android Gradle Plugin 9.5.1, Kotlin 2.2.21, and Compose BOM 2026.11.01.
+The app supports Android 9+ (API 28) and compiles against API 37.1 and targets API 37.
 
 On Andrew's Mac the tools are installed at:
 
@@ -41,7 +47,9 @@ For a new checkout, create an ignored `local.properties` with your SDK path:
 sdk.dir=/Users/andrewlandry/Library/Android/sdk
 ```
 
-Build and run static checks:
+Prepare the offline engine, model and dictionary for a new checkout using the
+[native setup instructions](docs/typing-playground.md#build-on-this-mac). Both debug
+and release APKs require those generated assets. Then build and run checks:
 
 ```sh
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
@@ -50,8 +58,11 @@ export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/c
 ./gradlew assembleDebug lintDebug testDebugUnitTest
 ```
 
-There are no unit tests yet because this slice has no business logic. Add meaningful
-behavioral tests alongside authentication, Journal, and WaniKani sync implementations.
+The completed port passed 136 JVM tests and 89 instrumented tests on each of the
+Pixel 10a and API 36 ARM64 emulator. CI also runs the complete suite on x86_64.
+See [lifecycle verification](docs/android-port/lifecycle.md) for process-restart,
+packaging and keyboard-layout evidence. These fixture checks do not establish
+live-account behavior or human audio/accessibility acceptance.
 
 ## Pixel testing
 
@@ -60,7 +71,9 @@ computer's debugging prompt. Then select it in Android Studio and click Run, or:
 
 ```sh
 adb devices
-./gradlew installDebug
+./gradlew assembleDebug
+# Set ANDROID_SERIAL to the chosen device when an emulator is also connected.
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.cdcg.convolab.debug/com.cdcg.convolab.MainActivity
 ```
 
@@ -69,14 +82,15 @@ API default is `https://convo-lab.com` for both build types; HTTP is disabled.
 No release signing key or Play Store distribution is configured yet.
 
 An ARM64 Android 16 emulator named `ConvoLab_API_36` is installed on Andrew's Mac
-and has been used to install and launch the starter app. Start it from Device Manager
+and has passed the integrated app tests. Start it from Device Manager
 or with `emulator -avd ConvoLab_API_36`. Other virtual devices can be added later.
 The SDK and a physical Pixel are also enough for local builds and testing.
 
 ## GitHub checks
 
-- **Android Build:** builds the debug APK, runs Android Lint with warnings treated
-  as errors, and runs unit tests when present. Uploads a debug APK for 14 days.
+- **Android Build:** prepares both native ABIs, builds debug and release APKs, runs
+  Android Lint with warnings treated as errors, JVM tests and offline emulator tests.
+  Uploads the debug APK and test/screenshot reports for 14 days.
 - **Claude Code Review:** mirrors iOS review automation with Android-specific
   guidance in `CLAUDE.md`. Runs for non-draft, same-repository pull requests;
   fork PRs cannot access the credential. Uses the `CLAUDE_CODE_OAUTH_TOKEN` secret.
@@ -88,20 +102,26 @@ Local source changes also require CodeScene MCP file reviews, staged safeguards,
 and branch change-set analysis as described in `AGENTS.md`. CodeScene does not
 support Gradle `.kts` scripts; Gradle compilation and Android Lint cover those.
 
-## Port sequence
+## Japanese input and playground
 
-1. Inventory current iOS Journal flows and the Settings subset above against iOS `main`.
-2. Account authentication, secure token storage, and account-scoped Journal state.
-3. Journal screens and their existing backend contracts, including Journal audio.
-4. Reduced Settings and WaniKani sync, without vocabulary transfer options.
-5. Pixel testing of Journal editing, Japanese input, playback, and account lifecycle.
+Journal includes immediate romaji-to-kana composition, kanji suggestions, section
+selection/resizing, expanded candidates, and account-scoped confirmed learning.
+The device keyboard can be selected instead. See [composition](docs/android-port/composition.md),
+[keyboard integration](docs/android-port/journal-keyboard.md), and
+[performance results](docs/android-port/typing-performance.md).
 
-Use the current iOS main branch and backend contracts as references, not a stale
-local iOS checkout. Port behavior and contract test cases, not Apple-specific APIs.
+Typing remains independent of native inference. On the Pixel, ordinary native
+suggestions measured roughly 340 ms p95, above the 150 ms target. A cold expanded
+request still takes about 13 seconds; a repeated warm request is about 57 ms.
+These are measured inference results, not physical key-to-display latency.
 
-## Japanese typing prototype
+The standalone typing playground remains a debug-only activity. It is not the app's
+launch screen and does not require an account:
 
-The app currently opens the standalone offline typing playground. See
-[setup, tests and benchmark instructions](docs/typing-playground.md) for the
-additional native engine preparation step and emulator testing. Journal's final
-layout remains pending the iOS design update.
+```sh
+adb shell am start -n com.cdcg.convolab.debug/com.cdcg.convolab.TypingLabActivity
+```
+
+See [playground setup and historical benchmarks](docs/typing-playground.md).
+Release builds package the Journal engine/model/dictionary but exclude playground
+fixtures. Play Store distribution and release signing are not configured.

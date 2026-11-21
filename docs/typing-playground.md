@@ -1,13 +1,21 @@
 # Android Japanese typing playground
 
-Debug builds open a standalone typing lab; release keeps the welcome screen and
-does not package the native engine, dictionary, model or fixtures. It does not require login or use
-Journal data. Use an English keyboard in **Romaji**, then tap a candidate, tap
+The main app opens authentication and Journal. Debug builds also contain a separate
+standalone typing lab, launched explicitly with:
+
+```sh
+adb shell am start -n com.cdcg.convolab.debug/com.cdcg.convolab.TypingLabActivity
+```
+
+The lab does not require login or use Journal data. Release builds include the
+Journal engine, model and dictionary, but exclude the lab activity and test fixtures.
+Use an English keyboard in **Romaji**, then tap a candidate, tap
 **かな**, or press the keyboard's Done button to append the first candidate to the
 scratchpad. Edit/copy the scratchpad with normal Android text controls. Scratchpad
 and composition survive rotation in memory but are discarded when the screen's
 ViewModel is destroyed; they are not saved to preferences, files or saved state.
-The final Journal layout is intentionally deferred until the iOS design is ready.
+The integrated Journal layout is documented separately in
+[Journal keyboard](android-port/journal-keyboard.md) and [composition](android-port/composition.md).
 
 Conversion is entirely on-device: AzooKey v0.11.2
 `80b8204f1cdfb364bb2ed355cf52c7ebb2519a0c`, llama.cpp b4846
@@ -16,8 +24,9 @@ Q5_K_M model used on iOS. The download and extracted model are SHA-256 verified;
 marker, model size/hash and dictionary index files. Interrupted or damaged copies
 are rebuilt in a staging directory and atomically renamed. Startup failures expose
 a Retry action. The model and dictionary
-are packaged in debug APKs, then copied to app-private, non-backed-up storage. No
-runtime download is needed. Personal learning and emoji prediction are disabled.
+are packaged in both debug and release APKs, then copied to app-private, non-backed-up storage. No
+runtime download is needed. The lab disables personal learning and emoji prediction;
+Journal has separate account-scoped confirmed learning.
 **Credits** includes the model's CC BY-SA 4.0 attribution and dependency licenses.
 
 The Kotlin/Compose app calls a Swift shared library through a small JNI bridge.
@@ -32,10 +41,10 @@ the composition discards that cache. Uncached input clears old candidates immedi
 scratchpad, entered in several phrases. No silent dictionary-only fallback is used
 if neural loading fails.
 
-This prototype offers the normal ten whole-phrase candidates. iOS's expanded
-160-candidate menu, section/boundary adjustment and Metal acceleration are not
-ported here. CPU performance and ordinary conversion quality can now be measured
-on Android before selecting the final editing interface.
+The lab offers the normal ten whole-phrase candidates. Journal additionally includes
+the expanded 160-candidate pool and section/boundary adjustment, using CPU inference
+and exact-score prefix reuse. Metal acceleration does not apply to Android. See the
+[current Pixel performance results](android-port/typing-performance.md).
 
 ## Build on this Mac
 
@@ -57,14 +66,16 @@ On Andrew's Mac, set `TYPING_SWIFT` to
 `/Users/andrewlandry/Library/Developer/Toolchains/swift-6.4.2-RELEASE.xctoolchain/usr/bin/swift`
 for the Python build commands. The installed Swift SDK is already prepared.
 Native libraries, dictionary, model and vendor checkouts are generated/ignored;
-a missing preparation step fails debug APK packaging instead of producing a broken
-playground. JVM-only tests and release builds do not require these assets. Both ARM64 (Pixel / Apple Silicon emulator) and x86_64 (CI emulator)
+a missing preparation step fails APK packaging instead of producing a broken
+app. JVM-only tests do not require these assets. Both ARM64 (Pixel / Apple Silicon emulator) and x86_64 (CI emulator)
 are built. Native libraries use 16 KB-compatible alignment.
 
-The upstream conversion source is unchanged. `native/cpu_model.cpp` wraps the
+The pinned upstream source is prepared with `scripts/patch_typing.py` and the checked-in
+Android adapters. `native/cpu_model.cpp` wraps the
 model-loading call at link time to select `LAYER` with zero GPU layers: b4846's
 `NONE` mode validates a GPU index even for CPU-only loading. Personalization's
-unused API is supplied by the same disabled-learning stub as the iOS playground.
+legacy API is stubbed for the lab; Journal persists confirmed conversions through
+its account-scoped learning layer.
 
 ## Tests, screenshots and performance
 
@@ -103,9 +114,10 @@ keyboard events, debounce and rendering. PSS is sampled, not a true peak.
 The usability target is p95 conversion wall time <=150 ms. The automated smoke
 gate is intentionally broader (<2 seconds) to detect stalls on shared CI machines;
 it does not certify the usability target. Emulator results measure this Mac or
-the CI host, not the Pixel. Run the same benchmark on a cool Pixel when it arrives
-and compare first-use and repeated results, memory, UI responsiveness and thermal
-behavior before making a production performance claim.
+the CI host, not the Pixel. The Pixel has now been tested; see the current results
+linked above. The dated
+measurements below describe the earlier lab implementation. Continue comparing
+cold/warm performance and thermals before claiming the usability target is met.
 
 ## Initial local measurements (2026-11-18)
 
