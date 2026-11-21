@@ -22,6 +22,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
+import java.util.regex.Pattern
 import java.io.File
 
 class JournalKeyboardUiTest {
@@ -81,17 +82,26 @@ class JournalKeyboardUiTest {
     }
     @Test fun englishSoftwareKeysProduceKanaWithoutDuplicatingComposingText() {
         launchNotebook()
-        compose.onNodeWithTag("journal-editor").performClick()
-        for (letter in "nihongo") {
-            val key = device.wait(Until.findObject(By.desc(letter.toString())), 5_000)
-            assertNotNull("English software key $letter was not available", key)
-            key.click()
-        }
+        device.waitForIdle()
+        compose.onNodeWithTag("journal-editor").performClick().assertIsFocused()
+        compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        device.waitForIdle()
+        for (letter in "nihongo") tapEnglishKey(letter)
         compose.waitUntil(5_000) { notebook.state.value.draft.body == "にほんご" }
         screenshot(TestOutput.file("journal-real-english-keyboard.png"))
         compose.waitUntil(5_000) { compose.onAllNodesWithText("日本語").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("日本語").performClick()
         assertEquals("日本語", notebook.state.value.draft.body)
+    }
+    private fun tapEnglishKey(letter: Char) {
+        val label = Pattern.compile(Pattern.quote(letter.toString()), Pattern.CASE_INSENSITIVE)
+        val key = device.wait(Until.findObject(By.desc(label)), 5_000)
+        if (key == null) {
+            screenshot(TestOutput.file("journal-english-key-missing.png"))
+            device.dumpWindowHierarchy(TestOutput.file("journal-english-key-missing.xml"))
+        }
+        assertNotNull("English software key $letter was not available", key)
+        key.click()
     }
     @Test fun realBundledEngineSuppliesAndLearnsJournalCandidates() {
         launchNotebook(realEngine = true)
