@@ -119,6 +119,7 @@ public final class PlaygroundEngine {
   public func learn(_ json: String) throws -> Bool {
     let selection = try JSONDecoder().decode(ConfirmedConversion.self, from: Data(json.utf8))
     guard learning.enabled, let candidate = learning.candidate(for: selection) else { return false }
+    // Confirmed preferences are the durable ranking authority; converter memory is a secondary cache.
     try learning.confirm(selection)
     converter.stopComposition()
     converter.updateLearningData(candidate)
@@ -131,8 +132,8 @@ public final class PlaygroundEngine {
   public func resetLearning() throws {
     guard learning.enabled else { return }
     defer { invalidateLearningCaches() }
-    converter.resetMemory()
     try learning.clear()
+    converter.resetMemory()
   }
 
   private func checkCancellation() throws {
