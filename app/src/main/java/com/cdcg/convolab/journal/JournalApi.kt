@@ -15,7 +15,11 @@ class JournalApi(
     private val transport: ApiTransport,
     private val session: Session,
     private val currentSession: suspend () -> Session?,
+    private val expired: suspend (Session) -> Unit,
 ) : JournalGateway {
+    constructor(transport: ApiTransport, session: Session, currentSession: suspend () -> Session?) :
+        this(transport, session, currentSession, {})
+
     override suspend fun archive(cursor: String?): JournalPage {
         val query = cursor?.let { "?cursor=" + URLEncoder.encode(it, "UTF-8") }.orEmpty()
         return page(request(JournalRequest(JournalMethod.GET, "/api/journal/entries$query")))
@@ -45,7 +49,11 @@ class JournalApi(
 
     suspend fun request(call: JournalRequest): JSONObject {
         checkSession()
-        val response = transport.request(call.method.name, call.path, session.token, call.body?.toString())
+        val response = try { transport.request(call.method.name, call.path, session.token, call.body?.toString()) }
+        catch (failure: ApiFailure) {
+            if (failure.status == 401) expired(session)
+            throw failure
+        }
         checkSession()
         return decode { if (response.isBlank()) JSONObject() else JSONObject(response) }
     }

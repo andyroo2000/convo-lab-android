@@ -29,10 +29,12 @@ class AccountDeletionApiTest {
         assertEquals(1, calls)
     }
     @Test fun rejectedPasswordPropagatesWithoutAcknowledgement() = runBlocking {
+        var expired = false
         val api = AccountDeletionApi(object : ApiTransport {
             override suspend fun request(method: String, path: String, token: String?, body: String?): String = throw ApiFailure(422)
-        })
+        }, { expired = true })
         try { api.delete(session, "wrong"); fail("Must reject") }
         catch (failure: ApiFailure) { assertEquals(422, failure.status) }
+        assertFalse("A wrong password must not expire the session", expired)
     }
 }

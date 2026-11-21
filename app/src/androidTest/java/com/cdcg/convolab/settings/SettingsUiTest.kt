@@ -39,7 +39,8 @@ class SettingsUiTest {
         screenshot(TestOutput.file("settings-profile-keyboard.png"))
         compose.onNodeWithTag("settings-save-profile").performClick()
         compose.waitUntil(5_000) { controller.state.value.account.name == "Naomi Updated" }
-        device.pressBack()
+        // Successful form replacement dismisses its input; Back can navigate away after that.
+        device.waitForIdle()
         compose.onNodeWithText("Change Password").performScrollTo().performClick()
         compose.onNodeWithTag("auth-Current password").performClick().performTextInput("fixture-current")
         compose.onNodeWithTag("auth-New password").performScrollTo().performClick().performTextInput("fixture-new-password")
@@ -60,7 +61,8 @@ class SettingsUiTest {
         screenshot(TestOutput.file("settings-wanikani-token-keyboard.png"))
         compose.onNodeWithTag("settings-connect-wanikani").performClick()
         compose.waitUntil(5_000) { controller.state.value.known.connected && !controller.state.value.busy }
-        device.pressBack()
+        // Successful form replacement dismisses its input; Back can navigate away after that.
+        device.waitForIdle()
         compose.onNodeWithText("Known kanji: 2").assertExists()
         compose.onNodeWithText("Daily vocabulary transfer").assertDoesNotExist()
         screenshot(TestOutput.file("settings-wanikani-connected.png"))

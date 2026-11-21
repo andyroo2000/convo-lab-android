@@ -14,4 +14,4 @@ Build, lint and JVM checks pass. Nine audio Android tests pass on the emulator a
 - [Paused after sentence navigation](audio-screenshots/journal-audio-paused.png)
 - [Voice picker](audio-screenshots/journal-audio-voices.png)
 
-The screenshots isolate playback for repeatable checks. Full Notebook parity, font scaling, dark paper and final visual polish remain in #14/#17. Compare with the audio/voice captures in [the iOS manifest](../ios-reference/2026-11-20/README.md).
+The screenshots isolate playback for repeatable checks. Notebook font scaling and adaptive layouts are covered by #14. The Journal deliberately keeps light paper like iOS, even under a dark system theme. Human listening and final acceptance remain in #17. Compare with the audio/voice captures in [the iOS manifest](../ios-reference/2026-11-20/README.md).

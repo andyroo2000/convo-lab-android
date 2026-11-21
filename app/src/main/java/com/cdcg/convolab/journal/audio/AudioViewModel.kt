@@ -26,7 +26,7 @@ class AudioViewModel(context: Context, sessions: SessionController) : ViewModel(
                         if (!sessions.work.own(session.account.id, coroutineContext.job)) return@coroutineScope
                         val lease = PlaybackLease(session.account.id)
                         PlaybackOwner.active = lease
-                        val api = JournalAudioApi(JournalApi(HttpApiTransport(), session, sessions::snapshot))
+                        val api = JournalAudioApi(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire))
                         val player = AndroidAudioPlayer(context, lease, this)
                         val coordinator = AudioCoordinator(AudioAccess(api, AudioDiskStore(context.noBackupFilesDir, lease.accountId), player), this)
                         mutableBinding.value = AudioBinding(lease.accountId, coordinator)
