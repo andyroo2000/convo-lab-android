@@ -30,3 +30,17 @@ At 7e62078, all 89 instrumented tests passed on both Pixel 10a and the API 36 em
 ## Remaining acceptance
 
 Sign in on the Pixel with a real account, write and submit an entry, complete any clarification, compare corrections and the final version, answer a tutor question, play narration, change appearance and synchronize WaniKani. Check TalkBack and personal font preferences. Public fixtures validate interface and contracts; they do not prove the user's live account or listening experience. The first expanded neural suggestion request can still take several seconds; immediate kana entry does not wait for inference and cancellation remains available.
+
+## Android 11 window verification
+
+A focused API 30 / Android 11 ARM64 emulator run verifies the clarification action,
+Final editor and Settings forms above a visible keyboard. The test host now uses
+the same edge-to-edge and `adjustResize` policy already configured by MainActivity;
+its older default window policy had panned the fixture instead. The keyboard bounds
+assertion is unchanged. All five feedback/Settings checks pass on API 30, the API 36
+ARM64 emulator and Pixel 10a. No product behavior changed. API 28–29 remain outside
+this visual coverage.
+
+![Android 11 clarification](lifecycle-screenshots/api30-clarification-keyboard.png)
+![Android 11 Final editor](lifecycle-screenshots/api30-final-editor-keyboard.png)
+![Android 11 profile](lifecycle-screenshots/api30-profile-keyboard.png)

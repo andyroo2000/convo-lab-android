@@ -1,7 +1,9 @@
 package com.cdcg.convolab.journal.feedback
 
 import android.view.WindowInsets
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.*
@@ -83,6 +85,11 @@ class FeedbackUiTest {
     }
 
     private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            // Match MainActivity: older Android does not force edge-to-edge on test hosts.
+            compose.activity.enableEdgeToEdge()
+            compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
         val storage = FeedbackNotebookStorage(JournalRecord(entry, JournalDraft.from(entry)))
         val notebook = NotebookController(JournalRepository(FeedbackNotebookGateway(), storage), scope)
         workflow = WorkflowController(WorkflowAccess(api, UiWorkflowStorage(saved)), scope)
