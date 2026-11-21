@@ -1,6 +1,7 @@
 package com.cdcg.convolab.typing
 
 import android.content.Context
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -42,7 +43,7 @@ class OnDeviceEngine(context: Context) : TypingEngine {
             result.getDouble("engineMs"), result.optDouble("resetMs", 0.0))
     }
 
-    override suspend fun close() = withContext(Dispatchers.IO) {
+    override suspend fun close() = withContext(Dispatchers.IO + NonCancellable) {
         NativeOperation.mutex.withLock {
             if (handle != 0L) NativeTyping.destroy(handle)
             handle = 0L
