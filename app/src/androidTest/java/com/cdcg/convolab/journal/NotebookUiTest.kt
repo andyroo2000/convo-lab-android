@@ -75,6 +75,18 @@ class NotebookUiTest {
         compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
     }
 
+    @Test fun closingASavedEntryRequiresExplicitDeletionConfirmation() {
+        launchNotebook()
+        compose.onNodeWithText("Contents").performClick()
+        compose.onNodeWithText("A movie night").performClick()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Delete draft").performClick()
+        compose.onNodeWithText("Delete entry?").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
+    }
+
     private fun launchNotebook() {
         val storage = UiJournalStorage()
         val id = JournalIds.newId()
@@ -91,12 +103,16 @@ class NotebookUiTest {
 
     private fun assertActionsAboveKeyboard() {
         compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        device.waitForIdle()
+        compose.waitForIdle()
+        screenshot("notebook-keyboard-bounds")
         val keyboardTop = compose.runOnIdle {
             val view = compose.activity.window.decorView
             view.height - view.rootWindowInsets.getInsets(WindowInsets.Type.ime()).bottom
         }
         for (node in listOf(compose.onNodeWithTag("journal-save"), compose.onNodeWithText("Close"))) {
-            assertTrue("Journal action hidden by keyboard", node.fetchSemanticsNode().boundsInWindow.bottom <= keyboardTop + 1)
+            val bounds = node.assertIsDisplayed().fetchSemanticsNode().boundsInWindow
+            assertTrue("Journal action $bounds is hidden by keyboard starting at $keyboardTop", bounds.height > 0 && bounds.bottom <= keyboardTop + 1)
         }
     }
 
