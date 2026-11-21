@@ -113,7 +113,7 @@ class WorkflowSession(
             if (finishClarification(current)) return
             budget.pause(1_500)
             current = JournalPolling.read { access.api.clarification(entry) }
-                ?: throw ApiFailure(409)
+                ?: throw WorkflowFailure("The meaning check is unavailable. Please retry.")
         }
     }
 

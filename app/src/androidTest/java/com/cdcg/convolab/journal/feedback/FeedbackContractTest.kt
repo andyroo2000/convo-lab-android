@@ -80,6 +80,8 @@ class FeedbackContractTest {
         assertNull(storage.read(pending.entryId))
         val archived = File(directory, "journal-workflow/101/recovery").listFiles()!!.single()
         assertEquals(original, archived.readText())
+        storage.archive(pending.entryId) // Retrying after the acknowledged move is harmless.
+        assertEquals(1, archived.parentFile!!.listFiles()!!.size)
         storage.write(pending)
         assertEquals(pending, storage.read(pending.entryId))
     }
