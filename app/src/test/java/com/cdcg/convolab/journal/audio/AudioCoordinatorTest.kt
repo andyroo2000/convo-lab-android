@@ -67,6 +67,19 @@ class AudioCoordinatorTest {
         assertEquals("second", fixture.coordinator.state.value.options[fixture.source.key]?.selected)
     }
 
+    @Test fun onlyTextLimitFailuresAreReportedAsOversizedText() = runTest {
+        val fixture = AudioFixture(this)
+        val source = fixture.source.copy(content = AudioContent.Question(JournalId(JournalIds.newId()), "質問。", "質問[しつもん]。", "Tutor"))
+        fixture.api.failure = IllegalArgumentException("Malformed audio")
+        fixture.coordinator.toggle(source)
+        runCurrent()
+        assertFalse(fixture.coordinator.state.value.errors.getValue(source.key).contains("15,000"))
+        fixture.api.failure = AudioTextLimitFailure()
+        fixture.coordinator.toggle(source)
+        runCurrent()
+        assertTrue(fixture.coordinator.state.value.errors.getValue(source.key).contains("15,000"))
+    }
+
     @Test fun tutorRecordingUsesItsHistoricalQuestionWithoutLoadingNarrationVoices() = runTest {
         val fixture = AudioFixture(this)
         val source = fixture.source.copy(content = AudioContent.Question(JournalId(JournalIds.newId()), "質問。", "質問[しつもん]。", "Tutor"))
@@ -90,12 +103,14 @@ private class AudioFixture(test: TestScope) {
 private class FakeAudioApi : JournalAudioGateway {
     val voices = listOf(NarrationVoice("first", "First", null), NarrationVoice("second", "Second", null))
     var offline = false
+    var failure: Exception? = null
     var generated = 0
     var gate: CompletableDeferred<Unit>? = null
     override suspend fun voices(): List<NarrationVoice> { if (offline) throw IOException("offline"); return voices }
     override suspend fun selectedVoice(source: AudioSource) = "first"
     override suspend fun generate(request: AudioRequest): AudioPayload {
         if (offline) throw IOException("offline")
+        failure?.let { throw it }
         generated++
         withContext(NonCancellable) { gate?.await() }
         return AudioPayload(byteArrayOf(1), listOf(SentenceTiming(request.source.content.text, 0.0, 5.0)))

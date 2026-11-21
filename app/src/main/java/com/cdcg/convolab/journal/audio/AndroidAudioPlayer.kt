@@ -42,9 +42,9 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
         check(!closed && PlaybackOwner.active == owner)
         val metadata = MediaMetadata.Builder().setTitle(audio.request.source.content.title).setArtist("ConvoLab Journal").build()
         player.setMediaItem(MediaItem.Builder().setMediaId(owner.id + ":" + audio.request.key).setUri(audio.file.toUri()).setMediaMetadata(metadata).build())
+        mutableState.value = AudioPlayback(buffering = true)
         player.prepare()
         player.play()
-        mutableState.value = AudioPlayback(buffering = true)
         updateProgress(player)
     }
     override fun toggle() {
@@ -83,12 +83,12 @@ class AndroidAudioPlayer(private val context: Context, private val owner: Playba
         val pending = future ?: createConnection().also { future = it }
         val player = suspendCancellableCoroutine { continuation ->
             pending.addListener({
-                if (continuation.isActive) {
-                    try { continuation.resume(pending.get()) }
-                    catch (failure: Exception) {
-                        if (future === pending) { MediaController.releaseFuture(pending); future = null }
-                        continuation.resumeWithException(failure)
-                    }
+                try {
+                    val connected = pending.get()
+                    if (continuation.isActive) continuation.resume(connected)
+                } catch (failure: Exception) {
+                    if (future === pending) { future = null; MediaController.releaseFuture(pending) }
+                    if (continuation.isActive) continuation.resumeWithException(failure)
                 }
             }, ContextCompat.getMainExecutor(context))
         }

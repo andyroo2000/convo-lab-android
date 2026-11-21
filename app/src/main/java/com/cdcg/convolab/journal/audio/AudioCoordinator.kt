@@ -106,7 +106,7 @@ class AudioCoordinator(private val access: AudioAccess, private val scope: Corou
     private fun report(source: AudioSource, failure: Exception) {
         val message = when {
             failure is ApiFailure && failure.status == 409 -> "This audio changed or is still being prepared. Please retry shortly."
-            failure is IllegalArgumentException -> "Audio supports text up to 15,000 characters."
+            failure is AudioTextLimitFailure -> "Audio supports text up to 15,000 characters."
             else -> failure.userMessage()
         }
         mutableState.update { it.copy(errors = it.errors + (source.key to message)) }
