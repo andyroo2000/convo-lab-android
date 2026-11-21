@@ -31,7 +31,7 @@ This does not remove audio playback or caching needed by Journal itself.
 Install Android Studio for Apple Silicon and JDK 17. Open this repository in Android
 Studio and let Gradle sync. Use JDK 17 for the Gradle JDK in project settings.
 
-The checked-in Gradle wrapper downloads and verifies Gradle 9.9.1. Dependencies are
+The checked-in Gradle wrapper downloads and verifies Gradle 9.9.2. Dependencies are
 pinned: Android Gradle Plugin 9.5.1, Kotlin 2.2.21, and Compose BOM 2026.11.01.
 The app supports Android 9+ (API 28) and compiles against API 37.1 and targets API 37.
 
@@ -115,12 +115,11 @@ suggestions measured roughly 340 ms p95, above the 150 ms target. A cold expande
 request still takes about 13 seconds; a repeated warm request is about 57 ms.
 These are measured inference results, not physical key-to-display latency.
 
-The standalone typing playground remains a debug-only activity. It is not the app's
-launch screen and does not require an account:
-
-```sh
-adb shell am start -n com.cdcg.convolab.debug/com.cdcg.convolab.TypingLabActivity
-```
+The standalone typing playground remains a debug-only activity. After signing in,
+open the account menu and select **Japanese typing lab**, or use **Japanese typing
+playground** in Settings. The lab itself uses scratchpad fixtures rather than
+Journal data. Its activity is not exported; launching it directly from adb is not
+supported. Automated UI tests launch it inside the app without a real account.
 
 See [playground setup and historical benchmarks](docs/typing-playground.md).
 Release builds package the Journal engine/model/dictionary but exclude playground

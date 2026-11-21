@@ -1,13 +1,12 @@
 # Android Japanese typing playground
 
 The main app opens authentication and Journal. Debug builds also contain a separate
-standalone typing lab, launched explicitly with:
+standalone typing lab. After signing in, open the account menu → **Japanese typing
+lab**, or Settings → **Japanese typing playground**. The activity is not exported,
+so it cannot be launched directly from adb. Automated tests launch it inside the
+app without a real account.
 
-```sh
-adb shell am start -n com.cdcg.convolab.debug/com.cdcg.convolab.TypingLabActivity
-```
-
-The lab does not require login or use Journal data. Release builds include the
+The lab uses a scratchpad rather than Journal data. Release builds include the
 Journal engine, model and dictionary, but exclude the lab activity and test fixtures.
 Use an English keyboard in **Romaji**, then tap a candidate, tap
 **かな**, or press the keyboard's Done button to append the first candidate to the
