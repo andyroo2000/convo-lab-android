@@ -63,6 +63,26 @@ class TutorControllerTest {
         assertFalse(controller.state.value.busy)
     }
 
+    @Test fun dismissingAnInFlightPreferenceCannotReopenThePicker() = runTest {
+        val api = TutorFixture()
+        val controller = TutorController(api, backgroundScope)
+        controller.open(source)
+        runCurrent()
+        controller.showPicker()
+        runCurrent()
+        val response = CompletableDeferred<TutorPreferences>()
+        api.chooseResult = { withContext(NonCancellable) { response.await() } }
+        controller.choose(api.ren)
+        runCurrent()
+        controller.dismissPicker()
+        response.complete(TutorPreferences("ren", listOf(api.hana, api.ren)))
+        runCurrent()
+        assertFalse(controller.state.value.choosing)
+        assertFalse(controller.state.value.busy)
+        assertEquals(api.hana, controller.state.value.question?.tutor)
+        assertNull(controller.state.value.notice)
+    }
+
     @Test fun anUnassignedQuestionIsPreparedAgainAfterChoosing() = runTest {
         val api = TutorFixture().apply { prepareResult = { sample.copy(tutor = null) } }
         val controller = TutorController(api, backgroundScope)
@@ -89,7 +109,8 @@ private class TutorFixture : TutorGateway {
         if (failCatalog) throw java.io.IOException("offline")
         return TutorPreferences("hana", listOf(hana, ren))
     }
-    override suspend fun choose(tutor: Tutor) = TutorPreferences(tutor.id, listOf(hana, ren))
+    var chooseResult: suspend (Tutor) -> TutorPreferences = { TutorPreferences(it.id, listOf(hana, ren)) }
+    override suspend fun choose(tutor: Tutor) = chooseResult(tutor)
     override suspend fun question(entryId: JournalId, questionId: JournalId) = sample
     override suspend fun retryAudio(entryId: JournalId, questionId: JournalId) = sample
 }

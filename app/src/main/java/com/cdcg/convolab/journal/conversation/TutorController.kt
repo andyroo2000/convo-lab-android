@@ -40,7 +40,11 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
         if (question.tutor == null) loadPicker(epoch)
     }
     fun showPicker() = action { _, epoch -> loadPicker(epoch) }
-    fun dismissPicker() { if (!state.value.busy) mutableState.update { it.copy(choosing = false, error = null) } }
+    fun dismissPicker() {
+        generation++
+        work?.cancel()
+        mutableState.update { it.copy(choosing = false, busy = false, error = null) }
+    }
     fun retry() { if (state.value.choosing) showPicker() else reload() }
 
     fun choose(tutor: Tutor) = action { source, epoch ->
