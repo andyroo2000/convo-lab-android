@@ -88,6 +88,15 @@ class SessionController(
         if (old != null) revoke(old.token)
     }
 
+    suspend fun updateAccount(expected: Session, account: Account): Boolean = withContext(NonCancellable) { mutex.withLock {
+        if (session?.token != expected.token || session?.account?.id != account.id) return@withLock false
+        val updated = Session(expected.token, account)
+        withContext(io) { storage.write(updated) }
+        session = updated
+        mutableState.value = mutableState.value.copy(account = account)
+        true
+    } }
+
     suspend fun clearMessage() = mutex.withLock {
         mutableState.value = mutableState.value.copy(error = null, resetSent = false)
     }
