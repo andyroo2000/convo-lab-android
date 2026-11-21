@@ -2,6 +2,12 @@ package com.cdcg.convolab.auth
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,37 +53,54 @@ fun AuthScreen(state: AuthState, submit: (AuthPage, AuthForm) -> Unit, clearMess
     LaunchedEffect(page, state.resetSent) { scroll.scrollTo(0) }
     val navigate: (AuthPage) -> Unit = { page = it; form.clearSecrets(); clearMessage() }
     BackHandler(page != AuthPage.SignIn && !state.busy) { navigate(AuthPage.SignIn) }
-    Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()
-        .verticalScroll(scroll).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    CompositionLocalProvider(LocalAuthInput provides true) {
+    ProvideTextStyle(TextStyle(fontFamily = JournalBrand.Body, fontSize = 14.sp)) {
+    Box(Modifier.fillMaxSize().background(JournalBrand.Green)) {
+    Box(Modifier.fillMaxSize().padding(8.dp).border(2.dp, Color(0xFFEFF3C7).copy(alpha = .55f), RoundedCornerShape(topStart = 26.dp, topEnd = 3.dp, bottomStart = 3.dp, bottomEnd = 26.dp)))
+    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()
+        .verticalScroll(scroll).padding(horizontal = 24.dp, vertical = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (page != AuthPage.SignIn) TextButton(onClick = { navigate(AuthPage.SignIn) }, modifier = Modifier.align(Alignment.Start)) { Text("Back to sign in", color = Color.White) }
         JournalCover(Modifier.widthIn(max = 540.dp).fillMaxWidth())
-        Card(Modifier.widthIn(max = 540.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Spacer(Modifier.height(32.dp))
+        AuthPanel(state, page, form, AuthActions(submit, navigate))
+    }
+    }
+    }
+    }
+}
+
+private class AuthActions(val submit: (AuthPage, AuthForm) -> Unit, val navigate: (AuthPage) -> Unit)
+
+@Composable
+private fun AuthPanel(state: AuthState, page: AuthPage, form: AuthForm, actions: AuthActions) {
+        Card(Modifier.widthIn(max = 540.dp).fillMaxWidth(), shape = RoundedCornerShape(4.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 30.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Text(page.title(), fontFamily = JournalBrand.Heading, fontWeight = FontWeight.ExtraBold,
                     fontSize = 32.sp, color = Color(0xFF242424))
+                if (page == AuthPage.SignIn) AuthNavigation(page, !state.busy, actions.navigate)
+                if (page == AuthPage.Reset && !state.resetSent) Text("Enter your email address and we’ll send you a link to reset your password.")
                 if (state.resetSent && page == AuthPage.Reset) {
                     Text("If an account exists for that email, a reset link is on its way.",
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 } else {
-                    AuthFields(page, form, !state.busy)
+                    AuthFields(page, form, !state.busy, if (page == AuthPage.SignIn) { { actions.navigate(AuthPage.Reset) } } else null)
                     AuthError(state.error, page)
-                    Button(onClick = { submit(page, form) }, enabled = !state.busy && form.valid(page),
-                        colors = ButtonDefaults.buttonColors(containerColor = JournalBrand.Blue),
-                        modifier = Modifier.align(Alignment.End).testTag("auth-submit")) { Text(page.action()) }
+                    Button(onClick = { actions.submit(page, form) }, enabled = !state.busy && form.valid(page),
+                        colors = ButtonDefaults.buttonColors(containerColor = JournalBrand.Blue, disabledContainerColor = JournalBrand.Blue.copy(alpha = .5f), disabledContentColor = Color.White),
+                        modifier = Modifier.align(Alignment.End).testTag("auth-submit")) { Text(page.action(), fontFamily = JournalBrand.Body, fontSize = 13.sp) }
                 }
                 if (state.busy) CircularProgressIndicator()
-                AuthNavigation(page, !state.busy, navigate)
             }
         }
-    }
 }
 
 @Composable
 private fun AuthNavigation(page: AuthPage, enabled: Boolean, navigate: (AuthPage) -> Unit) {
-    if (page == AuthPage.SignIn) {
-        TextButton(onClick = { navigate(AuthPage.Register) }, enabled = enabled) { Text("Create an account") }
-        TextButton(onClick = { navigate(AuthPage.Reset) }, enabled = enabled) { Text("Forgot password?") }
-    } else {
-        TextButton(onClick = { navigate(AuthPage.SignIn) }, enabled = enabled) { Text("Back to sign in") }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("New user?", fontFamily = JournalBrand.Body, fontSize = 12.sp)
+        TextButton(onClick = { navigate(AuthPage.Register) }, enabled = enabled) {
+            Text("Create an account", fontFamily = JournalBrand.Body, fontSize = 12.sp, color = JournalBrand.Blue)
+        }
     }
 }
 

@@ -1,6 +1,9 @@
 package com.cdcg.convolab.settings
 
 import android.view.WindowInsets
+import android.os.Build
+import android.view.View
+import android.view.inspector.WindowInspector
 import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
@@ -13,6 +16,7 @@ import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.auth.*
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.ConvoLabTheme
+import com.cdcg.convolab.ui.cancelFixtureAutofill
 import kotlinx.coroutines.*
 import org.junit.After
 import org.junit.Assert.*
@@ -28,7 +32,7 @@ class SettingsUiTest {
     private val session = Session("fixture-token", Account(101, "Naomi", "naomi@example.invalid"))
     private val api = UiSettingsGateway(session.account)
     private lateinit var controller: SettingsController
-    @After fun stop() { scope.cancel() }
+    @After fun stop() { compose.activity.cancelFixtureAutofill(); scope.cancel() }
 
     @Test fun profileAndPasswordFormsRemainUsableWithKeyboard() {
         launchSettings()
@@ -37,6 +41,7 @@ class SettingsUiTest {
         compose.onNodeWithTag("auth-Name").performClick().performTextReplacement("Naomi Updated")
         aboveKeyboard(compose.onNodeWithTag("settings-save-profile"))
         screenshot(TestOutput.file("settings-profile-keyboard.png"))
+        compose.activity.cancelFixtureAutofill()
         compose.onNodeWithTag("settings-save-profile").performClick()
         compose.waitUntil(5_000) { controller.state.value.account.name == "Naomi Updated" }
         // Successful form replacement dismisses its input; Back can navigate away after that.
@@ -47,6 +52,7 @@ class SettingsUiTest {
         compose.onNodeWithTag("auth-Confirm password").performScrollTo().performClick().performTextInput("fixture-new-password")
         aboveKeyboard(compose.onNodeWithTag("settings-save-password"))
         screenshot(TestOutput.file("settings-password-keyboard.png"))
+        compose.activity.cancelFixtureAutofill()
         compose.onNodeWithTag("settings-save-password").assertIsEnabled().performClick()
         compose.waitUntil(5_000) { api.passwordChanged }
         compose.onNodeWithText("Password updated.").assertExists()
@@ -55,10 +61,12 @@ class SettingsUiTest {
     @Test fun wanikaniConnectSyncAndConfirmedDisconnectOmitStudyOptions() {
         launchSettings()
         compose.onNodeWithText("Connections").performClick()
-        compose.onNodeWithText("WaniKani · Not connected").performClick()
-        compose.onNodeWithTag("auth-WaniKani API token").performClick().performTextInput("fixture-provider-token")
+        compose.onNodeWithText("WaniKani").performClick()
+        compose.onNodeWithTag("auth-WaniKani API token").performScrollTo().performClick().performTextInput("fixture-provider-token")
+        screenshot(TestOutput.file("settings-wanikani-focus.png"))
         aboveKeyboard(compose.onNodeWithTag("settings-connect-wanikani"))
         screenshot(TestOutput.file("settings-wanikani-token-keyboard.png"))
+        compose.activity.cancelFixtureAutofill()
         compose.onNodeWithTag("settings-connect-wanikani").performClick()
         compose.waitUntil(5_000) { controller.state.value.known.connected && !controller.state.value.busy }
         // Successful form replacement dismisses its input; Back can navigate away after that.
@@ -89,16 +97,24 @@ class SettingsUiTest {
     }
 
     private fun aboveKeyboard(action: SemanticsNodeInteraction) {
-        compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        compose.waitUntil(10_000) { settingsWindow().rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
         device.waitForIdle()
         compose.waitForIdle()
         val node = action.performScrollTo().assertIsDisplayed()
         val top = compose.runOnIdle {
-            val view = compose.activity.window.decorView
+            val view = settingsWindow()
             view.height - view.rootWindowInsets.getInsets(WindowInsets.Type.ime()).bottom
         }
         val bounds = node.fetchSemanticsNode().boundsInWindow
         assertTrue("Settings action is hidden by keyboard", bounds.height > 0 && bounds.bottom <= top + 1)
+    }
+
+    private fun settingsWindow(): View {
+        // Settings lives in its own sheet window; the activity can retain stale IME insets.
+        if (Build.VERSION.SDK_INT >= 29) {
+            WindowInspector.getGlobalWindowViews().firstOrNull { it.hasWindowFocus() }?.let { return it }
+        }
+        return compose.activity.window.decorView
     }
 
     private fun screenshot(file: File) {

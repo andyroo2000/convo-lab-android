@@ -19,7 +19,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.journal.input.*
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
+import com.cdcg.convolab.journal.NotebookPaperShape
+import com.cdcg.convolab.journal.notebookLines
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 class ConversationPresentation(val state: ConversationState, val session: ConversationSession)
@@ -29,7 +33,7 @@ fun ConversationContent(presentation: ConversationPresentation, tutor: TutorPres
     val state = presentation.state
     Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
         state.replies.forEach { binding -> key(binding.controller) {
-            Surface(color = Color(0xFFFAFCFF), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFD9E6F2))) {
+            Surface(color = Color.Transparent) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     binding.node?.question?.let { TeacherQuestion(it, binding.node?.parentId?.let(::JournalId)) }
                     ReplyContent(binding.controller, enabled)
@@ -59,7 +63,7 @@ fun ReplyContent(controller: ReplyController, enabled: Boolean) {
         }
         ReplyMessages(state, controller, enabled)
     }
-    if (work.finalEdit != null) FinalEditSheet(feedback)
+    if (work.finalEdit != null) ReplyFinalEditDialog(feedback)
 }
 
 private fun ReplyState.showsEditor(feedback: FeedbackPresentation) = editing || (!feedback.visible && !feedback.state.busy)
@@ -77,13 +81,15 @@ private fun ReplyEditor(state: ReplyState, controller: ReplyController, enabled:
     val clipboard = LocalClipboardManager.current
     val editable = enabled && !state.busy && state.record.pendingSave == null
     val input = LocalInputHost.current
-    Text("Your answer")
+    Text("Your answer", style = JournalStyle.Body)
+    Box(Modifier.fillMaxWidth().background(JournalStyle.Paper, NotebookPaperShape).border(1.dp, JournalStyle.Border, NotebookPaperShape).padding(24.dp)) {
     JournalWritingField(text = state.text, changed = controller::edit,
         options = WritingOptions("Your answer", editable, LocalJournalTypography.current.style, "返事を書く…"),
-        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).testTag("conversation-answer-${state.record.id}"))
+        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp).notebookLines(LocalJournalTypography.current.size).testTag("conversation-answer-${state.record.id}"))
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { input?.finish(); keyboard?.hide(); controller.submit() }, enabled = enabled && !state.busy && state.text.isNotBlank(),
-            modifier = Modifier.testTag("conversation-submit-${state.record.id}")) { Text(if (state.busy) "Submitting…" else "Submit answer") }
+        JournalDraftButton(if (state.busy) "Submitting…" else "Submit answer", { input?.finish(); keyboard?.hide(); controller.submit() },
+            style = DraftButtonStyle(enabled = enabled && !state.busy && state.text.isNotBlank()), modifier = Modifier.testTag("conversation-submit-${state.record.id}"))
         TextButton(onClick = { clipboard.setText(AnnotatedString(state.text)) }) { Text("Copy answer") }
     }
     if (state.record.pendingSave != null) Text("Sending was interrupted. Retry submits the same answer without creating a duplicate.")

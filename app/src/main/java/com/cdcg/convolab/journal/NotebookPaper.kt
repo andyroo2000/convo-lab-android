@@ -44,3 +44,13 @@ private fun DrawScope.drawRules(linePitch: Double) {
         y += linePitch.sp.toPx()
     }
 }
+
+/** Rules for editable passages, including final edits and tutor replies. */
+fun Modifier.notebookLines(fontSize: Int): Modifier = drawBehind {
+    val pitch = (fontSize * 2.2).sp.toPx()
+    var y = pitch * (34f / 44f)
+    while (y < size.height) {
+        drawLine(Color(0xFFD1D9DA), Offset(0f, y), Offset(size.width, y), .5.dp.toPx())
+        y += pitch
+    }
+}

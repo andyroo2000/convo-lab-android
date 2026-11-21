@@ -1,6 +1,13 @@
 package com.cdcg.convolab.journal.input
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import com.cdcg.convolab.ui.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
@@ -28,9 +35,8 @@ fun KeyboardChoices(preference: KeyboardPreference, onboarding: Boolean = false,
         KeyboardChoice(JournalKeyboard.Device, selected, { selected = it },
             KeyboardDescription(if (onboarding) "I use a Japanese keyboard" else "Use my keyboard", "Let my keyboard handle the conversion."))
         Text("With built-in input, type with your English keyboard. Tap a suggestion to choose kanji. Space cycles choices; Enter accepts. Use the arrows to choose a section and −/+ to adjust it.")
-        Button(onClick = { preference.change(selected); done() }, enabled = selected != JournalKeyboard.Choose) {
-            Text(if (onboarding) "Start writing" else "Save keyboard choice")
-        }
+        JournalDraftButton(if (onboarding) "Start writing" else "Save keyboard choice", { preference.change(selected); done() },
+            modifier = Modifier.fillMaxWidth(), style = DraftButtonStyle(enabled = selected != JournalKeyboard.Choose))
     }
 }
 
@@ -38,9 +44,21 @@ private data class KeyboardDescription(val title: String, val detail: String)
 
 @Composable
 private fun KeyboardChoice(mode: JournalKeyboard, selection: JournalKeyboard, choose: (JournalKeyboard) -> Unit, description: KeyboardDescription) {
-    Row(Modifier.fillMaxWidth().selectable(selected = mode == selection, role = Role.RadioButton, onClick = { choose(mode) }).padding(8.dp)) {
-        RadioButton(selected = mode == selection, onClick = null)
-        Column(Modifier.padding(start = 8.dp)) { Text(description.title); Text(description.detail, style = MaterialTheme.typography.bodySmall) }
+    Surface(color = if (mode == selection) JournalStyle.Sage else Color.White.copy(alpha = .4f), shape = RoundedCornerShape(9.dp),
+        border = BorderStroke(1.dp, if (mode == selection) JournalStyle.Green else JournalStyle.Border)) {
+        Row(Modifier.fillMaxWidth().selectable(selected = mode == selection, role = Role.RadioButton, onClick = { choose(mode) }).padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            Box(Modifier.size(38.dp, 40.dp).background(Color.White.copy(alpha = .6f), RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                if (mode == JournalKeyboard.BuiltIn) Text("あ", fontFamily = JournalBrand.Handwriting, fontSize = 25.sp)
+                else JournalIcon(JournalSymbol.Keyboard)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(description.title, fontFamily = JournalBrand.Serif, fontSize = 22.sp, color = JournalStyle.Green)
+                Text(description.detail, fontFamily = JournalBrand.Serif, fontSize = 18.sp, color = Color(0xFF73695E))
+            }
+            RadioButton(selected = mode == selection, onClick = null, modifier = Modifier.size(24.dp),
+                colors = RadioButtonDefaults.colors(selectedColor = JournalStyle.Green))
+        }
     }
 }
 

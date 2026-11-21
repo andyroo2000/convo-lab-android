@@ -1,0 +1,338 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "4654593F-B995-402B-A2DA-0EB73BEA26B5.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal font cards and slider_0_1165A998-EAE6-4A2F-B3D9-267EC155338D.png",
+        "timestamp" : 1795295463.611
+      }
+    ],
+    "testIdentifier" : "JournalAppearanceUITests/testAppearancePersistsAcrossRelaunch()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalAppearanceUITests/testAppearancePersistsAcrossRelaunch"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "C49AC221-11F2-43F0-8DA6-C923E437E21F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal delete confirmation_0_E3447B1B-2414-4C2F-9F6A-64284A4CC670.png",
+        "timestamp" : 1795295532.885
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "3787B8B5-D1C4-44E3-B2C1-974BD2BD7DA8.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal rename sheet_0_87D2E683-0610-4AD7-93BC-388B27ABF53B.png",
+        "timestamp" : 1795295516.15
+      }
+    ],
+    "testIdentifier" : "JournalDeletionUITests/testDraftRowMenuRenamesAndRequiresDeletionConfirmation()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalDeletionUITests/testDraftRowMenuRenamesAndRequiresDeletionConfirmation"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "546923BF-6EA8-4240-B83C-EAC97E290918.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Reopened notebook draft_0_0100F617-361B-463C-97B0-E19DB9033982.png",
+        "timestamp" : 1795295587.336
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "54CE6EB5-C551-4BA9-ADE2-8F55DB04E3FE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Growing notebook draft_0_2BBFE33D-A6F7-48DD-9B15-D7125F56B7DC.png",
+        "timestamp" : 1795295580.251
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "F3A1675A-0439-4468-B821-EA7E337CC072.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Empty notebook draft_0_64E7D7BF-27DF-48CF-93E5-64AF74CFF3C4.png",
+        "timestamp" : 1795295562.971
+      }
+    ],
+    "testIdentifier" : "JournalDraftCloseUITests/testNewDraftUsesGrowingNotebookPaperAndKeepsWritingAfterReopening()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalDraftCloseUITests/testNewDraftUsesGrowingNotebookPaperAndKeepsWritingAfterReopening"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "4D5B1B47-250D-4EE5-9077-E8C0B70D04F3.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Web-style correction bubble_0_3DEB0BF7-A052-4BB4-8ADF-892D9EDB61C0.png",
+        "timestamp" : 1795295621.745
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testCorrectionBubbleHasNoMutationControls()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testCorrectionBubbleHasNoMutationControls"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "E861AF64-72EC-4800-AABF-03F80A1DB31F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Web-style correction bubble_0_EB69BB5A-C01D-44B9-B7B7-522127D9A9BB.png",
+        "timestamp" : 1795295649.417
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "8903BFE5-23CC-4450-A60E-FCA756FDD969.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Web-style correction bubble_0_1BD4CDD5-9A1C-42D5-A8D0-0C4A55D0099E.png",
+        "timestamp" : 1795295635.604
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testCorrectionPopoverFollowsJournalFontSize()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testCorrectionPopoverFollowsJournalFontSize"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "8A26405E-2224-469F-B972-058887D6D214.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Soft highlights and corrected version_0_5D4A5734-617F-44B2-B7A2-884E7395DAB6.png",
+        "timestamp" : 1795295661.801
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "02573EFA-2657-4420-BE47-4175BCEE9D3F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Final selected_0_B428651A-1EEF-4C5F-9683-3C39EC190667.png",
+        "timestamp" : 1795295661.356
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testDraftAndFinalShowOnlyOneVersionAtATime()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testDraftAndFinalShowOnlyOneVersionAtATime"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "90DE49EA-0249-4700-B0C1-D52638B01677.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Edit final on notebook paper_0_132D2B02-F35B-45C1-80DC-1CB6FE595492.png",
+        "timestamp" : 1795295694.596
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testFinalEditorCancelsAndSavesOnNotebookPaper()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testFinalEditorCancelsAndSavesOnNotebookPaper"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "F59D91A3-E617-4043-8C24-AAB451C0D408.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Long correction scrolled to end_0_51CE620B-BB46-48E0-A223-93AB29B7CA5F.png",
+        "timestamp" : 1795295726.828
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "F2B1517C-0E0F-4640-B1B4-12EA610F2810.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Web-style correction bubble_0_07CABC21-128B-4183-BF2A-B5843183E864.png",
+        "timestamp" : 1795295713.995
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testLongCorrectionStaysInsideScreenAndScrollsAtLargeText()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testLongCorrectionStaysInsideScreenAndScrollsAtLargeText"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "2C8A27B5-A64E-4CB4-81DD-FA60C27FAC44.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Account menu at largest text size_0_49259B61-DE39-4EC6-9336-6DC1055B26F4.png",
+        "timestamp" : 1795295741.76
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "C9F2C577-CE0C-4A70-A876-317E6D4D363B.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Picker at largest accessibility text size_0_B0F6589D-EAB2-4AC6-B765-4602718D9FD4.png",
+        "timestamp" : 1795295739.805
+      }
+    ],
+    "testIdentifier" : "JournalEditingUITests/testPickerFitsAtLargestTextSize()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalEditingUITests/testPickerFitsAtLargestTextSize"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "0E092014-9273-42B7-A953-075AECF91ECC.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal tutor picker keeps the existing question with Hana_0_8EBD0117-F8A9-4823-A411-DA659263226E.png",
+        "timestamp" : 1795295769.986
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "F263D3B4-EA4C-49BA-8AE2-F8640C61D861.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Generous Journal with illustrated tutor_0_49007154-9A51-4A6F-AD3D-D8DE70ECBFA5.png",
+        "timestamp" : 1795295762.752
+      }
+    ],
+    "testIdentifier" : "JournalTutorUITests/testTutorChoicePersistsAndDoesNotReassignAnOlderQuestion()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalTutorUITests/testTutorChoicePersistsAndDoesNotReassignAnOlderQuestion"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "9D4EBC73-C23B-4B34-A637-F40589EDBED8.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Paper account menu_0_14570FBE-5A8B-4F3B-A505-8C3B03C9F816.png",
+        "timestamp" : 1795295788.673
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "362FB669-6AB3-4134-93A7-16D2FC4DD0C0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Writing a Japanese tutor response_0_A822860B-4AAF-42B3-8A10-67BD2C8F3571.png",
+        "timestamp" : 1795295785.391
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "F3C7CF22-F315-492D-8F58-A3DEAB992CDE.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Tutor response notebook_0_162DBF6B-6662-4BE7-B1C3-311D545A1D6A.png",
+        "timestamp" : 1795295782.269
+      }
+    ],
+    "testIdentifier" : "JournalTutorUITests/testWritingOnTutorReplyPaperUsesSelectedJapaneseInput()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalTutorUITests/testWritingOnTutorReplyPaperUsesSelectedJapaneseInput"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "A1AD094B-1684-491F-9E26-35415D00ED39.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "New draft notebook_0_0A1E80B7-F99E-4D43-8CAA-A7C7DEBF5749.png",
+        "timestamp" : 1795295816.61
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "D7BF0E0E-502F-4007-A2DA-27E25F0E87D7.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Contents drawer_0_CC884658-8452-40C9-8404-AE5EAEAE9374.png",
+        "timestamp" : 1795295814.277
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "55022614-D7CE-4090-A943-CB3AF8BF7145.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Narration voice modal_0_EC12C881-AA36-42E2-A7F1-DD06C294DE62.png",
+        "timestamp" : 1795295810.53
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "21D35AA5-EC2C-4400-A15E-FB08B19C83AA.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Final notebook with compact audio header_0_E61A16CB-8B7C-4599-8886-8B6474393879.png",
+        "timestamp" : 1795295806.847
+      }
+    ],
+    "testIdentifier" : "JournalVoicePickerUITests/testCompactPlayerAndDrawerActions()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/JournalVoicePickerUITests/testCompactPlayerAndDrawerActions"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "FA7F7C73-F7B6-43C0-9A5F-14907E49223E.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal accordion settings_0_4CEF04B3-296C-482D-998B-07FEFD2B64B3.png",
+        "timestamp" : 1795295831.368
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "41B98D5A-F029-40BD-8129-64E63A258A70.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal profile fields_0_79A0F349-BCD8-4A14-B61E-D85F3C5698A3.png",
+        "timestamp" : 1795295829.433
+      }
+    ],
+    "testIdentifier" : "SettingsModalUITests/testAccordionAndProfileReturnToJournalWithoutLosingDraft()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/SettingsModalUITests/testAccordionAndProfileReturnToJournalWithoutLosingDraft"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "86DA909E-A8D0-4C21-B2BA-86B92369CA96",
+        "deviceName" : "iPhone 16e",
+        "exportedFileName" : "D6A9C51B-2166-4E7D-92AA-79A4FA7E2EC3.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Journal-only settings connections_0_7CF768CF-4E02-4949-BE34-55CDF90FB6C6.png",
+        "timestamp" : 1795295842.123
+      }
+    ],
+    "testIdentifier" : "SettingsModalUITests/testJournalOnlySettingsOfferJournalConnections()",
+    "testIdentifierURL" : "test://com.apple.xcode/ConvoLab/ConvoLabUITests/SettingsModalUITests/testJournalOnlySettingsOfferJournalConnections"
+  }
+]

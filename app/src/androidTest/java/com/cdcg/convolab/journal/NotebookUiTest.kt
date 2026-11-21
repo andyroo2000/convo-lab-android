@@ -44,6 +44,11 @@ class NotebookUiTest {
         compose.onNodeWithTag("journal-save").assertIsDisplayed().assertIsEnabled()
         assertActionsAboveKeyboard()
         screenshot("notebook-long-keyboard")
+        device.pressBack()
+        compose.waitUntil(10_000) { !compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        compose.onNodeWithTag("journal-save").assertIsDisplayed()
+        compose.onNodeWithText("Close").assertIsDisplayed()
+        screenshot("notebook-long-keyboard-hidden")
     }
 
     @Test fun pendingSaveVisiblyDisablesEditingUntilAcknowledged() {
@@ -69,7 +74,7 @@ class NotebookUiTest {
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Keep this draft?").assertIsDisplayed()
         screenshot("notebook-close-draft")
-        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithContentDescription("Close Keep this draft?").performClick()
         compose.onNodeWithText("Contents").performClick()
         compose.onNodeWithText("A movie night").assertIsDisplayed()
         screenshot("notebook-contents")
@@ -83,9 +88,9 @@ class NotebookUiTest {
         compose.onNodeWithText("A movie night").performClick()
         compose.onNodeWithText("Close").performClick()
         compose.onNodeWithText("Delete draft").performClick()
-        compose.onNodeWithText("Delete entry?").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
-        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithText("Delete this entry?").assertIsDisplayed()
+        compose.onNodeWithText("Keep entry").performClick()
+        compose.onNodeWithContentDescription("Close Keep this draft?").performClick()
         compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
     }
 

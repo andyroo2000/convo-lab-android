@@ -31,12 +31,12 @@ object JournalBrand {
 
 @Composable
 fun JournalCover(modifier: Modifier = Modifier) {
-    Column(modifier.background(JournalBrand.Green).padding(horizontal = 8.dp, vertical = 24.dp)) {
-        Text("CONVO-LAB", fontFamily = JournalBrand.Anton, fontSize = 40.sp, color = JournalBrand.Yellow)
+    Column(modifier.background(JournalBrand.Green).padding(horizontal = 8.dp)) {
+        Text("CONVO-LAB", fontFamily = JournalBrand.Anton, fontSize = 38.sp, color = JournalBrand.Yellow)
         Text("コンボ・ラボ", fontFamily = FontFamily(Font(R.font.noto_sans_jp)),
-            fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("JOURNAL", fontFamily = FontFamily(Font(R.font.barlow_condensed)), fontSize = 22.sp,
+            fontSize = 27.sp, letterSpacing = (-1.8).sp, fontWeight = FontWeight.Black, color = Color.White)
+        Text("JOURNAL", fontFamily = FontFamily(Font(R.font.barlow_condensed)), fontSize = 18.sp,
             letterSpacing = 5.sp, color = Color.White, modifier = Modifier.padding(top = 22.dp))
-        Text("ジャーナル", color = Color.White, fontSize = 15.sp)
+        Text("ジャーナル", color = Color.White, fontSize = 12.sp)
     }
 }

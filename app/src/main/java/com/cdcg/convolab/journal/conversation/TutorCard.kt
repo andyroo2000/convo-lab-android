@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -23,7 +25,7 @@ import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.journal.audio.*
 import com.cdcg.convolab.R
 import com.cdcg.convolab.journal.text.RubyText
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
 
 class TutorPresentation(val state: TutorState, val controller: TutorController)
 
@@ -32,16 +34,19 @@ fun TutorCard(presentation: TutorPresentation) {
     val state = presentation.state
     val question = state.question
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (question?.tutor == null && state.preferences != null) JournalCard {
+            Text("Choose your tutor", fontFamily = JournalBrand.Serif, fontSize = 30.sp)
+            TutorChoices(presentation)
+        }
         if (question != null) TeacherQuestion(question, state.source?.entryId)
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        TextButton(onClick = presentation.controller::showPicker, enabled = !state.busy) { Text("Choose your tutor") }
         state.notice?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
         state.error?.takeUnless { state.choosing }?.let {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             TextButton(onClick = presentation.controller::retry, enabled = !state.busy) { Text("Retry tutor") }
         }
     }
-    if (state.choosing) TutorPicker(presentation)
+    if (state.choosing && question?.tutor != null) TutorPicker(presentation)
 }
 
 @Composable
@@ -53,12 +58,12 @@ fun TeacherQuestion(question: TutorQuestion, parentId: JournalId? = null) {
         Column {
             Row(Modifier.fillMaxWidth().background(Color(0xFFE4EFFC)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 question.tutor?.let { TutorPortrait(it, Modifier.size(80.dp)) }
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { english = !english }) { Text(if (english) "Hide English" else "Show English") }
+                Box(Modifier.weight(1f)) { if (source != null) AudioControls(source) }
+                TextButton(onClick = { english = !english }, modifier = Modifier.semantics { contentDescription = if (english) "Hide English" else "Show English" }) { Text("En", fontSize = 13.sp, color = Color(0xFF6393EF)) }
             }
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (source == null) RubyText(question.reading.ifBlank { question.text })
-                else { AudioReading(source); AudioControls(source) }
+                else AudioReading(source)
                 if (english) Text(question.translation, fontFamily = JournalBrand.Serif)
             }
         }
@@ -77,22 +82,27 @@ fun TutorPortrait(tutor: Tutor, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun TutorPicker(presentation: TutorPresentation) {
+fun TutorPicker(presentation: TutorPresentation) {
     val state = presentation.state
-    AlertDialog(onDismissRequest = presentation.controller::dismissPicker, title = { Text("Choose your tutor") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Your choice applies to future questions.")
-                state.preferences?.tutors?.forEach { tutor ->
-                    OutlinedButton(onClick = { presentation.controller.choose(tutor) }, enabled = !state.busy, modifier = Modifier.fillMaxWidth().semantics { selected = state.preferences.selectedId == tutor.id }) {
-                        TutorPortrait(tutor, Modifier.size(64.dp).clearAndSetSemantics {})
-                        Spacer(Modifier.width(12.dp))
-                        Text(tutor.name + if (state.preferences.selectedId == tutor.id) " · Selected" else "")
-                    }
-                }
-                if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = presentation.controller::retry, enabled = !state.busy) { Text("Retry tutor") } }
+    JournalSheet("Choose your tutor", presentation.controller::dismissPicker) {
+        TutorChoices(presentation)
+        if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.error?.let {
+            Text(it, color = JournalStyle.Red)
+            JournalDraftButton("Retry tutor", presentation.controller::retry, style = DraftButtonStyle(enabled = !state.busy))
+        }
+    }
+}
+
+@Composable
+private fun TutorChoices(presentation: TutorPresentation) {
+    val state = presentation.state
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        state.preferences?.tutors?.forEach { tutor ->
+            JournalAvatarChoice(state.preferences.selectedId == tutor.id, tutor.name, !state.busy,
+                Modifier.weight(1f), { presentation.controller.choose(tutor) }) {
+                TutorPortrait(tutor, Modifier.size(80.dp).clearAndSetSemantics {})
             }
-        }, confirmButton = { TextButton(onClick = presentation.controller::dismissPicker) { Text("Done") } })
+        }
+    }
 }

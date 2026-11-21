@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -37,7 +40,7 @@ class FeedbackUiTest {
         launchNotebook(submit = true)
         compose.onNodeWithText("Who was driving?").assertIsDisplayed()
         screenshot("feedback-clarification")
-        compose.onNodeWithText("Write my own answer").performScrollTo().performClick()
+        compose.onNodeWithText("Something else").performScrollTo().performClick()
         compose.onNodeWithTag("clarification-answer").performScrollTo().performClick().performTextInput("My friend was driving.")
         compose.onNodeWithTag("clarification-send").performScrollTo()
         assertAboveKeyboard("clarification-send")
@@ -56,10 +59,14 @@ class FeedbackUiTest {
         screenshot("feedback-final")
         compose.onNodeWithContentDescription("More journal options").performScrollTo().performClick()
         compose.onNodeWithText("Edit final").performClick()
+        screenshot("feedback-final-editor")
+        compose.onNodeWithText("Draft").assertIsNotEnabled()
+        compose.onNodeWithText("Contents").assertIsNotEnabled()
         val text = "友達と映画を見ました。\n".repeat(18)
         compose.onNodeWithTag("final-editor").performClick().performTextReplacement(text)
         assertAboveKeyboard("final-save")
-        val heading = compose.onNodeWithText("Edit final").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        val heading = compose.onNodeWithText("Draft").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
         assertTrue("Editor heading must remain on screen", heading.top >= 0)
         screenshot("feedback-final-editor-keyboard")
         compose.onNodeWithTag("final-save").performClick()
@@ -67,6 +74,22 @@ class FeedbackUiTest {
         assertEquals(text, api.editedText)
         assertEquals(entry.body, workflow.state.value.entry?.body)
         assertEquals(text, workflow.state.value.snapshot?.analysis?.finalText)
+    }
+
+    @Test fun finalEditorSupportsDoubleTextSizeWithKeyboardAndLongText() {
+        launchNotebook(submit = false, scale = 2f)
+        compose.onNodeWithText("Final").performClick()
+        compose.onNodeWithContentDescription("More journal options").performScrollTo().performClick()
+        compose.onNodeWithText("Edit final").performClick()
+        compose.onAllNodesWithTag("final-editor").assertCountEquals(1)
+        compose.onNodeWithTag("final-editor").performClick().performTextReplacement("友達と映画を見ました。\n".repeat(18))
+        assertAboveKeyboard("final-save")
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        val editor = compose.onNodeWithTag("final-editor").fetchSemanticsNode().boundsInWindow
+        assertTrue("Large type must retain visible writing space", editor.height > 40)
+        screenshot("feedback-final-editor-double-text")
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitUntil(5_000) { workflow.state.value.finalEdit == null }
     }
 
     @Test fun earlierPendingTextRequiresConfirmationBeforeArchiveAndContinue() {
@@ -84,7 +107,7 @@ class FeedbackUiTest {
         compose.onNodeWithText("Final").performScrollTo().assertIsDisplayed()
     }
 
-    private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null) {
+    private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null, scale: Float = 1f) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             // Match MainActivity: older Android does not force edge-to-edge on test hosts.
             compose.activity.enableEdgeToEdge()
@@ -96,7 +119,10 @@ class FeedbackUiTest {
         compose.setContent {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()
-            ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
+                ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
+            }
         }
         compose.runOnIdle { notebook.start(); if (submit) workflow.submit(entry) else workflow.open(entry) }
         compose.waitUntil(5_000) { !notebook.state.value.loading && !workflow.state.value.busy }

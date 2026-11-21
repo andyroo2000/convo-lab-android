@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.cdcg.convolab.ui.JournalButton
 import com.cdcg.convolab.auth.AuthPasswordField
 
 @Composable
@@ -17,7 +18,7 @@ fun WaniKaniSettings(state: SettingsState, controller: SettingsController) {
             Text("Connected", style = MaterialTheme.typography.titleLarge)
             Text("Known kanji: ${state.known.kanji.size}")
             state.known.lastSyncedAt?.let { Text("Last synced: $it") }
-            Button(onClick = { controller.sync() }, enabled = !state.busy) { Text("Sync WaniKani") }
+            JournalButton("Sync WaniKani", { controller.sync() }, enabled = !state.busy)
             TextButton(onClick = { disconnect = true }, enabled = !state.busy) { Text("Disconnect WaniKani") }
         } else WaniKaniConnect(state.busy, controller)
         Text("Furigana stays visible unless every kanji in a word is in your synced known-kanji set. Your WaniKani API token is used to connect your account and is never saved on this device.")
@@ -36,7 +37,7 @@ private fun WaniKaniConnect(busy: Boolean, controller: SettingsController) {
     DisposableEffect(token) { onDispose(clear) }
     AuthPasswordField("WaniKani API token", token, !busy)
     if (token.text.length > 512) Text("API tokens must be 512 characters or fewer.", color = MaterialTheme.colorScheme.error)
-    Button(onClick = { controller.connect(token.text.toString(), clear) },
+    JournalButton("Connect and Sync", onClick = { controller.connect(token.text.toString(), clear) },
         enabled = !busy && token.text.isNotBlank() && token.text.length <= 512,
-        modifier = Modifier.testTag("settings-connect-wanikani")) { Text("Connect and Sync") }
+        modifier = Modifier.testTag("settings-connect-wanikani"))
 }

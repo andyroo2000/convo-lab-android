@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.ui.*
 import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.journal.conversation.*
 
@@ -32,26 +32,49 @@ typealias NotebookMenu = @Composable () -> Unit
 data class NotebookPanels(val feedback: FeedbackPresentation? = null, val tutor: TutorPresentation? = null,
     val conversation: ConversationPresentation? = null)
 
+private class NotebookPresentation(val state: NotebookState, val controller: NotebookController, val panels: NotebookPanels) {
+    val editing = panels.feedback?.state?.finalEdit != null
+    val writing = panels.feedback?.visible != true
+    val canNavigate = !state.loading && !editing
+    val canClose = !editing && !state.busy && !state.contents && !state.closePrompt
+}
+
 @Composable
 fun NotebookScreen(state: NotebookState, controller: NotebookController, panels: NotebookPanels = NotebookPanels(), menu: NotebookMenu) {
     val input = remember { JournalInputHost() }
-    CompositionLocalProvider(LocalInputHost provides input) {
-    BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
-    BoxWithConstraints(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
-        val compact = maxHeight < 240.dp && WindowInsets.ime.getBottom(LocalDensity.current) > 0
-        Column(Modifier.fillMaxSize()) {
-            if (!compact) { NotebookHeader(!state.loading, { controller.showContents(true) }, menu) }
-            Column(Modifier.weight(1f).background(Color(0xFFFAF9F6))) {
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) { NotebookPage(state, controller, panels) }
-                JournalInputFooter(compact) { NotebookActions(state, controller, panels.feedback, compact) }
+    val presentation = NotebookPresentation(state, controller, panels)
+    CompositionLocalProvider(LocalInputHost provides input, LocalJournalNavigationEnabled provides presentation.canNavigate, LocalTutorPicker provides panels.tutor?.controller?.let { { it.showPicker() } }) {
+        BackHandler(presentation.canClose) { controller.requestClose() }
+        BackHandler(presentation.editing) {}
+        BoxWithConstraints(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
+            val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+            val compact = maxHeight < 240.dp && keyboardVisible
+            Column(Modifier.fillMaxSize()) {
+                if (!compact) NotebookHeader(presentation.canNavigate, { controller.showContents(true) }, menu)
+                Column(Modifier.weight(1f).background(Color(0xFFFAF9F6))) { NotebookBody(presentation, keyboardVisible, compact) }
             }
         }
+        NotebookOverlays(presentation)
     }
-    if (panels.feedback?.state?.finalEdit != null) FinalEditSheet(panels.feedback)
+}
+
+@Composable
+private fun ColumnScope.NotebookBody(presentation: NotebookPresentation, keyboardVisible: Boolean, compact: Boolean) {
+    val (state, controller, panels) = Triple(presentation.state, presentation.controller, presentation.panels)
+    if (presentation.editing) FinalEditSheet(panels.feedback!!) else {
+        Column(Modifier.weight(1f, fill = keyboardVisible || !presentation.writing).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            NotebookPage(state, controller, panels)
+        }
+        JournalInputFooter(compact) { if (presentation.writing) NotebookActions(state, controller, panels.feedback, compact) }
+    }
+}
+
+@Composable
+private fun NotebookOverlays(presentation: NotebookPresentation) {
+    val (state, controller, panels) = Triple(presentation.state, presentation.controller, presentation.panels)
+    if (panels.tutor?.state?.source == null && panels.tutor?.state?.choosing == true) TutorPicker(panels.tutor)
     if (state.contents) NotebookContents(state, controller)
     if (state.closePrompt) CloseDraftSheet(state, controller)
-    }
 }
 
 @Composable
@@ -63,7 +86,7 @@ private fun NotebookPage(state: NotebookState, controller: NotebookController, p
         state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
         key(state.draft.id) { NotebookPaper(state, controller::edit) }
     }
-    NotebookMessage(state, controller)
+    if (panels.feedback?.visible != true) NotebookMessage(state, controller)
 }
 
 @Composable
@@ -75,32 +98,41 @@ private fun NotebookFeedback(panels: NotebookPanels) {
 
 @Composable
 private fun NotebookHeader(enabled: Boolean, contents: () -> Unit, menu: NotebookMenu) {
-    Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 14.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text("CONVO-LAB", fontFamily = JournalBrand.Anton, fontSize = 26.sp, color = JournalBrand.Yellow)
-            Text("Journal", fontFamily = JournalBrand.Serif, fontSize = 17.sp, color = Color.White)
+    val large = LocalDensity.current.fontScale >= 1.5f
+    val navigationColor = Color.White.copy(alpha = if (enabled) 1f else .5f)
+    Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 14.dp)) {
+        if (large) Text("Journal", fontFamily = JournalBrand.Serif, fontSize = 18.sp, color = Color.White)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (!large) NotebookHeaderBrand(navigationColor)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = contents, enabled = enabled, contentPadding = PaddingValues(4.dp)) {
+                JournalIcon(JournalSymbol.Contents, color = navigationColor)
+                Spacer(Modifier.width(8.dp))
+                Text("Contents", fontFamily = JournalBrand.Serif, fontSize = 18.sp, color = navigationColor)
+            }
+            menu()
         }
-        TextButton(onClick = contents, enabled = enabled) { Text("Contents", fontFamily = JournalBrand.Serif, fontSize = 20.sp, color = Color.White) }
-        menu()
     }
+}
+
+@Composable
+private fun RowScope.NotebookHeaderBrand(navigationColor: Color) {
+    Text("CONVO-LAB", fontFamily = JournalBrand.Anton, fontSize = 30.sp, letterSpacing = (-.5).sp, color = JournalBrand.Yellow)
+    Box(Modifier.padding(horizontal = 3.dp).width(1.dp).height(32.dp).background(Color.White.copy(alpha = .4f)))
+    Text("Journal", fontFamily = JournalBrand.Serif, fontSize = 18.sp, color = navigationColor)
 }
 
 @Composable
 private fun NotebookActions(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation?, compact: Boolean) {
     val input = LocalInputHost.current
-    val labelSize = actionLabelSize(compact)
     Row(Modifier.fillMaxWidth().background(Color(0xFFFAF9F6)).padding(horizontal = 14.dp, vertical = actionPadding(compact)),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = { input?.finish(); controller.requestClose() }, enabled = !state.busy) { Text("Close", fontFamily = JournalBrand.Serif, fontSize = labelSize) }
-        Button(onClick = {
+        JournalDraftButton("Close", { input?.finish(); controller.requestClose() }, style = DraftButtonStyle(enabled = !state.busy, filled = false))
+        JournalDraftButton(when { state.busy -> "Saving…"; feedback?.visible == true -> "Back to draft"; feedback != null -> "Submit"; else -> "Save draft" }, action = {
             input?.finish()
             if (feedback?.visible == true) feedback.controller.cancel()
             else controller.save { feedback?.controller?.submit(it) }
-        }, enabled = state.canEdit && state.draft.body.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF46764C)), modifier = Modifier.testTag("journal-save")) {
-            Text(when { state.busy -> "Saving…"; feedback?.visible == true -> "Back to draft"; feedback != null -> "Submit"; else -> "Save draft" }, fontFamily = JournalBrand.Serif, fontSize = labelSize)
-        }
+        }, style = DraftButtonStyle(enabled = state.canEdit && state.draft.body.isNotBlank()), modifier = Modifier.testTag("journal-save"))
     }
 }
 
@@ -122,5 +154,4 @@ private fun NotebookMessage(state: NotebookState, controller: NotebookController
     }
 }
 
-private fun actionLabelSize(compact: Boolean): TextUnit { return if (compact) 18.sp else 22.sp }
 private fun actionPadding(compact: Boolean): Dp { return if (compact) 4.dp else 8.dp }

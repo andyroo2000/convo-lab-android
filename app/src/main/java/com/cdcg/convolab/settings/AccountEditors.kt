@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.cdcg.convolab.ui.JournalButton
 import com.cdcg.convolab.auth.AuthField
 import com.cdcg.convolab.auth.AuthInput
 import com.cdcg.convolab.auth.AuthPasswordField
@@ -20,8 +21,8 @@ fun ProfileEditor(state: SettingsState, controller: SettingsController, done: ()
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         AuthField(AuthInput("Name"), name, { if (it.codePointCount(0, it.length) <= 255) name = it }, !state.busy)
         AuthField(AuthInput("Email", KeyboardType.Email), email, { if (it.length <= 255) email = it }, !state.busy)
-        Button(onClick = { controller.updateProfile(name, email, done) }, enabled = !state.busy && name.isNotBlank() && email.isNotBlank(),
-            modifier = Modifier.testTag("settings-save-profile")) { Text("Save profile") }
+        JournalButton("Save profile", onClick = { controller.updateProfile(name, email, done) }, enabled = !state.busy && name.isNotBlank() && email.isNotBlank(),
+            modifier = Modifier.padding(top = 12.dp).testTag("settings-save-profile"))
     }
 }
 
@@ -34,8 +35,8 @@ fun PasswordEditor(state: SettingsState, controller: SettingsController, done: (
         AuthPasswordField("New password", form.password, !state.busy)
         AuthPasswordField("Confirm password", form.confirmation, !state.busy)
         Text("Use at least 8 characters. Your new passwords must match.")
-        Button(onClick = { controller.updatePassword(form.change()) { form.clear(); done() } }, enabled = !state.busy && form.valid,
-            modifier = Modifier.testTag("settings-save-password")) { Text("Update password") }
+        JournalButton("Update password", onClick = { controller.updatePassword(form.change()) { form.clear(); done() } }, enabled = !state.busy && form.valid,
+            modifier = Modifier.padding(top = 12.dp).testTag("settings-save-password"))
     }
 }
 

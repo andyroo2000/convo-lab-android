@@ -50,20 +50,21 @@ class AudioUiTest {
     }
     @Test fun realPlayerSupportsSeekingVoiceChoiceAndCachedReplay() {
         launchAudio()
-        compose.onNodeWithText("Voice", substring = false).performClick()
-        compose.onNodeWithText("Ren").performClick()
+        compose.onNodeWithContentDescription("Voice").performClick()
+        compose.onNodeWithContentDescription("Ren").performClick()
         compose.onNodeWithText("Listen").performClick()
         compose.waitUntil(10_000) { coordinator.playback.value.playing && coordinator.playback.value.duration > 0 }
         assertEquals("ren", coordinator.state.value.active?.request?.voice)
         capture("journal-audio-playing.png")
+        compose.onNodeWithContentDescription("Playback details").performClick()
         compose.onNodeWithText("Next sentence").performClick()
         compose.waitUntil(5_000) { coordinator.playback.value.position >= 9_500 }
         compose.onNodeWithText("Pause").performClick()
         compose.waitUntil(5_000) { !coordinator.playback.value.playing }
         capture("journal-audio-paused.png")
-        compose.onNodeWithText("Voice", substring = false).performClick()
+        compose.onNodeWithContentDescription("Voice").performClick()
         capture("journal-audio-voices.png")
-        compose.onNodeWithText("Hana").performClick()
+        compose.onNodeWithContentDescription("Hana").performClick()
         assertNull(coordinator.state.value.active)
         compose.onNodeWithText("Listen").performClick()
         compose.waitUntil(10_000) { coordinator.playback.value.playing }
