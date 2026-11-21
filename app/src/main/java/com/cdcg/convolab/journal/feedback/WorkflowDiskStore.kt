@@ -33,10 +33,11 @@ class WorkflowDiskStore(noBackupDirectory: File, accountId: Long) : WorkflowStor
     }
 
     @Synchronized override fun archive(id: JournalId) {
+        val source = file(id)
+        if (!source.baseFile.exists() && !File(source.baseFile.path + ".bak").exists()) return
         val recovery = File(directory, "recovery")
         check(recovery.isDirectory || recovery.mkdirs())
         val archived = AtomicFile(File(recovery, "${id.value}-${UUID.randomUUID()}.json"))
-        val source = file(id)
         val output = archived.startWrite()
         try {
             source.openRead().use { it.copyTo(output) }
