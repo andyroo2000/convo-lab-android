@@ -5,6 +5,8 @@
 #include <string>
 
 extern "C" {
+bool typing_load_cpu_backend();
+const char *typing_cpu_backend();
 void *typing_create(const char *directory);
 void typing_destroy(void *handle);
 void typing_begin_operation(void *handle);
@@ -22,11 +24,17 @@ static std::string utf8(JNIEnv *env, jbyteArray bytes) {
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_cdcg_convolab_typing_NativeTyping_create(JNIEnv *env, jobject, jbyteArray path) {
+    if (!typing_load_cpu_backend()) return 0;
     llama_log_set([](ggml_log_level level, const char *text, void *) {
         if (level == GGML_LOG_LEVEL_ERROR) __android_log_write(ANDROID_LOG_ERROR, "TypingEngine", text);
     }, nullptr);
     const auto directory = utf8(env, path);
     return reinterpret_cast<jlong>(typing_create(directory.c_str()));
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_cdcg_convolab_typing_NativeTyping_backend(JNIEnv *env, jobject) {
+    return env->NewStringUTF(typing_cpu_backend());
 }
 
 extern "C" JNIEXPORT void JNICALL

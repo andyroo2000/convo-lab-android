@@ -1,17 +1,24 @@
 package com.cdcg.convolab.typing
 
+import androidx.activity.ComponentActivity
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
 
 /** Public synthetic sentences only; captures numerical and timing evidence. */
 class BoundaryScoringProbeTest {
+    // Match interactive typing's foreground CPU scheduling, including on physical phones.
+    @get:Rule val activity = ActivityScenarioRule(ComponentActivity::class.java)
     // Oversubscribing emulator vCPUs measures scheduler starvation, not inference.
     // Keep the full sweep on phones with >= 6 cores, and match the engine's cap elsewhere.
     private val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
     private val threadCounts = listOf(2, 4, 6).map { it.coerceAtMost(cores) }.distinct()
+    private val poolThreads = (InstrumentationRegistry.getArguments().getString("poolThreads")?.toInt() ?: 4)
+        .coerceIn(1, minOf(8, cores))
     @Test fun comparePrefixReuseAndBatchingWithUnchangedUpstreamScores() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val handle = NativeTyping.create(EngineAssets(context).prepare().absolutePath.toByteArray(Charsets.UTF_8))
@@ -44,9 +51,11 @@ class BoundaryScoringProbeTest {
             assertEquals(160, candidates.length())
             val texts = JSONArray((0 until candidates.length()).map { candidates.getJSONObject(it).getString("text") })
             val probe = call(handle, JSONObject().put("action", "benchmarkBoundary").put("reading", request.getString("reading"))
-                .put("texts", texts).put("threads", minOf(4, cores)))
-            assertScoresMatch(probe, 160)
+                .put("texts", texts).put("threads", poolThreads))
             probe.put("texts", texts).put("coldEngineMs", first.getDouble("engineMs"))
+                .put("backend", NativeTyping.backend()).put("threads", poolThreads)
+            TestOutput.file("boundary-full-pool.json").writeText(probe.toString(2))
+            assertScoresMatch(probe, 160)
             val repeated = call(handle, request)
             assertEquals(candidateOrder(candidates), candidateOrder(repeated.getJSONArray("candidates")))
             assertTrue(repeated.getDouble("engineMs") < 1000)

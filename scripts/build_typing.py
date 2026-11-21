@@ -1,5 +1,6 @@
 """Build the Pixel or emulator engine with Swift 6.4.2 and NDK r30."""
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import platform
@@ -20,33 +21,56 @@ def run(arguments):
                    env={**os.environ, 'ANDROID_NDK_HOME': str(NDK)})
 
 
-def build_llama():
+def build_llama_variant(directory, architecture=None):
     cmake = SDK / 'cmake/3.31.6/bin/cmake'
-    run([cmake, '-S', 'native/Vendor/llama.cpp', '-B', BUILD,
+    options = [f'-DGGML_CPU_ARM_ARCH={architecture}'] if architecture else []
+    run([cmake, '-S', 'native/Vendor/llama.cpp', '-B', directory,
          f'-DCMAKE_TOOLCHAIN_FILE={NDK}/build/cmake/android.toolchain.cmake',
          f'-DANDROID_ABI={ABI}', '-DANDROID_PLATFORM=android-28',
          '-DCMAKE_BUILD_TYPE=Release', '-DGGML_OPENMP=OFF', '-DGGML_NATIVE=OFF',
+         '-DGGML_BACKEND_DL=ON',
          '-DLLAMA_BUILD_TESTS=OFF', '-DLLAMA_BUILD_EXAMPLES=OFF',
-         '-DLLAMA_BUILD_SERVER=OFF', '-DLLAMA_CURL=OFF'])
-    run([cmake, '--build', BUILD, '--parallel', '6'])
+         '-DLLAMA_BUILD_SERVER=OFF', '-DLLAMA_CURL=OFF'] + options)
+    targets = ['--target', 'ggml-cpu'] if architecture else []
+    run([cmake, '--build', directory, '--parallel', '6'] + targets)
+
+
+def build_llama():
+    build_llama_variant(BUILD)
+    if ABI == 'arm64-v8a':
+        optimized = ROOT / 'native/.build/llama-arm64-dotprod'
+        build_llama_variant(optimized, 'armv8-a+dotprod')
+        shutil.copy2(optimized / 'bin/libggml-cpu.so', OUTPUT / 'libggml-cpu-dotprod.so')
 
 
 def build_cpu_adapter():
     host = 'darwin-x86_64' if platform.system() == 'Darwin' else 'linux-x86_64'
     compiler = NDK / f'toolchains/llvm/prebuilt/{host}/bin/{ARCH}-linux-android28-clang++'
-    run([compiler, '-c', '-fPIC', '-O2', 'native/cpu_model.cpp',
-         '-Inative/Vendor/llama.cpp/include', '-Inative/Vendor/llama.cpp/ggml/include',
-         '-o', BUILD / 'cpu_model.o'])
+    objects = []
+    for adapter in ['cpu_model', 'cpu_context']:
+        compiled = BUILD / f'{adapter}.o'
+        run([compiler, '-c', '-std=c++17', '-fPIC', '-O2', f'native/{adapter}.cpp',
+             '-Inative/Vendor/llama.cpp/include', '-Inative/Vendor/llama.cpp/ggml/include',
+             '-o', compiled])
+        # SwiftPM does not track external object contents. Changing the link path
+        # forces relinking when an adapter changes, even in an incremental build.
+        digest = hashlib.sha256(compiled.read_bytes()).hexdigest()
+        versioned = BUILD / f'{adapter}-{digest}.o'
+        shutil.copy2(compiled, versioned)
+        objects.append(versioned)
+    return objects
 
 
-def build_swift():
+def build_swift(objects):
     swift = os.environ.get('TYPING_SWIFT', 'swift')
     arguments = [swift, 'build', '--package-path', 'native', '-c', 'release',
          '--swift-sdk', 'swift-6.4.2-RELEASE_android',
          '--triple', f'{ARCH}-unknown-linux-android28', '--static-swift-stdlib',
          '-Xcc', f'-I{ROOT}/native/Vendor/llama.cpp/ggml/include',
-         '-Xlinker', f'-L{BUILD}/bin', '-Xlinker', BUILD / 'cpu_model.o',
-         '-Xlinker', '--wrap=llama_model_load_from_file']
+         '-Xlinker', f'-L{BUILD}/bin', '-Xlinker', '-lggml', '-Xlinker', '-lggml-base',
+         '-Xlinker', '--wrap=llama_model_load_from_file',
+         '-Xlinker', '--wrap=llama_init_from_model', '-Xlinker', '--wrap=llama_free']
+    arguments += [value for obj in objects for value in ['-Xlinker', obj]]
     run(arguments)
     binary_directory = subprocess.check_output(
         [str(value) for value in arguments + ['--show-bin-path']], cwd=ROOT, text=True,
@@ -58,16 +82,16 @@ def build_bridge():
     host = 'darwin-x86_64' if platform.system() == 'Darwin' else 'linux-x86_64'
     toolchain = NDK / f'toolchains/llvm/prebuilt/{host}'
     run([toolchain / f'bin/{ARCH}-linux-android28-clang++', '-shared', '-fPIC',
-         '-std=c++17', '-O2', '-Wl,-z,max-page-size=16384', 'native/bridge.cpp',
-         f'-L{OUTPUT}', '-lAndroidTyping', '-lllama', '-landroid', f'-I{ROOT}/native/Vendor/llama.cpp/include', f'-I{ROOT}/native/Vendor/llama.cpp/ggml/include', '-o', OUTPUT / 'libtyping_jni.so'])
+         '-std=c++17', '-O2', '-Wl,-z,max-page-size=16384', 'native/bridge.cpp', 'native/cpu_backend.cpp',
+         f'-L{OUTPUT}', '-lAndroidTyping', '-lllama', '-lggml', '-landroid', f'-I{ROOT}/native/Vendor/llama.cpp/include', f'-I{ROOT}/native/Vendor/llama.cpp/ggml/include', '-o', OUTPUT / 'libtyping_jni.so'])
     shutil.copy2(toolchain / f'sysroot/usr/lib/{ARCH}-linux-android/libc++_shared.so', OUTPUT)
 
 
 def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     build_llama()
-    build_cpu_adapter()
-    build_swift()
+    objects = build_cpu_adapter()
+    build_swift(objects)
     for library in (BUILD / 'bin').glob('*.so'):
         shutil.copy2(library, OUTPUT)
     build_bridge()

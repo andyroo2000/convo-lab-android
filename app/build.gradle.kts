@@ -71,8 +71,12 @@ dependencies {
 val verifyTypingAssets by tasks.registering {
     doLast {
         for (abi in listOf("arm64-v8a", "x86_64")) {
-            check(file("src/main/jniLibs/$abi/libtyping_jni.so").isFile) {
-                "Prepare typing first: see docs/typing-playground.md"
+            val libraries = listOf("libtyping_jni.so", "libggml-cpu.so") +
+                if (abi == "arm64-v8a") listOf("libggml-cpu-dotprod.so") else emptyList()
+            for (library in libraries) {
+                check(file("src/main/jniLibs/$abi/$library").isFile) {
+                    "Missing $abi/$library. Prepare typing first: see docs/typing-playground.md"
+                }
             }
         }
         check(file("src/main/assets/typing/model.gguf").length() == 72298816L)
