@@ -41,7 +41,10 @@ fun ClarificationCard(presentation: FeedbackPresentation, clarification: Clarifi
 
 @Composable
 private fun CustomAnswer(value: String, enabled: Boolean, change: (String) -> Unit) {
+    var invalid by remember { mutableStateOf(false) }
     OutlinedTextField(value = value, onValueChange = {
-        if (it.codePointCount(0, it.length) <= 2_000 && !it.contains('\u0000')) change(it)
-    }, label = { Text("Your answer") }, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("clarification-answer"))
+        invalid = it.codePointCount(0, it.length) > 2_000 || it.contains('\u0000')
+        if (!invalid) change(it)
+    }, label = { Text("Your answer") }, isError = invalid,
+        supportingText = { Text(if (invalid) "Use up to 2,000 characters without null characters." else "${value.codePointCount(0, value.length)} / 2,000") }, enabled = enabled, modifier = Modifier.fillMaxWidth().testTag("clarification-answer"))
 }

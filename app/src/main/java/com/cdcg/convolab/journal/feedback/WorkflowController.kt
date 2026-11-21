@@ -60,8 +60,11 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
 
     fun changeFinalText(text: String) {
         if (state.value.busy) return
-        if (text.length > 30_000 || text.contains('\u0000')) return
-        mutableState.update { it.copy(finalEdit = it.finalEdit?.copy(text = text)) }
+        if (text.length > 30_000 || text.contains('\u0000')) {
+            mutableState.update { it.copy(error = "Use up to 30,000 characters without null characters. Your previous text is kept.") }
+            return
+        }
+        mutableState.update { it.copy(finalEdit = it.finalEdit?.copy(text = text), error = null) }
     }
 
     fun dismissFinalEdit() {

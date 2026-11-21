@@ -235,6 +235,24 @@ class WorkflowSessionTest {
         assertNull(controller.state.value.finalEdit)
     }
 
+    @Test fun reopeningFailedWorkRequiresExplicitRetryBeforeResubmission() = runTest {
+        val storage = MemoryWorkflow().apply {
+            record = WorkflowSnapshot(JournalId(entry.id), 1, clarification(WorkStatus.Resolved),
+                analysis().copy(status = WorkStatus.Failed), submissionRequested = true)
+        }
+        var submissions = 0
+        val api = FakeFeedback().apply { submitResult = { submissions++; analysis() } }
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        assertEquals(0, submissions)
+        assertNotNull(controller.state.value.error)
+        controller.retry()
+        runCurrent()
+        assertEquals(1, submissions)
+        assertEquals(WorkStatus.Ready, controller.state.value.snapshot?.analysis?.status)
+    }
+
     @Test fun pollingStopsAfterThreeTransportFailures() = runTest {
         var calls = 0
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }

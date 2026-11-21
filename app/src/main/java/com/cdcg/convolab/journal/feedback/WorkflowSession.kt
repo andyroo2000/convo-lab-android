@@ -64,13 +64,24 @@ class WorkflowSession(
     }
 
     suspend fun refresh() {
-        if (snapshot.submissionRequested) { resume(); return }
+        if (snapshot.submissionRequested) {
+            checkFailedWork()
+            resume()
+            return
+        }
         val response = access.api.analysis(entry)
         checkVersion(response.entry.version)
         val analysis = response.analysis ?: return
         checkVersion(analysis.sourceVersion)
         checkpoint(snapshot.copy(analysis = analysis))
         if (analysis.status.pending) receiveAnalysis(analysis)
+    }
+
+    private fun checkFailedWork() {
+        val analysis = snapshot.analysis
+        if (analysis?.status == WorkStatus.Failed) throw WorkflowFailure(analysis.error ?: "Feedback failed. Retry when you are ready.")
+        val clarification = snapshot.clarification
+        if (clarification?.status == WorkStatus.Failed) throw WorkflowFailure(clarification.error ?: "The meaning check failed. Retry when you are ready.")
     }
 
     suspend fun editFinal(edit: FinalEdit) {
@@ -130,7 +141,7 @@ class WorkflowSession(
     private fun checkVersion(version: Int) { if (version != entry.version) throw ApiFailure(409) }
 
     private suspend fun checkpoint(next: WorkflowSnapshot) = withContext(NonCancellable) {
-        withContext(access.io) { access.storage.write(next) }
+        if (next != snapshot) withContext(access.io) { access.storage.write(next) }
         snapshot = next
         publish(next)
     }
