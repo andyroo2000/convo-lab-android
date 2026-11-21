@@ -70,13 +70,13 @@ class FeedbackUiTest {
         launchNotebook(submit = false, saved = pending)
         compose.onNodeWithText("残しておく修正。").assertIsDisplayed()
         screenshot("feedback-recovery")
-        compose.onNodeWithText("Archive earlier work and continue").performClick()
+        compose.onNodeWithText("Archive earlier work and continue").performScrollTo().performClick()
         compose.onNodeWithText("Cancel").performClick()
         assertNotNull(workflow.state.value.recovery)
-        compose.onNodeWithText("Archive earlier work and continue").performClick()
+        compose.onNodeWithText("Archive earlier work and continue").performScrollTo().performClick()
         compose.onNodeWithText("Archive and continue").performClick()
         compose.waitUntil(5_000) { workflow.state.value.recovery == null && !workflow.state.value.busy }
-        compose.onNodeWithText("Final").assertIsDisplayed()
+        compose.onNodeWithText("Final").performScrollTo().assertIsDisplayed()
     }
 
     private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null) {

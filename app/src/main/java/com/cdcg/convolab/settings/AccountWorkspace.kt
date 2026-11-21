@@ -15,6 +15,7 @@ import com.cdcg.convolab.journal.JournalApi
 import com.cdcg.convolab.journal.NotebookRoute
 import com.cdcg.convolab.journal.text.LocalKnownKanji
 import com.cdcg.convolab.network.HttpApiTransport
+import com.cdcg.convolab.journal.input.KeyboardWorkspace
 import com.cdcg.convolab.ui.AccountMenu
 
 @Composable
@@ -31,6 +32,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     val controller = binding?.takeIf { it.accountId == account.id }?.controller
     val settings = controller?.state?.collectAsStateWithLifecycle()?.value
     var showing by rememberSaveable(account.id) { mutableStateOf(false) }
+    KeyboardWorkspace(account.id) {
     CompositionLocalProvider(LocalKnownKanji provides settings?.known?.kanji.orEmpty()) {
         AudioWorkspace(account.id, sessions) {
             NotebookRoute(account, sessions) { AccountMenu(account.name, actions.signOut, actions.typingLab) { showing = true } }
@@ -41,5 +43,6 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
             SettingsActions({ showing = false }, actions.signOut, actions.typingLab))
         else AlertDialog(onDismissRequest = { showing = false }, title = { Text("Loading Settings…") },
             text = { CircularProgressIndicator() }, confirmButton = { TextButton(onClick = { showing = false }) { Text("Close") } })
+    }
     }
 }

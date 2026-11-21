@@ -17,3 +17,8 @@ app/src/debug/assets/typing/Dictionary/
 app/src/debug/assets/typing/model.gguf
 
 __pycache__/
+
+# Shared by debug and release Journal input
+app/src/main/jniLibs/
+app/src/main/assets/typing/Dictionary/
+app/src/main/assets/typing/model.gguf

@@ -12,7 +12,7 @@ NDK = SDK / 'ndk/30.0.16248370'
 ABI = 'arm64-v8a'
 ARCH = 'aarch64'
 BUILD = ROOT / 'native/.build/llama-arm64-v8a'
-OUTPUT = ROOT / 'app/src/debug/jniLibs/arm64-v8a'
+OUTPUT = ROOT / 'app/src/main/jniLibs/arm64-v8a'
 
 
 def run(arguments):
@@ -79,5 +79,5 @@ if __name__ == '__main__':
     ABI = parser.parse_args().abi
     ARCH = 'aarch64' if ABI == 'arm64-v8a' else 'x86_64'
     BUILD = ROOT / f'native/.build/llama-{ABI}'
-    OUTPUT = ROOT / f'app/src/debug/jniLibs/{ABI}'
+    OUTPUT = ROOT / f'app/src/main/jniLibs/{ABI}'
     main()
