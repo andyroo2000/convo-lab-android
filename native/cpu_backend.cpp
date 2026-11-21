@@ -1,4 +1,5 @@
 #include "ggml-backend.h"
+#include <android/log.h>
 #include <mutex>
 #if defined(__aarch64__)
 #include <asm/hwcap.h>
@@ -18,14 +19,24 @@ bool supports_dot_product() {
 #endif
 }
 
+bool load_backend(const char *library, const char *name) {
+    if (!ggml_backend_load(library)) return false;
+    selected = name;
+    available = true;
+    __android_log_print(ANDROID_LOG_INFO, "TypingEngine", "CPU backend: %s", selected);
+    return true;
+}
+
 void initialize() {
     // Check hardware before loading any code compiled with optional instructions.
-    if (supports_dot_product() && ggml_backend_load("libggml-cpu-dotprod.so")) {
-        selected = "arm64-dotprod";
-        available = true;
-    } else if (ggml_backend_load("libggml-cpu.so")) {
-        selected = "generic";
-        available = true;
+    if (supports_dot_product()) {
+        if (load_backend("libggml-cpu-dotprod.so", "arm64-dotprod")) return;
+        __android_log_write(ANDROID_LOG_WARN, "TypingEngine", "Dot-product library could not load; trying generic CPU");
+    } else {
+        __android_log_write(ANDROID_LOG_INFO, "TypingEngine", "CPU has no ARM dot-product support; using generic CPU");
+    }
+    if (!load_backend("libggml-cpu.so", "generic")) {
+        __android_log_write(ANDROID_LOG_ERROR, "TypingEngine", "No CPU backend could load");
     }
 }
 }

@@ -1,5 +1,6 @@
 """Build the Pixel or emulator engine with Swift 6.4.2 and NDK r30."""
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import platform
@@ -45,19 +46,31 @@ def build_llama():
 def build_cpu_adapter():
     host = 'darwin-x86_64' if platform.system() == 'Darwin' else 'linux-x86_64'
     compiler = NDK / f'toolchains/llvm/prebuilt/{host}/bin/{ARCH}-linux-android28-clang++'
-    run([compiler, '-c', '-fPIC', '-O2', 'native/cpu_model.cpp',
-         '-Inative/Vendor/llama.cpp/include', '-Inative/Vendor/llama.cpp/ggml/include',
-         '-o', BUILD / 'cpu_model.o'])
+    objects = []
+    for adapter in ['cpu_model', 'cpu_context']:
+        compiled = BUILD / f'{adapter}.o'
+        run([compiler, '-c', '-std=c++17', '-fPIC', '-O2', f'native/{adapter}.cpp',
+             '-Inative/Vendor/llama.cpp/include', '-Inative/Vendor/llama.cpp/ggml/include',
+             '-o', compiled])
+        # SwiftPM does not track external object contents. Changing the link path
+        # forces relinking when an adapter changes, even in an incremental build.
+        digest = hashlib.sha256(compiled.read_bytes()).hexdigest()
+        versioned = BUILD / f'{adapter}-{digest}.o'
+        shutil.copy2(compiled, versioned)
+        objects.append(versioned)
+    return objects
 
 
-def build_swift():
+def build_swift(objects):
     swift = os.environ.get('TYPING_SWIFT', 'swift')
     arguments = [swift, 'build', '--package-path', 'native', '-c', 'release',
          '--swift-sdk', 'swift-6.4.2-RELEASE_android',
          '--triple', f'{ARCH}-unknown-linux-android28', '--static-swift-stdlib',
          '-Xcc', f'-I{ROOT}/native/Vendor/llama.cpp/ggml/include',
-         '-Xlinker', f'-L{BUILD}/bin', '-Xlinker', BUILD / 'cpu_model.o',
-         '-Xlinker', '--wrap=llama_model_load_from_file']
+         '-Xlinker', f'-L{BUILD}/bin', '-Xlinker', '-lggml', '-Xlinker', '-lggml-base',
+         '-Xlinker', '--wrap=llama_model_load_from_file',
+         '-Xlinker', '--wrap=llama_init_from_model', '-Xlinker', '--wrap=llama_free']
+    arguments += [value for obj in objects for value in ['-Xlinker', obj]]
     run(arguments)
     binary_directory = subprocess.check_output(
         [str(value) for value in arguments + ['--show-bin-path']], cwd=ROOT, text=True,
@@ -77,8 +90,8 @@ def build_bridge():
 def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     build_llama()
-    build_cpu_adapter()
-    build_swift()
+    objects = build_cpu_adapter()
+    build_swift(objects)
     for library in (BUILD / 'bin').glob('*.so'):
         shutil.copy2(library, OUTPUT)
     build_bridge()

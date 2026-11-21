@@ -2,33 +2,33 @@
   {
     "threads": 1,
     "backend": "arm64-dotprod",
-    "referenceMs": 21918.596162,
-    "optimizedMs": 6203.130415,
-    "coldEngineMs": 5714.443281,
-    "warmEngineMs": 41.665893
+    "referenceMs": 22317.503877,
+    "optimizedMs": 6341.14958,
+    "coldEngineMs": 2379.707765,
+    "warmEngineMs": 37.582112
   },
   {
     "threads": 2,
     "backend": "arm64-dotprod",
-    "referenceMs": 17383.168506,
-    "optimizedMs": 8431.064864,
-    "coldEngineMs": 5774.630455,
-    "warmEngineMs": 37.107747
+    "referenceMs": 13913.811164,
+    "optimizedMs": 3905.193605,
+    "coldEngineMs": 2469.495729,
+    "warmEngineMs": 42.485962
   },
   {
     "threads": 4,
     "backend": "arm64-dotprod",
-    "referenceMs": 12046.359137,
-    "optimizedMs": 5652.3902610000005,
-    "coldEngineMs": 5640.594281,
-    "warmEngineMs": 43.672282
+    "referenceMs": 10308.3971,
+    "optimizedMs": 2833.631145,
+    "coldEngineMs": 2592.520142,
+    "warmEngineMs": 49.566041
   },
   {
     "threads": 6,
     "backend": "arm64-dotprod",
-    "referenceMs": 14617.026171,
-    "optimizedMs": 7404.599573,
-    "coldEngineMs": 5766.824995,
-    "warmEngineMs": 41.360759
+    "referenceMs": 15803.296151,
+    "optimizedMs": 3290.210857,
+    "coldEngineMs": 4891.974042,
+    "warmEngineMs": 51.988932
   }
 ]
