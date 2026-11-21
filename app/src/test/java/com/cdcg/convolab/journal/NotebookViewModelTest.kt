@@ -43,6 +43,25 @@ class NotebookViewModelTest {
         assertEquals("回転しても残す文章。", rebound.binding.value?.controller?.state?.value?.draft?.body)
     }
 
+    @Test fun deletionRegistryDoesNotCancelTheCollectorForTheNextAccount() = runTest {
+        val auth = FakeAuth().apply { loginResult = { original } }
+        val sessions = SessionController(auth, MemoryStorage(), dispatcher)
+        val factory = viewModelFactory { initializer { NotebookViewModel(sessions) {
+            JournalRepository(NotebookGateway(), NotebookMemory(), dispatcher)
+        } } }
+        val model = ViewModelProvider(owner, factory)["active-journal", NotebookViewModel::class.java]
+        sessions.login("first@example.invalid", "fixture")
+        runCurrent()
+        sessions.work.stop(1)
+        sessions.forgetDeletedAccount(1)
+        auth.loginResult = { replacement }
+        sessions.login("second@example.invalid", "fixture")
+        runCurrent()
+        assertEquals(2L, model.binding.value?.accountId)
+        model.binding.value!!.controller.edit("次のアカウント。")
+        assertEquals("次のアカウント。", model.binding.value?.controller?.state?.value?.draft?.body)
+    }
+
     @Test fun switchingAccountsFlushesPreviousWritingBeforeOpeningTheNextWorkspace() = runTest {
         val auth = FakeAuth().apply { loginResult = { original } }
         val sessions = SessionController(auth, MemoryStorage(), dispatcher)
