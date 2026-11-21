@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import com.cdcg.convolab.journal.input.*
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
@@ -31,6 +34,8 @@ data class NotebookPanels(val feedback: FeedbackPresentation? = null, val tutor:
 
 @Composable
 fun NotebookScreen(state: NotebookState, controller: NotebookController, panels: NotebookPanels = NotebookPanels(), menu: NotebookMenu) {
+    val input = remember { JournalInputHost() }
+    CompositionLocalProvider(LocalInputHost provides input) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     BoxWithConstraints(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
         val compact = maxHeight < 240.dp && WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -39,13 +44,14 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, panels:
             Column(Modifier.weight(1f).background(Color(0xFFFAF9F6))) {
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) { NotebookPage(state, controller, panels) }
-                NotebookActions(state, controller, panels.feedback, compact)
+                JournalInputFooter(compact) { NotebookActions(state, controller, panels.feedback, compact) }
             }
         }
     }
     if (panels.feedback?.state?.finalEdit != null) FinalEditSheet(panels.feedback)
     if (state.contents) NotebookContents(state, controller)
     if (state.closePrompt) CloseDraftSheet(state, controller)
+    }
 }
 
 @Composable
@@ -82,11 +88,13 @@ private fun NotebookHeader(enabled: Boolean, contents: () -> Unit, menu: Noteboo
 
 @Composable
 private fun NotebookActions(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation?, compact: Boolean) {
+    val input = LocalInputHost.current
     val labelSize = actionLabelSize(compact)
     Row(Modifier.fillMaxWidth().background(Color(0xFFFAF9F6)).padding(horizontal = 14.dp, vertical = actionPadding(compact)),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = controller::requestClose, enabled = !state.busy) { Text("Close", fontFamily = JournalBrand.Serif, fontSize = labelSize) }
+        OutlinedButton(onClick = { input?.finish(); controller.requestClose() }, enabled = !state.busy) { Text("Close", fontFamily = JournalBrand.Serif, fontSize = labelSize) }
         Button(onClick = {
+            input?.finish()
             if (feedback?.visible == true) feedback.controller.cancel()
             else controller.save { feedback?.controller?.submit(it) }
         }, enabled = state.canEdit && state.draft.body.isNotBlank(),

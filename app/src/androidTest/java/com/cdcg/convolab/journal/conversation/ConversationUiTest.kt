@@ -122,7 +122,14 @@ class ConversationUiTest {
     private fun current() = requireNotNull(conversation.session.value)
     private fun composer() = requireNotNull(current().state.value.composer).controller
     private fun write(reply: ReplyController, text: String) {
-        compose.onNodeWithTag("conversation-answer-${reply.state.value.record.id}").performScrollTo().performClick().performTextInput(text)
+        val field = compose.onNodeWithTag("conversation-answer-${reply.state.value.record.id}")
+        field.performScrollTo()
+        device.waitForIdle()
+        compose.waitForIdle()
+        field.performClick().assertIsFocused()
+        compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        device.waitForIdle()
+        field.performTextInput(text)
         compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
         device.waitForIdle()
         assertEquals(text, reply.state.value.text)
