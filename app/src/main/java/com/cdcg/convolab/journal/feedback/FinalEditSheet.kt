@@ -87,7 +87,7 @@ private fun FinalEditActions(presentation: FeedbackPresentation) {
     val edit = presentation.state.finalEdit ?: return
     val controller = presentation.controller
     val input = LocalInputHost.current
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End)) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         JournalDraftButton("Cancel", controller::dismissFinalEdit, style = DraftButtonStyle(enabled = !presentation.state.busy, filled = false))
         JournalDraftButton(if (presentation.state.busy) "Saving…" else "Save changes", action = { input?.finish(); controller.saveFinalEdit() },
             style = DraftButtonStyle(enabled = !presentation.state.busy && presentation.state.canRetry && edit.text.isNotBlank()),

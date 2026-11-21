@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -18,15 +19,15 @@ val LocalTutorPicker = compositionLocalOf<(() -> Unit)?> { null }
 @Composable
 fun AccountMenu(name: String, signOut: () -> Unit, openTypingLab: (() -> Unit)?, settings: (() -> Unit)? = null) {
     var expanded by remember { mutableStateOf(false) }
-    var panel by remember { mutableStateOf<String?>(null) }
-    var logout by remember { mutableStateOf(false) }
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    var logout by rememberSaveable { mutableStateOf(false) }
     val tutor = LocalTutorPicker.current
     val navigationEnabled = LocalJournalNavigationEnabled.current
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.semantics { contentDescription = "Account menu" }) { AccountInitial(name) }
         PaperMenu(expanded, { expanded = false }) {
             PaperMenuGroup("Journal")
-            tutor?.let { PaperMenuItem("Tutor", JournalSymbol.Person) { expanded = false; it() } }
+            tutor?.let { PaperMenuItem("Tutor", JournalSymbol.Person, enabled = navigationEnabled) { expanded = false; it() } }
             PaperMenuItem("Appearance", JournalSymbol.Appearance) { expanded = false; panel = "Journal appearance" }
             PaperMenuItem("Keyboard", JournalSymbol.Keyboard) { expanded = false; panel = "How would you like to type?" }
             HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 8.dp))

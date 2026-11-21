@@ -33,21 +33,19 @@ import com.cdcg.convolab.ui.JournalStyle
 fun CorrectionPopover(segment: FeedbackSegment, anchor: Rect, dismiss: () -> Unit) {
     val density = LocalDensity.current
     val margin = with(density) { 16.dp.roundToPx() }
-    var pointer by remember { mutableStateOf(PopoverPointer()) }
-    val position = remember(anchor, margin) { CorrectionPosition(anchor, margin) { if (pointer != it) pointer = it } }
+    val pointer = remember { mutableStateOf(PopoverPointer()) }
+    val position = remember(anchor, margin) { CorrectionPosition(anchor, margin) { pointer.value = it } }
     val screen = LocalWindowInfo.current.containerSize
     val width = with(density) { screen.width.toDp() }
     val height = with(density) { screen.height.toDp() }
     Popup(popupPositionProvider = position, onDismissRequest = dismiss, properties = PopupProperties(focusable = true)) {
-        Column(Modifier.width(minOf(340.dp, width - 32.dp)).heightIn(max = height * .75f)
-            .testTag("correction-popover")) {
-            if (pointer.top) CorrectionPointer(pointer.x, if (segment.replacement != null) Color(0xFF398C43) else Color.White)
-            Column(Modifier.weight(1f, fill = false).shadow(7.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
+        Box(Modifier.width(minOf(340.dp, width - 32.dp)).heightIn(max = height * .75f).testTag("correction-popover")) {
+            Column(Modifier.padding(vertical = 8.dp).shadow(7.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
                 .background(Color.White).verticalScroll(rememberScrollState()).testTag("correction-scroll")) {
                 CorrectionPassage(segment)
                 CorrectionExplanation(segment)
             }
-            if (!pointer.top) CorrectionPointer(pointer.x, Color.White, false)
+            CorrectionPointer(pointer, segment.replacement != null, Modifier.matchParentSize())
         }
     }
 }
@@ -82,11 +80,15 @@ private fun CorrectionExplanation(segment: FeedbackSegment) {
 }
 
 @Composable
-private fun CorrectionPointer(x: Int, color: Color, top: Boolean = true) {
-    Canvas(Modifier.fillMaxWidth().height(8.dp)) {
-        val center = x.toFloat().coerceIn(36.dp.toPx(), size.width - 36.dp.toPx())
-        val edge = if (top) size.height else 0f
-        val tip = if (top) 0f else size.height
+private fun CorrectionPointer(placement: State<PopoverPointer>, edited: Boolean, modifier: Modifier) {
+    // Placement is consumed only during drawing: no composition/layout feedback loop.
+    // Both orientations use the same fixed padding, and layout finishes before this draw.
+    Canvas(modifier) {
+        val pointer = placement.value
+        val center = pointer.x.toFloat().coerceIn(36.dp.toPx(), size.width - 36.dp.toPx())
+        val edge = if (pointer.top) 8.dp.toPx() else size.height - 8.dp.toPx()
+        val tip = if (pointer.top) 0f else size.height
+        val color = if (pointer.top && edited) Color(0xFF398C43) else Color.White
         drawPath(Path().apply { moveTo(center - 12.dp.toPx(), edge); lineTo(center, tip); lineTo(center + 12.dp.toPx(), edge); close() }, color)
     }
 }

@@ -40,8 +40,10 @@ of scope. The typing engine and its performance settings are unchanged.
 - Pixel 10a / Android 16: the targeted UI suite covers authentication, account
   deletion, Settings/WaniKani, notebook navigation, feedback/final editing, tutor
   conversations, audio, appearance, and both keyboard modes: the final full run
-  passes all 32 UI tests (122 seconds), including the review fixes for long-entry
-  actions and emphasis formatting. PR emulator results are recorded in the PR.
+  passes all 32 UI tests (122 seconds), followed by 12/12 focused checks including
+  a new final-editor test at 2.0× text scale (33 distinct tests overall). These
+  cover long-entry actions, emphasis formatting, popover placement, and large-type
+  keyboard bounds. PR emulator results are recorded in the PR.
 - [Pixel screenshots](visual-parity-screenshots/README.md) include complete notebook
   screens and isolated component fixtures; the gallery labels the latter.
 - CodeScene MCP reviewed all 45 changed Kotlin files: no remaining findings.

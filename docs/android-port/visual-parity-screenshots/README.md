@@ -41,3 +41,4 @@ conversation captures exercise the containing layout and keyboard insets.
 | Large text with keyboard | [Screenshot](journal-large-text-keyboard.png) |
 | Built-in conversion with English keyboard | [Screenshot](journal-real-english-keyboard.png) |
 | Long draft after hiding keyboard | [Screenshot](notebook-long-keyboard-hidden.png) |
+| Final editor at double text size | [Screenshot](feedback-final-editor-double-text.png) |

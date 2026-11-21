@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -73,6 +76,22 @@ class FeedbackUiTest {
         assertEquals(text, workflow.state.value.snapshot?.analysis?.finalText)
     }
 
+    @Test fun finalEditorSupportsDoubleTextSizeWithKeyboardAndLongText() {
+        launchNotebook(submit = false, scale = 2f)
+        compose.onNodeWithText("Final").performClick()
+        compose.onNodeWithContentDescription("More journal options").performScrollTo().performClick()
+        compose.onNodeWithText("Edit final").performClick()
+        compose.onAllNodesWithTag("final-editor").assertCountEquals(1)
+        compose.onNodeWithTag("final-editor").performClick().performTextReplacement("友達と映画を見ました。\n".repeat(18))
+        assertAboveKeyboard("final-save")
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+        val editor = compose.onNodeWithTag("final-editor").fetchSemanticsNode().boundsInWindow
+        assertTrue("Large type must retain visible writing space", editor.height > 40)
+        screenshot("feedback-final-editor-double-text")
+        compose.onNodeWithText("Cancel").performClick()
+        compose.waitUntil(5_000) { workflow.state.value.finalEdit == null }
+    }
+
     @Test fun earlierPendingTextRequiresConfirmationBeforeArchiveAndContinue() {
         val pending = WorkflowSnapshot(JournalId(entry.id), entry.version + 1,
             pendingFinalEdit = FinalEdit(JournalIds.newId(), 3, "残しておく修正。"))
@@ -88,7 +107,7 @@ class FeedbackUiTest {
         compose.onNodeWithText("Final").performScrollTo().assertIsDisplayed()
     }
 
-    private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null) {
+    private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null, scale: Float = 1f) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             // Match MainActivity: older Android does not force edge-to-edge on test hosts.
             compose.activity.enableEdgeToEdge()
@@ -100,7 +119,10 @@ class FeedbackUiTest {
         compose.setContent {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()
-            ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
+                ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
+            }
         }
         compose.runOnIdle { notebook.start(); if (submit) workflow.submit(entry) else workflow.open(entry) }
         compose.waitUntil(5_000) { !notebook.state.value.loading && !workflow.state.value.busy }

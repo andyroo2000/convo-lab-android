@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -115,6 +116,6 @@ private fun SettingsChapter(title: String, icon: JournalSymbol?, expanded: Strin
 fun AccountInitial(name: String, size: Int = 44) {
     Box(Modifier.size(size.dp).background(JournalStyle.Green, CircleShape).padding(3.dp).background(JournalBrand.Paper, CircleShape), contentAlignment = Alignment.Center) {
         Text(name.codePoints().findFirst().orElse(63).let { String(Character.toChars(it)).uppercase() },
-            fontFamily = JournalBrand.Anton, fontSize = (size * .6).sp, color = JournalBrand.Ink)
+            fontFamily = JournalBrand.Anton, fontSize = (size * .6 / LocalDensity.current.fontScale).sp, color = JournalBrand.Ink)
     }
 }
