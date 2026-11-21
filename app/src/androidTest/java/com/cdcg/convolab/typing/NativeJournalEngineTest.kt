@@ -57,6 +57,21 @@ class NativeJournalEngineTest {
         }
     }
 
+    @Test fun failedLearningResetReportsErrorAndPreservesPreferencesForRetry() {
+        NativeJournalFixture(context.noBackupFilesDir, EngineAssets(context).prepare()).use { fixture ->
+            fixture.convert("はし", expanded = true)
+            assertTrue(fixture.learn("はし", "橋").getBoolean("learned"))
+            assertTrue(fixture.learning.setWritable(false, false))
+            try {
+                assertTrue(fixture.request(JSONObject().put("action", "resetLearning")).has("error"))
+                assertTrue(File(fixture.learning, "confirmed.json").exists())
+            } finally { assertTrue(fixture.learning.setWritable(true, true)) }
+            assertEquals("橋", fixture.convert("はし").getJSONArray("candidates").getJSONObject(0).getString("text"))
+            assertTrue(fixture.request(JSONObject().put("action", "resetLearning")).getBoolean("reset"))
+            assertFalse(File(fixture.learning, "confirmed.json").exists())
+        }
+    }
+
     @Test fun invalidBoundariesAndOversizedReadingFailWithoutBreakingTheNextRequest() {
         NativeJournalFixture(context.noBackupFilesDir, EngineAssets(context).prepare()).use { fixture ->
             assertTrue(fixture.convert("はし", boundaries = listOf(1, 1)).has("error"))
