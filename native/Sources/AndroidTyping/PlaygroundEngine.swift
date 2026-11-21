@@ -7,6 +7,7 @@ public final class PlaygroundEngine {
   var boundaryConverter: BoundaryCandidateConverter
   let dictionary: DicdataStore
   let learning: ConversionLearning
+  private let cancelled: () -> Bool
   private var boundaryRanker: NeuralBoundaryRanker?
   let modelURL: URL
   let options: ConvertRequestOptions
@@ -15,7 +16,8 @@ public final class PlaygroundEngine {
   public private(set) var lastResetMs = 0.0
   public private(set) var preparationTimings: [String: Double] = [:]
 
-  public init(directory: URL, learningDirectory: URL? = nil) throws {
+  public init(directory: URL, learningDirectory: URL? = nil, cancelled: @escaping () -> Bool = { false }) throws {
+    self.cancelled = cancelled
     let start = ContinuousClock.now
     let modelURL = directory.appendingPathComponent("model.gguf")
     guard FileManager.default.fileExists(atPath: modelURL.path) else { throw PlaygroundFailure.missingModel }
@@ -56,17 +58,19 @@ public final class PlaygroundEngine {
     // The model is already loaded and warmed for ordinary typing. Allocate the
     // additional ranking buffers only when the learner adjusts a section.
     let start = ContinuousClock.now
-    let ranker = try NeuralBoundaryRanker(converter: converter, modelURL: modelURL)
+    let ranker = try NeuralBoundaryRanker(converter: converter, modelURL: modelURL, cancelled: cancelled)
     boundaryRanker = ranker
     preparationTimings["boundaryWarmupMs"] = Self.milliseconds(from: start, to: .now)
     return ranker
   }
 
   public func convert(_ json: String) throws -> String {
+    try checkCancellation()
     let request = try JSONDecoder().decode(ConversionInput.self, from: Data(json.utf8))
     try request.validate()
     let start = ContinuousClock.now
     let candidates = try candidates(for: request)
+    try checkCancellation()
     let elapsed = start.duration(to: .now).components
     let result = ConversionOutput(
       candidates: candidates,
@@ -81,6 +85,7 @@ public final class PlaygroundEngine {
     composition.insertAtCursorPosition(request.reading, inputStyle: .direct)
     let adjusted = request.boundaries?.isEmpty == false
     var pool = try neuralCandidates(composition, reading: request.reading, reuse: adjusted)
+    try checkCancellation()
     if adjusted {
       pool = try boundaryCandidates(
         reading: request.reading, boundaries: request.boundaries ?? [], neural: pool,
@@ -128,6 +133,10 @@ public final class PlaygroundEngine {
     defer { invalidateLearningCaches() }
     converter.resetMemory()
     try learning.clear()
+  }
+
+  private func checkCancellation() throws {
+    if cancelled() { throw PlaygroundFailure.cancelled }
   }
 
   private func invalidateLearningCaches() {
