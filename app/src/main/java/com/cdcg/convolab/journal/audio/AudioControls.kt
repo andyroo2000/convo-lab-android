@@ -85,7 +85,10 @@ private fun AudioTransport(playback: AudioPlayback, audio: CachedAudio, coordina
     Slider(value = (dragging ?: playback.position.toFloat()).coerceIn(0f, maximum),
         onValueChange = { dragging = it }, onValueChangeFinished = { dragging?.let { coordinator.seek(it / 1000.0) }; dragging = null },
         valueRange = 0f..maximum, enabled = playback.duration > 0,
-        modifier = Modifier.semantics { contentDescription = "Audio position" })
+        modifier = Modifier.semantics {
+            contentDescription = "Audio position"
+            stateDescription = "${audioTime(playback.position)} of ${audioTime(playback.duration)}"
+        })
     Text("${audioTime(playback.position)} / ${audioTime(playback.duration)}")
     if (audio.sentences.isNotEmpty()) Row {
         TextButton(onClick = { coordinator.adjacent(-1) }) { Text("Previous sentence") }

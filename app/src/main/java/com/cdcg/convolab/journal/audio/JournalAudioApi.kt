@@ -7,6 +7,8 @@ import java.net.URLEncoder
 import org.json.JSONException
 import org.json.JSONObject
 
+class AudioTextLimitFailure : IllegalArgumentException()
+
 class JournalAudioApi(private val api: JournalApi) : JournalAudioGateway {
     override suspend fun voices(): List<NarrationVoice> = decode {
         val array = api.request(JournalRequest(JournalMethod.GET, "/api/journal/voices")).getJSONArray("data")
@@ -19,7 +21,7 @@ class JournalAudioApi(private val api: JournalApi) : JournalAudioGateway {
             .getJSONObject("data").getString("voiceId")
     }
     override suspend fun generate(request: AudioRequest): AudioPayload = decode {
-        require(request.source.content.text.codePointCount(0, request.source.content.text.length) <= 15_000)
+        if (request.source.content.text.codePointCount(0, request.source.content.text.length) > 15_000) throw AudioTextLimitFailure()
         val content = request.source.content
         val path = JournalApi.path(request.source.entryId.value)
         val call = when (content) {
