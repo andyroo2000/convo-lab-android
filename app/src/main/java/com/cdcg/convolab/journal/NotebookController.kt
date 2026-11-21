@@ -77,11 +77,13 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { it.copy(draft = JournalDraft.blank(), closePrompt = false, savedLocally = false, pendingDelete = false, canRecoverCopy = false) }
     }
 
-    fun save() = action(recoveryFor = state.value.draft.id) {
+    fun save(onSaved: (JournalEntry) -> Unit = {}) = action(recoveryFor = state.value.draft.id) {
         writer.flush()
         val sent = state.value.draft
         repository.save(sent.key)
         reloadCurrent(sent)
+        val saved = requireNotNull(repository.record(sent.key)?.entry)
+        onSaved(saved)
     }
 
     fun rename(selected: JournalRecord, title: String) = action(recoveryFor = selected.id) {
