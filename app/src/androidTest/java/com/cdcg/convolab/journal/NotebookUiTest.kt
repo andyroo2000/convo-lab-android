@@ -49,6 +49,8 @@ class NotebookUiTest {
     @Test fun pendingSaveVisiblyDisablesEditingUntilAcknowledged() {
         launchNotebook()
         compose.onNodeWithTag("journal-editor").performClick().performTextInput("保存中の文章。")
+        device.waitForIdle()
+        compose.waitForIdle()
         api.response = CompletableDeferred()
         compose.onNodeWithTag("journal-save").performClick()
         compose.waitUntil(5_000) { controller.state.value.busy }
