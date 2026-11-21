@@ -27,6 +27,7 @@ import com.cdcg.convolab.journal.text.RubyText
 import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.journal.audio.*
 import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 class FeedbackPresentation(val state: WorkflowState, val controller: WorkflowController) {
     val visible: Boolean get() = state.recovery != null || state.snapshot?.let { it.analysis != null || it.clarification != null || it.submissionRequested } == true
@@ -42,7 +43,7 @@ fun FeedbackContent(presentation: FeedbackPresentation) {
         else {
             Surface(color = JournalBrand.Paper, shape = RoundedCornerShape(6.dp)) {
                 Column(Modifier.fillMaxWidth().padding(24.dp)) {
-                    Text(state.entry?.title ?: "Your draft", fontFamily = JournalBrand.Handwriting, fontSize = 26.sp, color = Color(0xFF452713))
+                    Text(state.entry?.title ?: "Your draft", fontFamily = LocalJournalTypography.current.family, fontSize = 26.sp, color = Color(0xFF452713))
                     Spacer(Modifier.height(18.dp))
                     RubyText(state.entry?.body.orEmpty())
                 }
@@ -71,7 +72,7 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
                 FilterChip(colors = feedbackTabColors(), selected = final, onClick = { final = true }, label = { Text("Final", fontSize = 20.sp) })
             }
             Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, color = Color(0xFF745340), modifier = Modifier.fillMaxWidth())
-            Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = JournalBrand.Handwriting, fontSize = 26.sp, color = Color(0xFF452713))
+            Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 26.sp, color = Color(0xFF452713))
             if (final) FinalAudio(presentation, analysis)
             else CorrectionText(analysis.feedback?.segments.orEmpty(), presentation.state.entry?.body.orEmpty())
             if (final) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -17,8 +17,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.journal.appearance.AppearancePanel
 
-enum class SettingsPage(val title: String) { Overview("Settings"), Profile("Edit profile"), Password("Change password"), WaniKani("WaniKani") }
+enum class SettingsPage(val title: String) { Overview("Settings"), Profile("Edit profile"), Password("Change password"), WaniKani("WaniKani"), Appearance("Appearance") }
 class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typingLab: (() -> Unit)?)
 
 @Composable
@@ -39,6 +40,7 @@ fun SettingsScreen(state: SettingsState, controller: SettingsController, actions
                         SettingsPage.Profile -> ProfileEditor(state, controller) { if (page == SettingsPage.Profile) page = SettingsPage.Overview }
                         SettingsPage.Password -> PasswordEditor(state, controller) { if (page == SettingsPage.Password) page = SettingsPage.Overview }
                         SettingsPage.WaniKani -> WaniKaniSettings(state, controller)
+                        SettingsPage.Appearance -> AppearancePanel()
                     }
                     Spacer(Modifier.height(24.dp))
                 }
@@ -67,6 +69,9 @@ private fun SettingsOverview(state: SettingsState, actions: SettingsActions, nav
     SettingsChapter("Connections", expanded, { expanded = it }) {
         TextButton(onClick = { navigate(SettingsPage.WaniKani) }) { Text("WaniKani · " + if (state.known.connected) "Connected" else "Not connected") }
         Text("Sync known kanji to personalize Journal furigana.")
+    }
+    SettingsChapter("Journal", expanded, { expanded = it }) {
+        TextButton(onClick = { navigate(SettingsPage.Appearance) }) { Text("Appearance") }
     }
     actions.typingLab?.let { open ->
         SettingsChapter("Experiments", expanded, { expanded = it }) {

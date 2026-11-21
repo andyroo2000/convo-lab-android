@@ -1,6 +1,7 @@
 package com.cdcg.convolab.journal.feedback
 
 import androidx.activity.compose.BackHandler
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +27,7 @@ fun FinalEditSheet(presentation: FeedbackPresentation) {
                 Text("Edit your corrected Japanese. Your original draft stays available.")
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                     OutlinedTextField(value = edit.text, onValueChange = controller::changeFinalText,
-                        enabled = !presentation.state.busy, label = { Text("Corrected text") },
+                        enabled = !presentation.state.busy, label = { Text("Corrected text") }, textStyle = LocalJournalTypography.current.style,
                         modifier = Modifier.fillMaxWidth().testTag("final-editor"))
                     FeedbackError(presentation)
                 }
