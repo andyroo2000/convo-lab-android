@@ -20,9 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.journal.feedback.*
+import com.cdcg.convolab.journal.conversation.*
 
 @Composable
-fun NotebookScreen(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation? = null, menu: @Composable () -> Unit) {
+fun NotebookScreen(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation? = null, tutor: TutorPresentation? = null, menu: @Composable () -> Unit) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
         NotebookHeader(!state.loading, { controller.showContents(true) }, menu)
@@ -30,7 +31,10 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, feedbac
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (feedback?.visible == true) FeedbackContent(feedback) else {
+                if (feedback?.visible == true) {
+                    FeedbackContent(feedback)
+                    if (tutor?.state?.source != null) TutorCard(tutor)
+                } else {
                     state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
                     key(state.draft.id) { NotebookPaper(state, controller::edit) }
                 }

@@ -17,6 +17,7 @@ import com.cdcg.convolab.auth.Account
 import com.cdcg.convolab.auth.SessionController
 import com.cdcg.convolab.network.HttpApiTransport
 import com.cdcg.convolab.journal.feedback.*
+import com.cdcg.convolab.journal.conversation.*
 
 @Composable
 fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composable () -> Unit) {
@@ -25,6 +26,8 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         initializer { NotebookViewModel(sessions, workflow = { session, scope ->
             val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
             WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id)), scope)
+        }, tutor = { session, scope ->
+            TutorController(TutorApi(JournalApi(HttpApiTransport(), session, sessions::snapshot)), scope)
         }) { session ->
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
                 JournalDiskStore(context.noBackupFilesDir, session.account.id))
@@ -38,7 +41,10 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         FlushOnStop(current)
         val workflow = binding?.workflow
         val feedback = workflow?.state?.collectAsStateWithLifecycle()?.value
-        NotebookScreen(state, current, feedback = feedback?.let { FeedbackPresentation(it, workflow) }, menu = menu)
+        val teacher = binding?.tutor
+        val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
+        NotebookScreen(state, current, feedback = feedback?.let { FeedbackPresentation(it, workflow) },
+            tutor = tutorState?.let { TutorPresentation(it, teacher) }, menu = menu)
     }
 }
 

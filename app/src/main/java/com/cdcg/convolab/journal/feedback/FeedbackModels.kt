@@ -32,7 +32,7 @@ data class CorrectedDocument(val text: String, val reading: String)
 data class Analysis(
     val id: String, val sourceVersion: Int, val status: WorkStatus, val result: Feedback?,
     val replyResult: Feedback?, val correctedDocument: CorrectedDocument?, val replyRevision: Int,
-    val error: String?, val updatedAt: String, val encoded: String,
+    val error: String?, val updatedAt: String, val encoded: String, val currentReplyId: String? = null,
 ) {
     val feedback: Feedback? get() = replyResult ?: result
     val finalText: String? get() = correctedDocument?.text ?: replyResult?.entryText ?: result?.correctedText

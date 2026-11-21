@@ -17,6 +17,7 @@ object FeedbackJson {
         json.optJSONObject("result")?.let(::feedback), json.optJSONObject("currentReply")?.optJSONObject("result")?.let(::feedback),
         json.optJSONObject("correctedDocument")?.let { CorrectedDocument(it.getString("text"), it.getString("reading")) },
         json.optInt("replyRevision", 0), json.nullableString("error"), json.getString("updatedAt"), json.toString(),
+        json.optJSONObject("currentReply")?.nullableString("id")?.let(JournalIds::normalize),
     )
 
     private fun question(json: JSONObject) = ClarificationQuestion(JournalIds.normalize(json.getString("id")),
