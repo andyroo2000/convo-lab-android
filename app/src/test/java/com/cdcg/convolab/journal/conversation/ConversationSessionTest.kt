@@ -97,6 +97,19 @@ class ConversationSessionTest {
         assertNotEquals(old, fixture.conversation.session.value?.state?.value?.composer?.controller)
     }
 
+    @Test fun refreshCannotRollBackAKeystrokeArrivingDuringTheRecordRead() = runTest {
+        val fixture = ConversationFixture(this)
+        fixture.start()
+        val reply = fixture.conversation.session.value!!.state.value.composer!!.controller
+        reply.edit("最初の答え。")
+        reply.flush()
+        fixture.afterRead = { reply.edit("新しい答えを残す。") }
+        reply.refreshRecord()
+        assertEquals("新しい答えを残す。", reply.state.value.text)
+        reply.flush()
+        assertEquals(reply.state.value.text, fixture.memory.records[reply.state.value.record.id]?.draft?.body)
+    }
+
     @Test fun diskFailureKeepsAnswerVisibleAndBlocksSubmissionUntilRetry() = runTest {
         val fixture = ConversationFixture(this)
         fixture.start()
@@ -122,7 +135,17 @@ private class ConversationFixture(private val test: TestScope) {
     val tutor = ConversationTutor()
     val gateway = ConversationJournal(tutor, feedback)
     private val dispatcher = StandardTestDispatcher(test.testScheduler)
-    private val repository = JournalRepository(gateway, memory, dispatcher)
+    var afterRead: (() -> Unit)? = null
+    private val storageWithReadHook = object : JournalStorage by memory {
+        override fun read(id: String): JournalRecord? {
+            val snapshot = memory.read(id)
+            val callback = afterRead
+            afterRead = null
+            callback?.invoke()
+            return snapshot
+        }
+    }
+    private val repository = JournalRepository(gateway, storageWithReadHook, dispatcher)
     private val storage = ConversationWorkMemory()
     private fun workflow(scope: CoroutineScope) = WorkflowController(WorkflowAccess(feedback, storage, dispatcher), scope)
     val rootWorkflow = workflow(test.backgroundScope)
