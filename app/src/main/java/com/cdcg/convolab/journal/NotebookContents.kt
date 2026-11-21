@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.ui.JournalBrand
@@ -56,7 +58,8 @@ private fun ContentsRow(record: JournalRecord, busy: Boolean, select: () -> Unit
                 else if (record.draft != null) Text("Draft", color = Color(0xFF46764C))
             }
             Box {
-                TextButton(onClick = { menu = true }, enabled = !busy) { Text("•••") }
+                TextButton(onClick = { menu = true }, enabled = !busy,
+                    modifier = Modifier.semantics { contentDescription = "Actions for ${record.displayTitle()}" }) { Text("•••") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     for (action in listOf("Rename", "Delete")) DropdownMenuItem(text = { Text(action) }, onClick = { menu = false; command(action) })
                 }

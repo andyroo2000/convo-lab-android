@@ -45,7 +45,7 @@ fun NotebookPaper(state: NotebookState, edit: (String) -> Unit) {
         BasicTextField(state = field, inputTransformation = {
                 val text = asCharSequence().toString()
                 if (text.codePointCount(0, text.length) > 20_000 || text.contains('\u0000')) revertAllChanges()
-            }, enabled = !state.busy && !state.loading && !state.pendingDelete,
+            }, enabled = state.canEdit,
             textStyle = TextStyle(fontFamily = JournalBrand.Handwriting, fontSize = 20.sp,
                 lineHeight = 44.sp, color = Color(0xFF452713)), cursorBrush = SolidColor(JournalBrand.Blue),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),

@@ -13,7 +13,9 @@ data class NotebookState(
     val closePrompt: Boolean = false,
     val pendingDelete: Boolean = false,
     val canRecoverCopy: Boolean = false,
-)
+) {
+    val canEdit: Boolean get() = !busy && !loading && !pendingDelete
+}
 
 fun JournalRecord.displayTitle(): String = draft?.title ?: entry?.title ?: "Untitled entry"
 fun JournalRecord.displayDate(): String = draft?.entryDate ?: entry!!.entryDate

@@ -29,7 +29,7 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     fun edit(text: String) {
-        if (state.value.busy || state.value.pendingDelete) return
+        if (!state.value.canEdit) return
         val previous = state.value.draft
         if (text == previous.body) return
         try {
@@ -146,7 +146,7 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private fun action(block: suspend () -> Unit) = scope.launch {
-        if (state.value.busy || state.value.pendingDelete) return@launch
+        if (state.value.busy) return@launch
         mutableState.update { it.copy(busy = true, error = null) }
         try { block() }
         catch (cancelled: CancellationException) { throw cancelled }

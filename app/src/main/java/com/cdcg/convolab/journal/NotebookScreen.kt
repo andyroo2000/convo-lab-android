@@ -12,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,7 +24,7 @@ import com.cdcg.convolab.ui.JournalBrand
 fun NotebookScreen(state: NotebookState, controller: NotebookController, menu: @Composable () -> Unit) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
-        NotebookHeader({ controller.showContents(true) }, menu)
+        NotebookHeader(!state.loading, { controller.showContents(true) }, menu)
         Column(Modifier.weight(1f).background(Color(0xFFFAF9F6))) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -38,14 +41,14 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, menu: @
 }
 
 @Composable
-private fun NotebookHeader(contents: () -> Unit, menu: @Composable () -> Unit) {
+private fun NotebookHeader(enabled: Boolean, contents: () -> Unit, menu: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("CONVO-LAB", fontFamily = JournalBrand.Anton, fontSize = 26.sp, color = JournalBrand.Yellow)
             Text("Journal", fontFamily = JournalBrand.Serif, fontSize = 17.sp, color = Color.White)
         }
-        TextButton(onClick = contents) { Text("Contents", fontFamily = JournalBrand.Serif, fontSize = 20.sp, color = Color.White) }
+        TextButton(onClick = contents, enabled = enabled) { Text("Contents", fontFamily = JournalBrand.Serif, fontSize = 20.sp, color = Color.White) }
         menu()
     }
 }
@@ -71,7 +74,8 @@ private fun NotebookMessage(state: NotebookState, controller: NotebookController
     if (state.savedLocally) Text("Saved on this device", color = Color(0xFF586556), fontSize = 12.sp)
     if (state.recoveryCount > 0) Text("${state.recoveryCount} saved records need recovery. Their files have been kept.", color = Color(0xFF974634))
     state.error?.let {
-        Text(it, color = Color(0xFF974634), fontWeight = FontWeight.Medium)
+        Text(it, color = Color(0xFF974634), fontWeight = FontWeight.Medium,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         Row {
             TextButton(onClick = { controller.flush() }, enabled = !state.busy) { Text("Retry local save") }
             if (state.canRecoverCopy) TextButton(onClick = { controller.recoverCopy() }) { Text("Save as new") }

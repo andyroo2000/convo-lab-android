@@ -79,6 +79,27 @@ class NotebookControllerTest {
         assertFalse(controller.state.value.closePrompt)
     }
 
+    @Test fun failedDeletionCanBeRetriedAndDoesNotTrapNavigation() = runTest {
+        val draft = JournalDraft.blank().edited("削除する文章。")
+        val entry = JournalEntry(draft.id, null, draft.body, draft.entryDate, 1, "created", "updated")
+        val record = JournalRecord(entry = entry)
+        val storage = NotebookMemory().apply { records[draft.id] = record }
+        val api = NotebookGateway().apply { deleteResult = { throw IOException("fixture offline") } }
+        val controller = NotebookController(JournalRepository(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.start().join()
+        controller.select(record).join()
+        controller.delete(controller.state.value.draft).join()
+        assertTrue(controller.state.value.pendingDelete)
+        controller.newEntry().join()
+        assertNotEquals(draft.id, controller.state.value.draft.id)
+        controller.select(record).join()
+        assertTrue(controller.state.value.pendingDelete)
+        api.deleteResult = {}
+        controller.delete(controller.state.value.draft).join()
+        assertFalse(controller.state.value.pendingDelete)
+        assertTrue(storage.records.isEmpty())
+    }
+
     @Test fun typingLimitCountsUnicodeCodePointsAndPreservesLastAcceptedText() = runTest {
         val controller = NotebookController(JournalRepository(NotebookGateway(), NotebookMemory(), StandardTestDispatcher(testScheduler)), backgroundScope)
         controller.start().join()
@@ -106,6 +127,7 @@ internal class NotebookMemory : JournalStorage {
 internal class NotebookGateway : JournalGateway {
     var failSaves = false
     var failArchive = false
+    var deleteResult: suspend () -> Unit = {}
     override suspend fun archive(cursor: String?): JournalPage {
         if (failArchive) throw IOException("fixture offline")
         return JournalPage(emptyList(), null)
@@ -116,5 +138,5 @@ internal class NotebookGateway : JournalGateway {
         if (failSaves) throw IOException("fixture offline")
         return JournalEntry(draft.id, draft.title, draft.body, draft.entryDate, draft.expectedVersion + 1, "created", "updated")
     }
-    override suspend fun delete(id: String, version: Int) = Unit
+    override suspend fun delete(id: String, version: Int) = deleteResult()
 }
