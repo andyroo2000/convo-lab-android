@@ -1,0 +1,638 @@
+{
+  "engineMs": 620.91801,
+  "expansion": "whole-phrase-neural-and-dictionary",
+  "candidates": [
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "橋",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "渡り",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "橋を",
+          "reading": "はしを"
+        },
+        {
+          "text": "渡ります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日は橋を渡ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "アシタハハシヲワタリマス",
+          "reading": "あしたははしをわたります"
+        }
+      ],
+      "sections": [
+        {
+          "text": "アシタハハシヲワタリマス",
+          "reading": "あしたははしをわたります"
+        }
+      ],
+      "text": "アシタハハシヲワタリマス"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "あしたははしをわたります",
+          "reading": "あしたははしをわたります"
+        }
+      ],
+      "sections": [
+        {
+          "text": "あしたははしをわたります",
+          "reading": "あしたははしをわたります"
+        }
+      ],
+      "text": "あしたははしをわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "箸",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "わたり",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "箸を",
+          "reading": "はしを"
+        },
+        {
+          "text": "わたります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日は箸をわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "箸",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "渡り",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "箸を",
+          "reading": "はしを"
+        },
+        {
+          "text": "渡ります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日は箸を渡ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "橋",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "わたり",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "橋を",
+          "reading": "はしを"
+        },
+        {
+          "text": "わたります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日は橋をわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "はし"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "わたり"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "はしを"
+        },
+        {
+          "reading": "わたります",
+          "text": "わたります"
+        }
+      ],
+      "text": "明日ははしをわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "はし"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "渡り"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "はしを"
+        },
+        {
+          "reading": "わたります",
+          "text": "渡ります"
+        }
+      ],
+      "text": "明日ははしを渡ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "ハシ"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "渡り"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "ハシを"
+        },
+        {
+          "reading": "わたります",
+          "text": "渡ります"
+        }
+      ],
+      "text": "明日はハシを渡ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "走"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "わたり"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "走を"
+        },
+        {
+          "reading": "わたります",
+          "text": "わたります"
+        }
+      ],
+      "text": "明日は走をわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "箸"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "亘り"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "箸を"
+        },
+        {
+          "reading": "わたります",
+          "text": "亘ります"
+        }
+      ],
+      "text": "明日は箸を亘ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "ハシ",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "わたり",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "ハシを",
+          "reading": "はしを"
+        },
+        {
+          "text": "わたります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日はハシをわたります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "走",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "渡り",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "走を",
+          "reading": "はしを"
+        },
+        {
+          "text": "渡ります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日は走を渡ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "はし",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "亘り",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "はしを",
+          "reading": "はしを"
+        },
+        {
+          "text": "亘ります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日ははしを亘ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "橋"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "亘り"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "橋を"
+        },
+        {
+          "reading": "わたります",
+          "text": "亘ります"
+        }
+      ],
+      "text": "明日は橋を亘ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はし",
+          "text": "走"
+        },
+        {
+          "reading": "を",
+          "text": "を"
+        },
+        {
+          "reading": "わたり",
+          "text": "亘り"
+        },
+        {
+          "reading": "ます",
+          "text": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "reading": "あしたは",
+          "text": "明日は"
+        },
+        {
+          "reading": "はしを",
+          "text": "走を"
+        },
+        {
+          "reading": "わたります",
+          "text": "亘ります"
+        }
+      ],
+      "text": "明日は走を亘ります"
+    },
+    {
+      "reading": "あしたははしをわたります",
+      "units": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "ハシ",
+          "reading": "はし"
+        },
+        {
+          "text": "を",
+          "reading": "を"
+        },
+        {
+          "text": "亘り",
+          "reading": "わたり"
+        },
+        {
+          "text": "ます",
+          "reading": "ます"
+        }
+      ],
+      "sections": [
+        {
+          "text": "明日は",
+          "reading": "あしたは"
+        },
+        {
+          "text": "ハシを",
+          "reading": "はしを"
+        },
+        {
+          "text": "亘ります",
+          "reading": "わたります"
+        }
+      ],
+      "text": "明日はハシを亘ります"
+    }
+  ]
+}
