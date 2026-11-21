@@ -75,6 +75,18 @@ class NotebookUiTest {
         compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
     }
 
+    @Test fun closingASavedEntryRequiresExplicitDeletionConfirmation() {
+        launchNotebook()
+        compose.onNodeWithText("Contents").performClick()
+        compose.onNodeWithText("A movie night").performClick()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Delete draft").performClick()
+        compose.onNodeWithText("Delete entry?").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithTag("journal-editor").assertTextContains("昨日は映画を見ました。")
+    }
+
     private fun launchNotebook() {
         val storage = UiJournalStorage()
         val id = JournalIds.newId()

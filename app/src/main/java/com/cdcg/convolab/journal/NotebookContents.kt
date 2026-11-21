@@ -42,8 +42,8 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
             }
         }
     }
-    editing?.let { RenameEntryDialog(it, { editing = null }) { title -> controller.rename(it, title); editing = null } }
-    deleting?.let { DeleteEntryDialog(it, { deleting = null }) { controller.delete(it.editableDraft()); deleting = null } }
+    editing?.let { RenameEntryDialog(it, { editing = null }, !state.busy) { title -> controller.rename(it, title); editing = null } }
+    deleting?.let { DeleteEntryDialog(it, { deleting = null }, !state.busy) { controller.delete(it.editableDraft()); deleting = null } }
 }
 
 @Composable
