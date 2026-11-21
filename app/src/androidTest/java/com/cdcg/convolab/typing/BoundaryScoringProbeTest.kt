@@ -8,13 +8,17 @@ import org.junit.Test
 
 /** Public synthetic sentences only; captures numerical and timing evidence. */
 class BoundaryScoringProbeTest {
+    // Oversubscribing emulator vCPUs measures scheduler starvation, not inference.
+    // Keep the full sweep on phones with >= 6 cores, and match the engine's cap elsewhere.
+    private val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+    private val threadCounts = listOf(2, 4, 6).map { it.coerceAtMost(cores) }.distinct()
     @Test fun comparePrefixReuseAndBatchingWithUnchangedUpstreamScores() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val handle = NativeTyping.create(EngineAssets(context).prepare().absolutePath.toByteArray(Charsets.UTF_8))
         assertNotEquals(0L, handle)
         val reports = JSONArray()
         try {
-            for (threads in listOf(2, 4, 6)) {
+            for (threads in threadCounts) {
                 for ((reading, texts) in phrases) {
                     val request = JSONObject().put("action", "benchmarkBoundary").put("reading", reading)
                         .put("texts", JSONArray(texts)).put("threads", threads)
@@ -40,7 +44,7 @@ class BoundaryScoringProbeTest {
             assertEquals(160, candidates.length())
             val texts = JSONArray((0 until candidates.length()).map { candidates.getJSONObject(it).getString("text") })
             val probe = call(handle, JSONObject().put("action", "benchmarkBoundary").put("reading", request.getString("reading"))
-                .put("texts", texts).put("threads", 4))
+                .put("texts", texts).put("threads", minOf(4, cores)))
             assertScoresMatch(probe, 160)
             probe.put("texts", texts).put("coldEngineMs", first.getDouble("engineMs"))
             val repeated = call(handle, request)
