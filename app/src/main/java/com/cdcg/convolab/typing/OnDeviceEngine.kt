@@ -18,13 +18,7 @@ class OnDeviceEngine(context: Context) : TypingEngine {
             if (handle == 0L) {
                 handle = NativeTyping.create(assets.prepare().absolutePath.toByteArray(Charsets.UTF_8))
                 check(handle != 0L) { "The on-device model could not start" }
-                try {
-                    convertLocked("konnichiha")
-                } catch (failure: Exception) {
-                    NativeTyping.destroy(handle)
-                    handle = 0L
-                    throw failure
-                }
+                // Native creation loads and warms the model, or returns a null handle.
             }
         }
     }

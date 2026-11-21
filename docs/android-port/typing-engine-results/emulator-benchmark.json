@@ -1,0 +1,1192 @@
+{
+  "schema": 1,
+  "device": "sdk_gphone64_arm64",
+  "fingerprint": "google\/sdk_gphone64_arm64\/emu64a:16\/BE2A.250530.026.F3\/13894323:userdebug\/dev-keys",
+  "measuredAtEpochMs": 1795226470022,
+  "abi": "arm64-v8a",
+  "emulator": true,
+  "hardware": "ranchu",
+  "thermalStatusAtEnd": 0,
+  "azooKeyRevision": "80b8204f1cdfb364bb2ed355cf52c7ebb2519a0c",
+  "llamaRevision": "10131b23ee0dbd9d03dfc618cec9fe3402919277",
+  "androidApi": 36,
+  "appVersion": "0.1.0-dev",
+  "modelSha256": "501f605d088f5b988791a00ae19ed46985ed7c48144f364b2f3f1f951c9b2083",
+  "backend": "CPU \/ arm64-v8a",
+  "preloadMs": 183.781083,
+  "samples": [
+    {
+      "pass": 1,
+      "reading": "きのうえいがをみました",
+      "category": "journal",
+      "candidates": [
+        "昨日映画を観ました",
+        "昨日映画を見ました",
+        "キノウエイガヲミマシタ",
+        "きのうえいがをみました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 122.842542,
+      "resetMs": 1.032,
+      "wallMs": 123.379541,
+      "sampledPssKb": 229820
+    },
+    {
+      "pass": 1,
+      "reading": "きょうはいいてんきです",
+      "category": "journal",
+      "candidates": [
+        "今日はいい天気です",
+        "強はいい天気です",
+        "キョウハイイテンキデス",
+        "きょうはいいてんきです"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 165.621084,
+      "resetMs": 1.069583,
+      "wallMs": 166.469708,
+      "sampledPssKb": 229912
+    },
+    {
+      "pass": 1,
+      "reading": "あたらしいほんをかいました",
+      "category": "journal",
+      "candidates": [
+        "新しい本を買いました",
+        "アタラシイホンヲカイマシタ",
+        "あたらしいほんをかいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 124.650791,
+      "resetMs": 0.71625,
+      "wallMs": 125.325417,
+      "sampledPssKb": 230776
+    },
+    {
+      "pass": 1,
+      "reading": "にほんごをべんきょうしています",
+      "category": "journal",
+      "candidates": [
+        "日本語を勉強しています",
+        "ニホンゴヲベンキョウシテイマス",
+        "にほんごをべんきょうしています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 182.987251,
+      "resetMs": 0.692709,
+      "wallMs": 183.602,
+      "sampledPssKb": 231216
+    },
+    {
+      "pass": 1,
+      "reading": "そのあとともだちにあいました",
+      "category": "journal",
+      "candidates": [
+        "そのあと友達に会いました",
+        "ソノアトトモダチニアイマシタ",
+        "そのあとともだちにあいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 117.052208,
+      "resetMs": 0.6505,
+      "wallMs": 117.539625,
+      "sampledPssKb": 232020
+    },
+    {
+      "pass": 1,
+      "reading": "あしたはやくおきます",
+      "category": "journal",
+      "candidates": [
+        "明日早く起きます",
+        "アシタハヤクオキマス",
+        "あしたはやくおきます"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 106.14275,
+      "resetMs": 0.575125,
+      "wallMs": 106.674625,
+      "sampledPssKb": 232352
+    },
+    {
+      "pass": 1,
+      "reading": "きんようびにかえります",
+      "category": "journal",
+      "candidates": [
+        "金曜日に帰ります",
+        "キンヨウビニカエリマス",
+        "きんようびにかえります"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 83.801208,
+      "resetMs": 0.572083,
+      "wallMs": 84.368208,
+      "sampledPssKb": 232436
+    },
+    {
+      "pass": 1,
+      "reading": "くるまをうんてんしました",
+      "category": "journal",
+      "candidates": [
+        "車を運転しました",
+        "クルマヲウンテンシマシタ",
+        "くるまをうんてんしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 115.009958,
+      "resetMs": 0.731084,
+      "wallMs": 115.830958,
+      "sampledPssKb": 230560
+    },
+    {
+      "pass": 1,
+      "reading": "えいごのじまくがありました",
+      "category": "journal",
+      "candidates": [
+        "英語の字幕がありました",
+        "エイゴノジマクガアリマシタ",
+        "えいごのじまくがありました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 158.891292,
+      "resetMs": 1.124959,
+      "wallMs": 159.583834,
+      "sampledPssKb": 230756
+    },
+    {
+      "pass": 1,
+      "reading": "ひこうきがとべなくなりました",
+      "category": "journal",
+      "candidates": [
+        "飛行機が飛べなくなりました",
+        "ヒコウキガトベナクナリマシタ",
+        "ひこうきがとべなくなりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 150.678167,
+      "resetMs": 1.159666,
+      "wallMs": 151.394708,
+      "sampledPssKb": 231600
+    },
+    {
+      "pass": 1,
+      "reading": "はしをわたりました",
+      "category": "homophone",
+      "candidates": [
+        "橋を渡りました",
+        "ハシヲワタリマシタ",
+        "はしをわたりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 82.033167,
+      "resetMs": 0.850417,
+      "wallMs": 82.527375,
+      "sampledPssKb": 231576
+    },
+    {
+      "pass": 1,
+      "reading": "はしでたべました",
+      "category": "homophone",
+      "candidates": [
+        "箸で食べました",
+        "橋で食べました",
+        "ハシデタベマシタ",
+        "はしでたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 70.504625,
+      "resetMs": 0.58675,
+      "wallMs": 71.03875,
+      "sampledPssKb": 231348
+    },
+    {
+      "pass": 1,
+      "reading": "あめがふっています",
+      "category": "homophone",
+      "candidates": [
+        "雨が降っています",
+        "アメガフッテイマス",
+        "あめがふっています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 86.200667,
+      "resetMs": 0.608125,
+      "wallMs": 86.799375,
+      "sampledPssKb": 231604
+    },
+    {
+      "pass": 1,
+      "reading": "あめをたべました",
+      "category": "homophone",
+      "candidates": [
+        "飴を食べました",
+        "雨を食べました",
+        "アメヲタベマシタ",
+        "あめをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 76.191792,
+      "resetMs": 0.578,
+      "wallMs": 76.682,
+      "sampledPssKb": 231328
+    },
+    {
+      "pass": 1,
+      "reading": "かみをきりました",
+      "category": "ambiguous",
+      "candidates": [
+        "髪を切りました",
+        "カミヲキリマシタ",
+        "かみをきりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 78.500709,
+      "resetMs": 0.493875,
+      "wallMs": 79.0375,
+      "sampledPssKb": 231488
+    },
+    {
+      "pass": 1,
+      "reading": "きしゃがきしゃできしゃにきた",
+      "category": "stress",
+      "candidates": [
+        "記者が記者で記者に来た",
+        "キシャガキシャデキシャニキタ",
+        "きしゃがきしゃできしゃにきた"
+      ],
+      "topAccepted": false,
+      "anyAccepted": false,
+      "engineMs": 113.639709,
+      "resetMs": 0.631417,
+      "wallMs": 114.365459,
+      "sampledPssKb": 231708
+    },
+    {
+      "pass": 1,
+      "reading": "とうきょうえきでまちあわせしました",
+      "category": "place",
+      "candidates": [
+        "東京駅で待ち合わせしました",
+        "トウキョウエキデマチアワセシマシタ",
+        "とうきょうえきでまちあわせしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 127.95075,
+      "resetMs": 0.833792,
+      "wallMs": 128.548959,
+      "sampledPssKb": 231996
+    },
+    {
+      "pass": 1,
+      "reading": "しんじゅくにいきました",
+      "category": "place",
+      "candidates": [
+        "新宿に行きました",
+        "シンジュクニイキマシタ",
+        "しんじゅくにいきました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 99.49425,
+      "resetMs": 0.745791,
+      "wallMs": 99.995875,
+      "sampledPssKb": 232092
+    },
+    {
+      "pass": 1,
+      "reading": "らーめんをたべました",
+      "category": "katakana",
+      "candidates": [
+        "ラーメンを食べました",
+        "ラーメンヲタベマシタ",
+        "らーめんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 102.152792,
+      "resetMs": 0.821042,
+      "wallMs": 102.727333,
+      "sampledPssKb": 232342
+    },
+    {
+      "pass": 1,
+      "reading": "こーひーをのみました",
+      "category": "katakana",
+      "candidates": [
+        "珈琲を飲みました",
+        "コーヒーを飲みました",
+        "コーヒーヲノミマシタ",
+        "こーひーをのみました"
+      ],
+      "topAccepted": false,
+      "anyAccepted": true,
+      "engineMs": 94.603,
+      "resetMs": 0.513292,
+      "wallMs": 95.223209,
+      "sampledPssKb": 232326
+    },
+    {
+      "pass": 1,
+      "reading": "えいがはおもしろかったです。",
+      "category": "punctuation",
+      "candidates": [
+        "映画は面白かったです。",
+        "エイガハオモシロカッタデス。",
+        "えいがはおもしろかったです。"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 114.52275,
+      "resetMs": 0.632125,
+      "wallMs": 115.043292,
+      "sampledPssKb": 232586
+    },
+    {
+      "pass": 1,
+      "reading": "わたしはがっこうにいきませんでした",
+      "category": "conjugation",
+      "candidates": [
+        "私は学校に行きませんでした",
+        "ワタシハガッコウニイキマセンデシタ",
+        "わたしはがっこうにいきませんでした"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 146.850708,
+      "resetMs": 0.67725,
+      "wallMs": 147.632875,
+      "sampledPssKb": 232701
+    },
+    {
+      "pass": 1,
+      "reading": "たべなければなりません",
+      "category": "conjugation",
+      "candidates": [
+        "食べなければなりません",
+        "タベナケレバナリマセン",
+        "たべなければなりません"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 130.875958,
+      "resetMs": 0.750292,
+      "wallMs": 131.459,
+      "sampledPssKb": 232989
+    },
+    {
+      "pass": 1,
+      "reading": "きのうともだちとえいがをみてからばんごはんをたべました",
+      "category": "long",
+      "candidates": [
+        "昨日友達と映画を見てから晩御飯を食べました",
+        "キノウトモダチトエイガヲミテカラバンゴハンヲタベマシタ",
+        "きのうともだちとえいがをみてからばんごはんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 210.929,
+      "resetMs": 0.624666,
+      "wallMs": 211.625916,
+      "sampledPssKb": 234689
+    },
+    {
+      "pass": 2,
+      "reading": "きのうえいがをみました",
+      "category": "journal",
+      "candidates": [
+        "昨日映画を観ました",
+        "昨日映画を見ました",
+        "キノウエイガヲミマシタ",
+        "きのうえいがをみました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 144.604417,
+      "resetMs": 1.835542,
+      "wallMs": 145.565208,
+      "sampledPssKb": 234673
+    },
+    {
+      "pass": 2,
+      "reading": "きょうはいいてんきです",
+      "category": "journal",
+      "candidates": [
+        "今日はいい天気です",
+        "強はいい天気です",
+        "キョウハイイテンキデス",
+        "きょうはいいてんきです"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 115.296417,
+      "resetMs": 0.783708,
+      "wallMs": 116.074375,
+      "sampledPssKb": 234725
+    },
+    {
+      "pass": 2,
+      "reading": "あたらしいほんをかいました",
+      "category": "journal",
+      "candidates": [
+        "新しい本を買いました",
+        "アタラシイホンヲカイマシタ",
+        "あたらしいほんをかいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 113.020792,
+      "resetMs": 0.69775,
+      "wallMs": 113.536084,
+      "sampledPssKb": 234781
+    },
+    {
+      "pass": 2,
+      "reading": "にほんごをべんきょうしています",
+      "category": "journal",
+      "candidates": [
+        "日本語を勉強しています",
+        "ニホンゴヲベンキョウシテイマス",
+        "にほんごをべんきょうしています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 96.53525,
+      "resetMs": 0.646417,
+      "wallMs": 96.996083,
+      "sampledPssKb": 234665
+    },
+    {
+      "pass": 2,
+      "reading": "そのあとともだちにあいました",
+      "category": "journal",
+      "candidates": [
+        "そのあと友達に会いました",
+        "ソノアトトモダチニアイマシタ",
+        "そのあとともだちにあいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 81.118292,
+      "resetMs": 0.489667,
+      "wallMs": 81.542834,
+      "sampledPssKb": 234669
+    },
+    {
+      "pass": 2,
+      "reading": "あしたはやくおきます",
+      "category": "journal",
+      "candidates": [
+        "明日早く起きます",
+        "アシタハヤクオキマス",
+        "あしたはやくおきます"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 63.462875,
+      "resetMs": 0.471584,
+      "wallMs": 63.899333,
+      "sampledPssKb": 235132
+    },
+    {
+      "pass": 2,
+      "reading": "きんようびにかえります",
+      "category": "journal",
+      "candidates": [
+        "金曜日に帰ります",
+        "キンヨウビニカエリマス",
+        "きんようびにかえります"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 63.848959,
+      "resetMs": 0.610042,
+      "wallMs": 64.34975,
+      "sampledPssKb": 235140
+    },
+    {
+      "pass": 2,
+      "reading": "くるまをうんてんしました",
+      "category": "journal",
+      "candidates": [
+        "車を運転しました",
+        "クルマヲウンテンシマシタ",
+        "くるまをうんてんしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 65.864125,
+      "resetMs": 0.575834,
+      "wallMs": 66.323583,
+      "sampledPssKb": 235156
+    },
+    {
+      "pass": 2,
+      "reading": "えいごのじまくがありました",
+      "category": "journal",
+      "candidates": [
+        "英語の字幕がありました",
+        "エイゴノジマクガアリマシタ",
+        "えいごのじまくがありました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 80.065458,
+      "resetMs": 0.607375,
+      "wallMs": 80.633208,
+      "sampledPssKb": 235160
+    },
+    {
+      "pass": 2,
+      "reading": "ひこうきがとべなくなりました",
+      "category": "journal",
+      "candidates": [
+        "飛行機が飛べなくなりました",
+        "ヒコウキガトベナクナリマシタ",
+        "ひこうきがとべなくなりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 107.308667,
+      "resetMs": 0.640833,
+      "wallMs": 107.863167,
+      "sampledPssKb": 234841
+    },
+    {
+      "pass": 2,
+      "reading": "はしをわたりました",
+      "category": "homophone",
+      "candidates": [
+        "橋を渡りました",
+        "ハシヲワタリマシタ",
+        "はしをわたりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 54.119,
+      "resetMs": 0.544833,
+      "wallMs": 54.508083,
+      "sampledPssKb": 234845
+    },
+    {
+      "pass": 2,
+      "reading": "はしでたべました",
+      "category": "homophone",
+      "candidates": [
+        "箸で食べました",
+        "橋で食べました",
+        "ハシデタベマシタ",
+        "はしでたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 50.029458,
+      "resetMs": 0.401458,
+      "wallMs": 50.421583,
+      "sampledPssKb": 234845
+    },
+    {
+      "pass": 2,
+      "reading": "あめがふっています",
+      "category": "homophone",
+      "candidates": [
+        "雨が降っています",
+        "アメガフッテイマス",
+        "あめがふっています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 54.987375,
+      "resetMs": 0.344333,
+      "wallMs": 55.350583,
+      "sampledPssKb": 234861
+    },
+    {
+      "pass": 2,
+      "reading": "あめをたべました",
+      "category": "homophone",
+      "candidates": [
+        "飴を食べました",
+        "雨を食べました",
+        "アメヲタベマシタ",
+        "あめをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 54.078792,
+      "resetMs": 0.302208,
+      "wallMs": 54.421417,
+      "sampledPssKb": 234865
+    },
+    {
+      "pass": 2,
+      "reading": "かみをきりました",
+      "category": "ambiguous",
+      "candidates": [
+        "髪を切りました",
+        "カミヲキリマシタ",
+        "かみをきりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 49.870916,
+      "resetMs": 0.339458,
+      "wallMs": 50.230542,
+      "sampledPssKb": 234869
+    },
+    {
+      "pass": 2,
+      "reading": "きしゃがきしゃできしゃにきた",
+      "category": "stress",
+      "candidates": [
+        "記者が記者で記者に来た",
+        "キシャガキシャデキシャニキタ",
+        "きしゃがきしゃできしゃにきた"
+      ],
+      "topAccepted": false,
+      "anyAccepted": false,
+      "engineMs": 74.725,
+      "resetMs": 0.349083,
+      "wallMs": 75.065708,
+      "sampledPssKb": 234889
+    },
+    {
+      "pass": 2,
+      "reading": "とうきょうえきでまちあわせしました",
+      "category": "place",
+      "candidates": [
+        "東京駅で待ち合わせしました",
+        "トウキョウエキデマチアワセシマシタ",
+        "とうきょうえきでまちあわせしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 87.324959,
+      "resetMs": 0.475083,
+      "wallMs": 87.67175,
+      "sampledPssKb": 234769
+    },
+    {
+      "pass": 2,
+      "reading": "しんじゅくにいきました",
+      "category": "place",
+      "candidates": [
+        "新宿に行きました",
+        "シンジュクニイキマシタ",
+        "しんじゅくにいきました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 64.2295,
+      "resetMs": 0.694084,
+      "wallMs": 64.636166,
+      "sampledPssKb": 234741
+    },
+    {
+      "pass": 2,
+      "reading": "らーめんをたべました",
+      "category": "katakana",
+      "candidates": [
+        "ラーメンを食べました",
+        "ラーメンヲタベマシタ",
+        "らーめんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 61.369208,
+      "resetMs": 0.443458,
+      "wallMs": 61.767667,
+      "sampledPssKb": 234741
+    },
+    {
+      "pass": 2,
+      "reading": "こーひーをのみました",
+      "category": "katakana",
+      "candidates": [
+        "珈琲を飲みました",
+        "コーヒーを飲みました",
+        "コーヒーヲノミマシタ",
+        "こーひーをのみました"
+      ],
+      "topAccepted": false,
+      "anyAccepted": true,
+      "engineMs": 68.28375,
+      "resetMs": 0.318708,
+      "wallMs": 68.697125,
+      "sampledPssKb": 234789
+    },
+    {
+      "pass": 2,
+      "reading": "えいがはおもしろかったです。",
+      "category": "punctuation",
+      "candidates": [
+        "映画は面白かったです。",
+        "エイガハオモシロカッタデス。",
+        "えいがはおもしろかったです。"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 77.548626,
+      "resetMs": 0.433042,
+      "wallMs": 77.9085,
+      "sampledPssKb": 234793
+    },
+    {
+      "pass": 2,
+      "reading": "わたしはがっこうにいきませんでした",
+      "category": "conjugation",
+      "candidates": [
+        "私は学校に行きませんでした",
+        "ワタシハガッコウニイキマセンデシタ",
+        "わたしはがっこうにいきませんでした"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 88.589958,
+      "resetMs": 0.451583,
+      "wallMs": 88.974667,
+      "sampledPssKb": 234801
+    },
+    {
+      "pass": 2,
+      "reading": "たべなければなりません",
+      "category": "conjugation",
+      "candidates": [
+        "食べなければなりません",
+        "タベナケレバナリマセン",
+        "たべなければなりません"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 67.4985,
+      "resetMs": 0.639666,
+      "wallMs": 67.886958,
+      "sampledPssKb": 234801
+    },
+    {
+      "pass": 2,
+      "reading": "きのうともだちとえいがをみてからばんごはんをたべました",
+      "category": "long",
+      "candidates": [
+        "昨日友達と映画を見てから晩御飯を食べました",
+        "キノウトモダチトエイガヲミテカラバンゴハンヲタベマシタ",
+        "きのうともだちとえいがをみてからばんごはんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 130.338125,
+      "resetMs": 0.481541,
+      "wallMs": 130.741375,
+      "sampledPssKb": 234833
+    },
+    {
+      "pass": 3,
+      "reading": "きのうえいがをみました",
+      "category": "journal",
+      "candidates": [
+        "昨日映画を観ました",
+        "昨日映画を見ました",
+        "キノウエイガヲミマシタ",
+        "きのうえいがをみました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 62.235208,
+      "resetMs": 0.5385,
+      "wallMs": 62.613125,
+      "sampledPssKb": 234837
+    },
+    {
+      "pass": 3,
+      "reading": "きょうはいいてんきです",
+      "category": "journal",
+      "candidates": [
+        "今日はいい天気です",
+        "強はいい天気です",
+        "キョウハイイテンキデス",
+        "きょうはいいてんきです"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 60.2305,
+      "resetMs": 0.404,
+      "wallMs": 60.571334,
+      "sampledPssKb": 234841
+    },
+    {
+      "pass": 3,
+      "reading": "あたらしいほんをかいました",
+      "category": "journal",
+      "candidates": [
+        "新しい本を買いました",
+        "アタラシイホンヲカイマシタ",
+        "あたらしいほんをかいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 69.685208,
+      "resetMs": 0.407291,
+      "wallMs": 70.076083,
+      "sampledPssKb": 234845
+    },
+    {
+      "pass": 3,
+      "reading": "にほんごをべんきょうしています",
+      "category": "journal",
+      "candidates": [
+        "日本語を勉強しています",
+        "ニホンゴヲベンキョウシテイマス",
+        "にほんごをべんきょうしています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 75.9215,
+      "resetMs": 0.529375,
+      "wallMs": 76.284334,
+      "sampledPssKb": 234849
+    },
+    {
+      "pass": 3,
+      "reading": "そのあとともだちにあいました",
+      "category": "journal",
+      "candidates": [
+        "そのあと友達に会いました",
+        "ソノアトトモダチニアイマシタ",
+        "そのあとともだちにあいました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 77.387125,
+      "resetMs": 0.442083,
+      "wallMs": 77.747167,
+      "sampledPssKb": 234849
+    },
+    {
+      "pass": 3,
+      "reading": "あしたはやくおきます",
+      "category": "journal",
+      "candidates": [
+        "明日早く起きます",
+        "アシタハヤクオキマス",
+        "あしたはやくおきます"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 57.2445,
+      "resetMs": 0.398166,
+      "wallMs": 57.764167,
+      "sampledPssKb": 234853
+    },
+    {
+      "pass": 3,
+      "reading": "きんようびにかえります",
+      "category": "journal",
+      "candidates": [
+        "金曜日に帰ります",
+        "キンヨウビニカエリマス",
+        "きんようびにかえります"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 64.34475,
+      "resetMs": 0.410833,
+      "wallMs": 64.725667,
+      "sampledPssKb": 234813
+    },
+    {
+      "pass": 3,
+      "reading": "くるまをうんてんしました",
+      "category": "journal",
+      "candidates": [
+        "車を運転しました",
+        "クルマヲウンテンシマシタ",
+        "くるまをうんてんしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 68.281291,
+      "resetMs": 0.526125,
+      "wallMs": 68.693708,
+      "sampledPssKb": 234829
+    },
+    {
+      "pass": 3,
+      "reading": "えいごのじまくがありました",
+      "category": "journal",
+      "candidates": [
+        "英語の字幕がありました",
+        "エイゴノジマクガアリマシタ",
+        "えいごのじまくがありました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 78.523375,
+      "resetMs": 0.660292,
+      "wallMs": 79.080333,
+      "sampledPssKb": 234833
+    },
+    {
+      "pass": 3,
+      "reading": "ひこうきがとべなくなりました",
+      "category": "journal",
+      "candidates": [
+        "飛行機が飛べなくなりました",
+        "ヒコウキガトベナクナリマシタ",
+        "ひこうきがとべなくなりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 80.639542,
+      "resetMs": 0.492458,
+      "wallMs": 81.022417,
+      "sampledPssKb": 234853
+    },
+    {
+      "pass": 3,
+      "reading": "はしをわたりました",
+      "category": "homophone",
+      "candidates": [
+        "橋を渡りました",
+        "ハシヲワタリマシタ",
+        "はしをわたりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 52.074542,
+      "resetMs": 0.447417,
+      "wallMs": 52.386708,
+      "sampledPssKb": 234857
+    },
+    {
+      "pass": 3,
+      "reading": "はしでたべました",
+      "category": "homophone",
+      "candidates": [
+        "箸で食べました",
+        "橋で食べました",
+        "ハシデタベマシタ",
+        "はしでたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 49.607958,
+      "resetMs": 0.32975,
+      "wallMs": 50.048209,
+      "sampledPssKb": 234861
+    },
+    {
+      "pass": 3,
+      "reading": "あめがふっています",
+      "category": "homophone",
+      "candidates": [
+        "雨が降っています",
+        "アメガフッテイマス",
+        "あめがふっています"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 54.375792,
+      "resetMs": 0.306709,
+      "wallMs": 54.708916,
+      "sampledPssKb": 234853
+    },
+    {
+      "pass": 3,
+      "reading": "あめをたべました",
+      "category": "homophone",
+      "candidates": [
+        "飴を食べました",
+        "雨を食べました",
+        "アメヲタベマシタ",
+        "あめをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 52.649459,
+      "resetMs": 0.362542,
+      "wallMs": 53.059041,
+      "sampledPssKb": 234857
+    },
+    {
+      "pass": 3,
+      "reading": "かみをきりました",
+      "category": "ambiguous",
+      "candidates": [
+        "髪を切りました",
+        "カミヲキリマシタ",
+        "かみをきりました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 51.40825,
+      "resetMs": 0.336417,
+      "wallMs": 51.756083,
+      "sampledPssKb": 234861
+    },
+    {
+      "pass": 3,
+      "reading": "きしゃがきしゃできしゃにきた",
+      "category": "stress",
+      "candidates": [
+        "記者が記者で記者に来た",
+        "キシャガキシャデキシャニキタ",
+        "きしゃがきしゃできしゃにきた"
+      ],
+      "topAccepted": false,
+      "anyAccepted": false,
+      "engineMs": 74.478875,
+      "resetMs": 0.34775,
+      "wallMs": 74.834876,
+      "sampledPssKb": 234873
+    },
+    {
+      "pass": 3,
+      "reading": "とうきょうえきでまちあわせしました",
+      "category": "place",
+      "candidates": [
+        "東京駅で待ち合わせしました",
+        "トウキョウエキデマチアワセシマシタ",
+        "とうきょうえきでまちあわせしました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 87.4035,
+      "resetMs": 0.47125,
+      "wallMs": 87.758958,
+      "sampledPssKb": 234877
+    },
+    {
+      "pass": 3,
+      "reading": "しんじゅくにいきました",
+      "category": "place",
+      "candidates": [
+        "新宿に行きました",
+        "シンジュクニイキマシタ",
+        "しんじゅくにいきました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 60.771708,
+      "resetMs": 0.49375,
+      "wallMs": 61.112208,
+      "sampledPssKb": 234889
+    },
+    {
+      "pass": 3,
+      "reading": "らーめんをたべました",
+      "category": "katakana",
+      "candidates": [
+        "ラーメンを食べました",
+        "ラーメンヲタベマシタ",
+        "らーめんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 61.356375,
+      "resetMs": 0.542,
+      "wallMs": 61.746958,
+      "sampledPssKb": 234897
+    },
+    {
+      "pass": 3,
+      "reading": "こーひーをのみました",
+      "category": "katakana",
+      "candidates": [
+        "珈琲を飲みました",
+        "コーヒーを飲みました",
+        "コーヒーヲノミマシタ",
+        "こーひーをのみました"
+      ],
+      "topAccepted": false,
+      "anyAccepted": true,
+      "engineMs": 66.260292,
+      "resetMs": 0.375166,
+      "wallMs": 66.699125,
+      "sampledPssKb": 234929
+    },
+    {
+      "pass": 3,
+      "reading": "えいがはおもしろかったです。",
+      "category": "punctuation",
+      "candidates": [
+        "映画は面白かったです。",
+        "エイガハオモシロカッタデス。",
+        "えいがはおもしろかったです。"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 75.561875,
+      "resetMs": 0.595875,
+      "wallMs": 76.01425,
+      "sampledPssKb": 234933
+    },
+    {
+      "pass": 3,
+      "reading": "わたしはがっこうにいきませんでした",
+      "category": "conjugation",
+      "candidates": [
+        "私は学校に行きませんでした",
+        "ワタシハガッコウニイキマセンデシタ",
+        "わたしはがっこうにいきませんでした"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 88.810291,
+      "resetMs": 0.503083,
+      "wallMs": 89.200459,
+      "sampledPssKb": 234933
+    },
+    {
+      "pass": 3,
+      "reading": "たべなければなりません",
+      "category": "conjugation",
+      "candidates": [
+        "食べなければなりません",
+        "タベナケレバナリマセン",
+        "たべなければなりません"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 66.201792,
+      "resetMs": 0.578083,
+      "wallMs": 66.662375,
+      "sampledPssKb": 234889
+    },
+    {
+      "pass": 3,
+      "reading": "きのうともだちとえいがをみてからばんごはんをたべました",
+      "category": "long",
+      "candidates": [
+        "昨日友達と映画を見てから晩御飯を食べました",
+        "キノウトモダチトエイガヲミテカラバンゴハンヲタベマシタ",
+        "きのうともだちとえいがをみてからばんごはんをたべました"
+      ],
+      "topAccepted": true,
+      "anyAccepted": true,
+      "engineMs": 130.517333,
+      "resetMs": 0.34475,
+      "wallMs": 130.914375,
+      "sampledPssKb": 234905
+    }
+  ],
+  "scope": "Public fixtures only. Excludes keyboard, debounce and rendering. PSS is sampled, not peak.",
+  "p50WallMs": 79.0375,
+  "p95WallMs": 159.583834,
+  "maxWallMs": 211.625916,
+  "targetP95Ms": 150,
+  "meetsTarget": false
+}
