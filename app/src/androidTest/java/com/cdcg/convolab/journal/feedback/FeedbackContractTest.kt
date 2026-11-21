@@ -76,6 +76,12 @@ class FeedbackContractTest {
         file.writeText(original)
         assertThrows(Exception::class.java) { storage.write(pending) }
         assertEquals(original, file.readText())
+        storage.archive(pending.entryId)
+        assertNull(storage.read(pending.entryId))
+        val archived = File(directory, "journal-workflow/101/recovery").listFiles()!!.single()
+        assertEquals(original, archived.readText())
+        storage.write(pending)
+        assertEquals(pending, storage.read(pending.entryId))
     }
 
     private fun clarificationJson() = JSONObject().put("id", clarificationId.uppercase()).put("sourceVersion", 3)

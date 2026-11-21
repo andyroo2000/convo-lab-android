@@ -5,6 +5,8 @@ import com.cdcg.convolab.journal.JournalId
 import java.io.File
 import java.io.FileNotFoundException
 import org.json.JSONObject
+import org.json.JSONException
+import java.util.UUID
 
 /** Raw server JSON preserves fields used by later conversation/audio versions of the client. */
 class WorkflowDiskStore(noBackupDirectory: File, accountId: Long) : WorkflowStorage {
@@ -12,6 +14,12 @@ class WorkflowDiskStore(noBackupDirectory: File, accountId: Long) : WorkflowStor
 
     @Synchronized override fun read(id: JournalId): WorkflowSnapshot? {
         val bytes = try { file(id).readFully() } catch (_: FileNotFoundException) { return null }
+        return try { decode(id, bytes) }
+        catch (_: JSONException) { throw WorkflowRecoveryFailure(WorkflowRecovery(null)) }
+        catch (_: IllegalArgumentException) { throw WorkflowRecoveryFailure(WorkflowRecovery(null)) }
+    }
+
+    private fun decode(id: JournalId, bytes: ByteArray): WorkflowSnapshot {
         val json = JSONObject(bytes.toString(Charsets.UTF_8))
         require(json.getInt("schemaVersion") == 1)
         require(json.getString("entryId") == id.value)
@@ -22,6 +30,23 @@ class WorkflowDiskStore(noBackupDirectory: File, accountId: Long) : WorkflowStor
             json.getBoolean("submissionRequested"), json.optJSONObject("pendingFinalEdit")?.let {
                 FinalEdit(it.getString("analysisId"), it.getInt("expectedRevision"), it.getString("text"))
             })
+    }
+
+    @Synchronized override fun archive(id: JournalId) {
+        val recovery = File(directory, "recovery")
+        check(recovery.isDirectory || recovery.mkdirs())
+        val archived = AtomicFile(File(recovery, "${id.value}-${UUID.randomUUID()}.json"))
+        val source = file(id)
+        val output = archived.startWrite()
+        try {
+            source.openRead().use { it.copyTo(output) }
+            archived.finishWrite(output)
+        } catch (failure: Exception) {
+            archived.failWrite(output)
+            throw failure
+        }
+        source.delete()
+        check(!source.baseFile.exists()) { "The recovery copy is saved, but the original could not be moved." }
     }
 
     @Synchronized override fun write(snapshot: WorkflowSnapshot) {

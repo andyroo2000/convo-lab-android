@@ -27,12 +27,13 @@ import com.cdcg.convolab.journal.text.RubyText
 import com.cdcg.convolab.ui.JournalBrand
 
 class FeedbackPresentation(val state: WorkflowState, val controller: WorkflowController) {
-    val visible: Boolean get() = state.snapshot?.let { it.analysis != null || it.clarification != null || it.submissionRequested } == true
+    val visible: Boolean get() = state.recovery != null || state.snapshot?.let { it.analysis != null || it.clarification != null || it.submissionRequested } == true
 }
 
 @Composable
 fun FeedbackContent(presentation: FeedbackPresentation) {
     val state = presentation.state
+    if (state.recovery != null) { WorkflowRecoveryCard(presentation); return }
     val analysis = state.snapshot?.analysis
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (analysis?.status == WorkStatus.Ready) FeedbackDocument(presentation, analysis)

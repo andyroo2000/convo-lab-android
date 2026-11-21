@@ -22,7 +22,16 @@ class WorkflowSession(
 
     suspend fun load() {
         val saved = withContext(access.io) { access.storage.read(snapshot.entryId) }
+        if (saved.requiresRecovery(entry.version)) {
+            throw WorkflowRecoveryFailure(WorkflowRecovery(saved))
+        }
         snapshot = saved?.takeIf { it.sourceVersion == entry.version } ?: snapshot
+        publish(snapshot)
+    }
+
+    suspend fun archiveOldWork() {
+        withContext(access.io + NonCancellable) { access.storage.archive(snapshot.entryId) }
+        snapshot = WorkflowSnapshot(snapshot.entryId, entry.version)
         publish(snapshot)
     }
 
@@ -120,4 +129,11 @@ class WorkflowSession(
         snapshot = next
         publish(next)
     }
+}
+
+private fun WorkflowSnapshot.hasPendingWriting() = pendingAnswer != null || pendingFinalEdit != null
+
+private fun WorkflowSnapshot?.requiresRecovery(version: Int): Boolean {
+    if (this == null) return false
+    return sourceVersion != version && hasPendingWriting()
 }

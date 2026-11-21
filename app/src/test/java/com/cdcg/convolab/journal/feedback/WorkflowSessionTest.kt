@@ -140,6 +140,59 @@ class WorkflowSessionTest {
         assertEquals("次のフィードバック。", controller.state.value.snapshot?.analysis?.finalText)
     }
 
+    @Test fun olderPendingWritingRequiresAnExplicitArchiveBeforeContinuing() = runTest {
+        val saved = WorkflowSnapshot(JournalId(entry.id), 1, pendingFinalEdit = FinalEdit(analysisId, 0, "前の修正。"))
+        val storage = MemoryWorkflow().apply { record = saved }
+        val newer = entry.copy(version = 2)
+        val api = FakeFeedback().apply { analysisResult = { AnalysisResponse(newer, analysis().copy(sourceVersion = 2)) } }
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(newer)
+        runCurrent()
+        assertEquals(saved, storage.record)
+        assertEquals("前の修正。", controller.state.value.recovery?.text)
+        assertEquals(0, api.analysisReads)
+        controller.recoverArchivedWork()
+        runCurrent()
+        assertNull(controller.state.value.recovery)
+        assertEquals(2, controller.state.value.snapshot?.sourceVersion)
+        assertEquals(0, api.starts)
+    }
+
+    @Test fun failedAnswerAcknowledgementWriteRetriesTheSameAcceptedAnswer() = runTest {
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Waiting) }
+            answerResult = { storage.failWrites = true; clarification(WorkStatus.Resolved) }
+            submitResult = { analysis() }
+        }
+        val access = WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))
+        val session = WorkflowSession(entry, access) {}
+        session.begin()
+        try { session.answer("A"); fail("Expected acknowledgement write failure") } catch (_: IOException) { }
+        val pending = storage.record!!.pendingAnswer!!
+        storage.failWrites = false
+        api.answerResult = { clarification(WorkStatus.Resolved) }
+        val reopened = WorkflowSession(entry, access) {}
+        reopened.load()
+        reopened.resume()
+        assertEquals(listOf(pending, pending), api.answers)
+        assertNull(storage.record?.pendingAnswer)
+    }
+
+    @Test fun refreshingNeverClobbersAnOpenFinalEditOrItsRevision() = runTest {
+        val api = FakeFeedback().apply { analysisResult = { AnalysisResponse(entry, analysis()) } }
+        val controller = WorkflowController(WorkflowAccess(api, MemoryWorkflow(), StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        controller.beginFinalEdit()
+        controller.changeFinalText("編集中の文章。")
+        api.analysisResult = { AnalysisResponse(entry, analysis("別の修正。").copy(replyRevision = 9)) }
+        controller.retry()
+        runCurrent()
+        assertEquals("編集中の文章。", controller.state.value.finalEdit?.text)
+        assertEquals(1, controller.state.value.finalEdit?.expectedRevision)
+    }
+
     @Test fun pollingStopsAfterThreeTransportFailures() = runTest {
         var calls = 0
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }
@@ -149,8 +202,13 @@ class WorkflowSessionTest {
 
 private class MemoryWorkflow : WorkflowStorage {
     var record: WorkflowSnapshot? = null
+    var failWrites = false
     override fun read(id: JournalId) = record?.takeIf { it.entryId == id }
-    override fun write(snapshot: WorkflowSnapshot) { record = snapshot }
+    override fun archive(id: JournalId) { record = null }
+    override fun write(snapshot: WorkflowSnapshot) {
+        if (failWrites) throw IOException("fixture disk failure")
+        record = snapshot
+    }
 }
 
 private class FakeFeedback : FeedbackGateway {

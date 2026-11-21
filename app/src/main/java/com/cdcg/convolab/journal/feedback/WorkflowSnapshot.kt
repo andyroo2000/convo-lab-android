@@ -10,5 +10,6 @@ data class WorkflowSnapshot(
 
 interface WorkflowStorage {
     fun read(id: JournalId): WorkflowSnapshot?
+    fun archive(id: JournalId)
     fun write(snapshot: WorkflowSnapshot)
 }

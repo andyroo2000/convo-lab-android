@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,12 +34,13 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val style = TextStyle(fontFamily = font, fontSize = size.sp, letterSpacing = 0.sp, lineHeight = (size * 1.8).sp, color = Color(0xFF452713))
+    val parsed = runs.map { run -> remember(run.reading, knownKanji) { RubyDocument.parse(run.reading, knownKanji) } }
     val inline = mutableMapOf<String, InlineTextContent>()
     val text = buildAnnotatedString {
         runs.forEachIndexed { index, run ->
             if (run.onClick != null) pushLink(LinkAnnotation.Clickable("correction-$index", TextLinkStyles(style = SpanStyle(color = style.color, textDecoration = TextDecoration.None))) { run.onClick.invoke() })
             pushStyle(SpanStyle(background = run.background))
-            RubyDocument.parse(run.reading, knownKanji).forEachIndexed { tokenIndex, token ->
+            parsed[index].forEachIndexed { tokenIndex, token ->
                 if (token.reading == null) append(token.text) else {
                     val key = "$index-$tokenIndex"
                     val baseWidth = measurer.measure(token.text, style.copy(lineHeight = size.sp)).size.width

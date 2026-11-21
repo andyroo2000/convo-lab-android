@@ -60,6 +60,7 @@ class NotebookWorkflowTest {
 private class BoundWorkflowStorage : WorkflowStorage {
     private var value: WorkflowSnapshot? = null
     override fun read(id: JournalId) = value?.takeIf { it.entryId == id }
+    override fun archive(id: JournalId) { value = null }
     override fun write(snapshot: WorkflowSnapshot) { value = snapshot }
 }
 

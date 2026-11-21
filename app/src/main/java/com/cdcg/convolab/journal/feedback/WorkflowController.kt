@@ -15,12 +15,14 @@ import kotlinx.coroutines.launch
 data class WorkflowState(
     val entry: JournalEntry? = null, val snapshot: WorkflowSnapshot? = null, val busy: Boolean = false,
     val error: String? = null, val canRetry: Boolean = true, val finalEdit: FinalEdit? = null,
+    val recovery: WorkflowRecovery? = null,
 )
 
 class WorkflowController(private val access: WorkflowAccess, private val scope: CoroutineScope) {
     private val mutableState = MutableStateFlow(WorkflowState())
     val state = mutableState.asStateFlow()
     private var generation = 0L
+    private var requestedSubmission = false
     private var work: Job? = null
     private var session: WorkflowSession? = null
 
@@ -37,6 +39,17 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     fun retry() = request {
         if (it.snapshot.submissionRequested) it.resume() else it.refresh()
     }
+    fun recoverArchivedWork() {
+        val epoch = generation
+        val submit = requestedSubmission
+        request(requireRetry = false) {
+            it.archiveOldWork()
+            if (generation != epoch) return@request
+            mutableState.update { current -> current.copy(recovery = null, canRetry = true, error = null) }
+            if (submit) it.begin() else it.refresh()
+        }
+    }
+
     fun answer(text: String) = request { it.answer(text) }
 
     fun beginFinalEdit() {
@@ -69,6 +82,7 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     }
 
     private fun replace(entry: JournalEntry, submit: Boolean) {
+        requestedSubmission = submit
         val previous = work
         previous?.cancel()
         val epoch = ++generation
@@ -103,6 +117,10 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     }
 
     private fun report(failure: Exception) {
+        if (failure is WorkflowRecoveryFailure) {
+            mutableState.update { it.copy(recovery = failure.recovery, error = null, canRetry = false) }
+            return
+        }
         val retry = failure !is ApiFailure || failure.status !in setOf(401, 409)
         val message = when {
             failure is WorkflowFailure -> failure.message.orEmpty()

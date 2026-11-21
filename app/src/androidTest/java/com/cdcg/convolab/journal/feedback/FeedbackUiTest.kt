@@ -64,10 +64,25 @@ class FeedbackUiTest {
         assertEquals(text, workflow.state.value.snapshot?.analysis?.finalText)
     }
 
-    private fun launchNotebook(submit: Boolean) {
+    @Test fun earlierPendingTextRequiresConfirmationBeforeArchiveAndContinue() {
+        val pending = WorkflowSnapshot(JournalId(entry.id), entry.version + 1,
+            pendingFinalEdit = FinalEdit(JournalIds.newId(), 3, "残しておく修正。"))
+        launchNotebook(submit = false, saved = pending)
+        compose.onNodeWithText("残しておく修正。").assertIsDisplayed()
+        screenshot("feedback-recovery")
+        compose.onNodeWithText("Archive earlier work and continue").performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        assertNotNull(workflow.state.value.recovery)
+        compose.onNodeWithText("Archive earlier work and continue").performClick()
+        compose.onNodeWithText("Archive and continue").performClick()
+        compose.waitUntil(5_000) { workflow.state.value.recovery == null && !workflow.state.value.busy }
+        compose.onNodeWithText("Final").assertIsDisplayed()
+    }
+
+    private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null) {
         val storage = FeedbackNotebookStorage(JournalRecord(entry, JournalDraft.from(entry)))
         val notebook = NotebookController(JournalRepository(FeedbackNotebookGateway(), storage), scope)
-        workflow = WorkflowController(WorkflowAccess(api, UiWorkflowStorage()), scope)
+        workflow = WorkflowController(WorkflowAccess(api, UiWorkflowStorage(saved)), scope)
         compose.setContent {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()
@@ -120,9 +135,9 @@ private class UiFeedbackGateway : FeedbackGateway {
     override suspend fun editFinal(entry: JournalEntry, edit: FinalEdit): Analysis { editedText = edit.text; return analysis() }
 }
 
-private class UiWorkflowStorage : WorkflowStorage {
-    private var record: WorkflowSnapshot? = null
+private class UiWorkflowStorage(private var record: WorkflowSnapshot? = null) : WorkflowStorage {
     override fun read(id: JournalId) = record?.takeIf { it.entryId == id }
+    override fun archive(id: JournalId) { record = null }
     override fun write(snapshot: WorkflowSnapshot) { record = snapshot }
 }
 
