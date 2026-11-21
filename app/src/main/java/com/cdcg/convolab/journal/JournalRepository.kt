@@ -24,10 +24,10 @@ class JournalRepository(
     suspend fun accept(entry: JournalEntry): JournalRecord = disk { mergeEntry(entry) }
 
     suspend fun answerDraft(root: JournalEntry, origin: AnswerOrigin): JournalRecord = disk {
+        check(storage.read(root.id)?.pendingDelete != true) { "This conversation is being deleted." }
         val local = storage.load()
         check(local.recoveryFiles.isEmpty()) { "Saved writing needs recovery before starting another answer." }
         local.records.firstOrNull { it.rootEntryId == root.id && it.answerOrigin == origin }?.let { return@disk it }
-        check(storage.read(root.id)?.pendingDelete != true) { "This conversation is being deleted." }
         val draft = JournalDraft.blank().copy(rootEntryId = root.id, entryDate = root.entryDate)
         JournalRecord(draft = draft, answerOrigin = origin).also(storage::write)
     }

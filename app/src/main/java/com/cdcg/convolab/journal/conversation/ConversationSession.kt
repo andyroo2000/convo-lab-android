@@ -5,6 +5,7 @@ import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.network.userMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -24,7 +25,7 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
     private var leafWork: Job? = null
     private var leafId: String? = null
     private val updates = Mutex()
-    private var pendingUpdates = 0
+    private val pendingUpdates = AtomicInteger()
 
     fun start() {
         action {
@@ -54,7 +55,7 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
 
     suspend fun flush() { bindings.values.toList().forEach { it.controller.flush() } }
     suspend fun checkDeletion() {
-        check(pendingUpdates == 0 && !access.tutor.state.value.busy && bindings.values.none { it.controller.state.value.busy || it.controller.workflow.state.value.busy }) {
+        check(pendingUpdates.get() == 0 && !access.tutor.state.value.busy && bindings.values.none { it.controller.state.value.busy || it.controller.workflow.state.value.busy }) {
             "Wait for this conversation to finish before deleting it."
         }
         flush() // JournalRepository's delete guard includes every unsent child draft.
@@ -117,11 +118,9 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
     }
 
     private fun action(operation: suspend () -> Unit): Job {
-        pendingUpdates++
-        return scope.launch {
-            try { updates.withLock { runUpdate(operation) } }
-            finally { pendingUpdates-- }
-        }
+        pendingUpdates.incrementAndGet()
+        return scope.launch { updates.withLock { runUpdate(operation) } }
+            .also { it.invokeOnCompletion { pendingUpdates.decrementAndGet() } }
     }
 
     private suspend fun runUpdate(operation: suspend () -> Unit) {
