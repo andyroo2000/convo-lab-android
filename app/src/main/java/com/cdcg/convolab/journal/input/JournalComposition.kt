@@ -22,13 +22,13 @@ class JournalComposition(initial: String = "") {
         return snapshot()
     }
     fun edit(change: InputEdit, selection: InputSelection, literal: Boolean = false): InputSnapshot {
+        if (!validEdit(change)) return snapshot()
         document.select(selection)
         if (!document.contains(change.start, change.start + change.length)) finishOutside()
         if (!literal && command(change.replacement)) return snapshot()
         menu.reset()
         if (literal) document.literal(change) else replaceInput(change)
-        if (document.active?.raw == "" || document.reading().length > 120) document.finish()
-        if (document.active == null) contextReading = ""
+        finishBoundedComposition()
         revision++
         return snapshot()
     }
@@ -84,6 +84,13 @@ class JournalComposition(initial: String = "") {
             part?.takeIf { active != null }?.let { InputSelection(active!!.start + it.start, active.start + it.start + it.reading.length) },
             options(), query(), menu.highlighted)
     }
+    private fun finishBoundedComposition() {
+        if (document.active?.raw == "" || document.reading().length > 120) document.finish()
+        if (document.active == null) contextReading = ""
+    }
+    private fun validEdit(change: InputEdit) = change.start in 0..document.text.length &&
+        change.length in 0..(document.text.length - change.start)
+
     private fun query(): CompositionQuery? {
         if (document.active == null) return null
         val reading = contextReading + document.reading()

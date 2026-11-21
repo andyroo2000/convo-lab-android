@@ -53,6 +53,15 @@ class JournalCompositionTest {
         model.external("Restored text")
         assertTrue(model.takeConfirmed().isEmpty())
     }
+    @Test fun staleImeOffsetsLeaveTheCurrentWritingIntact() {
+        val model = JournalComposition()
+        type(model, "nihongo")
+        val before = model.snapshot()
+        assertEquals(before, model.edit(InputEdit(50, 1, "a"), InputSelection(50)))
+        assertEquals(before, model.edit(InputEdit(-1, 1, "a"), InputSelection(0)))
+        assertEquals(before, model.edit(InputEdit(0, 50, "a"), InputSelection(0)))
+        assertEquals("にほんごあ", model.edit(InputEdit(4, 0, "a"), InputSelection(4)).text)
+    }
     private fun type(model: JournalComposition, text: String) {
         for (letter in text) {
             val selection = model.snapshot().selection
