@@ -19,9 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.ui.JournalBrand
+import com.cdcg.convolab.journal.feedback.*
 
 @Composable
-fun NotebookScreen(state: NotebookState, controller: NotebookController, menu: @Composable () -> Unit) {
+fun NotebookScreen(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation? = null, menu: @Composable () -> Unit) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
         NotebookHeader(!state.loading, { controller.showContents(true) }, menu)
@@ -29,13 +30,16 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, menu: @
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
-                key(state.draft.id) { NotebookPaper(state, controller::edit) }
+                if (feedback?.visible == true) FeedbackContent(feedback) else {
+                    state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
+                    key(state.draft.id) { NotebookPaper(state, controller::edit) }
+                }
                 NotebookMessage(state, controller)
             }
-            NotebookActions(state, controller)
+            NotebookActions(state, controller, feedback)
         }
     }
+    if (feedback?.state?.finalEdit != null) FinalEditSheet(feedback)
     if (state.contents) NotebookContents(state, controller)
     if (state.closePrompt) CloseDraftSheet(state, controller)
 }
@@ -54,13 +58,16 @@ private fun NotebookHeader(enabled: Boolean, contents: () -> Unit, menu: @Compos
 }
 
 @Composable
-private fun NotebookActions(state: NotebookState, controller: NotebookController) {
+private fun NotebookActions(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation?) {
     Row(Modifier.fillMaxWidth().background(Color(0xFFFAF9F6)).padding(horizontal = 14.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(onClick = controller::requestClose, enabled = !state.busy) { Text("Close", fontFamily = JournalBrand.Serif, fontSize = 22.sp) }
-        Button(onClick = { controller.save() }, enabled = !state.busy && !state.pendingDelete && state.draft.body.isNotBlank(),
+        Button(onClick = {
+            if (feedback?.visible == true) feedback.controller.cancel()
+            else controller.save { feedback?.controller?.submit(it) }
+        }, enabled = state.canEdit && state.draft.body.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF46764C)), modifier = Modifier.testTag("journal-save")) {
-            Text(if (state.busy) "Saving…" else "Save draft", fontFamily = JournalBrand.Serif, fontSize = 22.sp)
+            Text(when { state.busy -> "Saving…"; feedback?.visible == true -> "Back to draft"; feedback != null -> "Submit"; else -> "Save draft" }, fontFamily = JournalBrand.Serif, fontSize = 22.sp)
         }
     }
 }

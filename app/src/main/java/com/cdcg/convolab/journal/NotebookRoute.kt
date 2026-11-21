@@ -16,12 +16,16 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cdcg.convolab.auth.Account
 import com.cdcg.convolab.auth.SessionController
 import com.cdcg.convolab.network.HttpApiTransport
+import com.cdcg.convolab.journal.feedback.*
 
 @Composable
 fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
     val factory = remember(context, sessions) { viewModelFactory {
-        initializer { NotebookViewModel(sessions) { session ->
+        initializer { NotebookViewModel(sessions, workflow = { session, scope ->
+            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
+            WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id)), scope)
+        }) { session ->
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
                 JournalDiskStore(context.noBackupFilesDir, session.account.id))
         } }
@@ -32,7 +36,9 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
     if (current == null) CircularProgressIndicator() else {
         val state by current.state.collectAsStateWithLifecycle()
         FlushOnStop(current)
-        NotebookScreen(state, current, menu)
+        val workflow = binding?.workflow
+        val feedback = workflow?.state?.collectAsStateWithLifecycle()?.value
+        NotebookScreen(state, current, feedback = feedback?.let { FeedbackPresentation(it, workflow) }, menu = menu)
     }
 }
 
