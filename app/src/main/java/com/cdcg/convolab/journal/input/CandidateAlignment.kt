@@ -47,7 +47,7 @@ object CandidateAlignment {
         for (index in 1..edge(normalized.reversed(), part.reading.reversed())) bounds[part.reading.length - index] = part.text.length - index
         val from = bounds[span.start] ?: return null
         val to = bounds[span.end] ?: return null
-        return part.text.substring(from, to)
+        return if (from <= to) part.text.substring(from, to) else null
     }
     private fun edge(text: String, reading: String) = text.zip(reading).takeWhile { it.first == it.second }.size
 }

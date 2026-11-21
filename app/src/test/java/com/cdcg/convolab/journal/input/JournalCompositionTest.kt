@@ -42,6 +42,17 @@ class JournalCompositionTest {
         assertEquals("食べ", CandidateAlignment.text(verb, InputSelection(0, 2)))
         assertEquals("ました", CandidateAlignment.text(verb, InputSelection(2, 5)))
     }
+    @Test fun malformedOverlappingKanaEdgesCannotCrashSlicing() {
+        val candidate = JapaneseCandidate("ああ", "ああああ", units = listOf(CandidatePart("ああ", "ああああ")))
+        assertNull(CandidateAlignment.text(candidate, InputSelection(1, 2)))
+    }
+    @Test fun externalReplacementDiscardsUndeliveredLearningEvents() {
+        val model = JournalComposition()
+        type(model, "nihongo")
+        model.choose(0)
+        model.external("Restored text")
+        assertTrue(model.takeConfirmed().isEmpty())
+    }
     private fun type(model: JournalComposition, text: String) {
         for (letter in text) {
             val selection = model.snapshot().selection

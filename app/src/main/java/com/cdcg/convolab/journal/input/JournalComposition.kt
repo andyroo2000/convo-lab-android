@@ -5,7 +5,7 @@ data class ConfirmedInput(val reading: String, val text: String, val start: Int,
 data class InputSnapshot(val text: String, val selection: InputSelection, val composition: InputSelection?,
     val section: InputSelection?, val choices: List<String>, val query: CompositionQuery?, val highlighted: Int)
 
-/** Inference never changes the document. Only typing or an explicit choice does. */
+/** Main-thread confined. Inference never changes the document; only typing or an explicit choice does. */
 class JournalComposition(initial: String = "") {
     private val document = CompositionDocument(initial)
     private val menu = CompositionChoices()
@@ -14,6 +14,7 @@ class JournalComposition(initial: String = "") {
     private val confirmations = mutableListOf<ConfirmedInput>()
 
     fun external(text: String): InputSnapshot {
+        confirmations.clear()
         document.external(text)
         contextReading = ""
         menu.reset()
