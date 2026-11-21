@@ -2,7 +2,7 @@ import Foundation
 
 @_cdecl("typing_create")
 public func typingCreate(_ directory: UnsafePointer<CChar>) -> UnsafeMutableRawPointer? {
-    let converter = AndroidConverter(directory: String(cString: directory))
+    guard let converter = try? AndroidConverter(configuration: String(cString: directory)) else { return nil }
     return Unmanaged.passRetained(converter).toOpaque()
 }
 
@@ -15,9 +15,7 @@ public func typingDestroy(_ handle: UnsafeMutableRawPointer) {
 public func typingConvert(_ handle: UnsafeMutableRawPointer, _ json: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>? {
     let converter = Unmanaged<AndroidConverter>.fromOpaque(handle).takeUnretainedValue()
     do {
-        let input = try JSONDecoder().decode(Input.self, from: Data(String(cString: json).utf8))
-        let output = try JSONEncoder().encode(converter.convert(input))
-        return strdup(String(decoding: output, as: UTF8.self))
+        return strdup(try converter.process(String(cString: json)))
     } catch {
         return strdup("{\"error\":\"Native conversion failed\"}")
     }

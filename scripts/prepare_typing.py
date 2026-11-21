@@ -1,9 +1,9 @@
-"""Download pinned, unchanged upstream sources and model. Run from any directory."""
+"""Download pinned sources and model; apply the reviewed iOS typing adapters. Run from any directory."""
 import hashlib
 from pathlib import Path
 import shutil
 import subprocess
-import urllib.request
+from patch_typing import patch_typing
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / 'native/Vendor'
@@ -27,7 +27,7 @@ def prepare_model():
         url = ('https://huggingface.co/Miwa-Keita/zenz-v3-small-gguf/resolve/'
                'd48369e21adb9f49903eb7c54be1a1d9723eb805/ggml-model-Q5_K_M.gguf')
         temporary = destination.with_suffix('.download')
-        urllib.request.urlretrieve(url, temporary)
+        subprocess.run(['curl', '--fail', '--location', '--retry', '3', '--output', str(temporary), url], check=True)
         temporary.replace(destination)
     if hashlib.sha256(destination.read_bytes()).hexdigest() != MODEL_SHA:
         raise RuntimeError('Model checksum mismatch; remove the damaged model and retry.')
@@ -43,6 +43,7 @@ def main():
     dictionary = source / 'Sources/KanaKanjiConverterModuleWithDefaultDictionary/azooKey_dictionary_storage/Dictionary'
     shutil.copytree(dictionary, ASSETS / 'Dictionary', dirs_exist_ok=True)
     prepare_model()
+    patch_typing(ROOT, source)
 
 
 if __name__ == '__main__':
