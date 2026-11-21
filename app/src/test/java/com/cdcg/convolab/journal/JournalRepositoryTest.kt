@@ -1,6 +1,7 @@
 package com.cdcg.convolab.journal
 
 import java.io.IOException
+import com.cdcg.convolab.auth.*
 import com.cdcg.convolab.network.ApiFailure
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.CompletableDeferred
@@ -240,6 +241,29 @@ class JournalRepositoryTest {
         try { repository.save(draft.key); fail("Expected storage failure") } catch (_: IOException) { }
         assertEquals(draft, storage.records[draft.id]?.draft)
         assertEquals(draft, storage.records[draft.id]?.pendingSave)
+    }
+
+    @Test fun unauthorizedSaveSurvivesSignInAgainAndRetriesTheOriginalIdentity() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val session = Session("fixture", Account(101, "Fixture", "fixture@example.invalid"))
+        val auth = FakeAuth().apply { loginResult = { session } }
+        val sessions = SessionController(auth, MemoryStorage(), dispatcher)
+        sessions.login(session.account.email, "fixture")
+        val storage = MemoryJournal()
+        val api = FakeJournal().apply { saveResult = { sessions.expire(session); throw ApiFailure(401) } }
+        val repository = JournalRepository(api, storage, dispatcher)
+        repository.edit(draft)
+        try { repository.save(draft.key); fail("Must reject expired token") }
+        catch (failure: ApiFailure) { assertEquals(401, failure.status) }
+        assertNull(sessions.snapshot())
+        assertEquals(draft, storage.records[draft.id]?.pendingSave)
+        assertEquals(draft, storage.records[draft.id]?.draft)
+        sessions.login(session.account.email, "fixture")
+        api.saveResult = { saved(it) }
+        JournalRepository(api, storage, dispatcher).save(draft.key)
+        assertEquals(listOf(draft, draft), api.saved)
+        assertNull(storage.records[draft.id]?.pendingSave)
+        assertEquals(draft.body, storage.records[draft.id]?.entry?.body)
     }
 
     @Test fun saveAsNewRetainsOriginalRecoveryCopy() = runTest {
