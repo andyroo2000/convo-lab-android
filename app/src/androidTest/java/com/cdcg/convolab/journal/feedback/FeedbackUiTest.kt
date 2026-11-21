@@ -86,7 +86,7 @@ class FeedbackUiTest {
         compose.setContent {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()
-            ConvoLabTheme { NotebookScreen(state, notebook, FeedbackPresentation(feedback, workflow)) { AccountMenu("Naomi", {}, null) } }
+            ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
         }
         compose.runOnIdle { notebook.start(); if (submit) workflow.submit(entry) else workflow.open(entry) }
         compose.waitUntil(5_000) { !notebook.state.value.loading && !workflow.state.value.busy }
