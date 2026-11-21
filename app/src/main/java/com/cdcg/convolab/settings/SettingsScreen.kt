@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -76,9 +78,9 @@ private fun SettingsOverview(state: SettingsState, actions: SettingsActions, nav
 @Composable
 private fun SettingsChapter(title: String, expanded: String, expand: (String) -> Unit, content: @Composable ColumnScope.() -> Unit) {
     HorizontalDivider()
-    TextButton(onClick = { expand(if (title == expanded) "" else title) }, modifier = Modifier.fillMaxWidth()) {
+    TextButton(onClick = { expand(if (title == expanded) "" else title) }, modifier = Modifier.fillMaxWidth().semantics { stateDescription = if (title == expanded) "Expanded" else "Collapsed" }) {
         Text(title, fontFamily = JournalBrand.Serif, fontSize = 25.sp, modifier = Modifier.weight(1f))
-        Text(if (title == expanded) "−" else "+")
+        Text(if (title == expanded) "−" else "+", modifier = Modifier.clearAndSetSemantics {})
     }
     if (title == expanded) Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 }

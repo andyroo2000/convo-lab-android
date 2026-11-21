@@ -18,7 +18,7 @@ class SettingsController(private val access: SettingsAccess, private val scope: 
     val state = mutableState.asStateFlow()
 
     fun start() = action {
-        withContext(access.io) { access.storage.read() }?.let { cached -> mutableState.update { it.copy(known = cached) } }
+        loadCache()?.let { cached -> mutableState.update { it.copy(known = cached) } }
         refresh()
     }
 
@@ -60,11 +60,21 @@ class SettingsController(private val access: SettingsAccess, private val scope: 
 
     private suspend fun refresh() { apply(access.api.knownKanji()) }
 
+    private suspend fun loadCache(): KnownKanjiSnapshot? = try {
+        withContext(access.io) { access.storage.read() }
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (_: Exception) { null } // Server-derived cache; a fresh response can repair it.
+
     private suspend fun apply(snapshot: KnownKanjiSnapshot) {
         if (snapshot.version < state.value.known.version) return
-        withContext(access.io + NonCancellable) { access.storage.write(snapshot) }
+        val cached = try {
+            withContext(access.io + NonCancellable) { access.storage.write(snapshot) }
+            true
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { false }
         currentCoroutineContext().ensureActive()
-        mutableState.update { it.copy(known = snapshot) }
+        mutableState.update { it.copy(known = snapshot,
+            error = if (cached) it.error else "Your connection is updated, but known kanji could not be saved for offline use. Refresh to retry.") }
     }
 
     private fun action(operation: suspend () -> Unit) = scope.launch {

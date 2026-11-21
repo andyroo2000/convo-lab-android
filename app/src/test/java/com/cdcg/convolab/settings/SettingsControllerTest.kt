@@ -16,8 +16,7 @@ class SettingsControllerTest {
     @Test fun successfulConnectionClearsTokenEvenIfItsInitialSyncFails() = runTest {
         val api = SettingsFixture().apply { snapshot = known; failSync = true }
         val storage = KnownMemory()
-        val sessions = SessionController(FakeAuth(), MemoryStorage(), StandardTestDispatcher(testScheduler))
-        val controller = SettingsController(SettingsAccess(session, api, storage, sessions, StandardTestDispatcher(testScheduler)), backgroundScope)
+        val controller = controller(api, storage)
         var cleared = false
         controller.connect("fixture-provider-token") { cleared = true }.join()
         assertTrue(cleared)
@@ -30,11 +29,35 @@ class SettingsControllerTest {
         assertEquals(listOf("connect", "sync", "sync", "known"), api.calls)
     }
 
+    @Test fun unreadableCacheDoesNotPreventServerRefresh() = runTest {
+        val api = SettingsFixture().apply { snapshot = known }
+        val storage = KnownMemory().apply { failRead = true }
+        val controller = controller(api, storage)
+        controller.start().join()
+        assertEquals(known, controller.state.value.known)
+        assertEquals(known, storage.snapshot)
+        assertNull(controller.state.value.error)
+    }
+
+    @Test fun cacheWriteFailureStillShowsConnectionAndClearsProviderToken() = runTest {
+        val api = SettingsFixture().apply { snapshot = known }
+        val storage = KnownMemory().apply { failWrite = true }
+        val controller = controller(api, storage)
+        var cleared = false
+        controller.connect("fixture-token") { cleared = true }.join()
+        assertTrue(cleared)
+        assertEquals(known, controller.state.value.known)
+        assertTrue(controller.state.value.error!!.contains("offline"))
+        storage.failWrite = false
+        controller.reload().join()
+        assertEquals(known, storage.snapshot)
+        assertNull(controller.state.value.error)
+    }
+
     @Test fun olderServerSnapshotsNeverReplaceNewerCachedKnowledge() = runTest {
         val storage = KnownMemory().apply { snapshot = known }
         val api = SettingsFixture().apply { snapshot = KnownKanjiSnapshot(4) }
-        val sessions = SessionController(FakeAuth(), MemoryStorage(), StandardTestDispatcher(testScheduler))
-        val controller = SettingsController(SettingsAccess(session, api, storage, sessions, StandardTestDispatcher(testScheduler)), backgroundScope)
+        val controller = controller(api, storage)
         controller.start().join()
         assertEquals(known, controller.state.value.known)
         assertEquals(known, storage.snapshot)
@@ -43,8 +66,7 @@ class SettingsControllerTest {
     @Test fun disconnectRefreshesConnectionWhileKeepingKnownKanji() = runTest {
         val api = SettingsFixture().apply { snapshot = known }
         val storage = KnownMemory()
-        val sessions = SessionController(FakeAuth(), MemoryStorage(), StandardTestDispatcher(testScheduler))
-        val controller = SettingsController(SettingsAccess(session, api, storage, sessions, StandardTestDispatcher(testScheduler)), backgroundScope)
+        val controller = controller(api, storage)
         controller.start().join()
         controller.disconnect().join()
         assertFalse(controller.state.value.known.connected)
@@ -88,12 +110,20 @@ class SettingsControllerTest {
         assertEquals(replacement.account, credentials.saved?.account)
         assertEquals(replacement.token, sessions.snapshot()?.token)
     }
+    private fun TestScope.controller(api: SettingsGateway, storage: KnownKanjiStorage): SettingsController {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val sessions = SessionController(FakeAuth(), MemoryStorage(), dispatcher)
+        return SettingsController(SettingsAccess(session, api, storage, sessions, dispatcher), backgroundScope)
+    }
+
 }
 
 private class KnownMemory : KnownKanjiStorage {
     var snapshot: KnownKanjiSnapshot? = null
-    override fun read() = snapshot
-    override fun write(snapshot: KnownKanjiSnapshot) { this.snapshot = snapshot }
+    var failRead = false
+    var failWrite = false
+    override fun read(): KnownKanjiSnapshot? { if (failRead) throw IOException("cache unavailable"); return snapshot }
+    override fun write(snapshot: KnownKanjiSnapshot) { if (failWrite) throw IOException("disk full"); this.snapshot = snapshot }
 }
 
 private class SettingsFixture : SettingsGateway {
