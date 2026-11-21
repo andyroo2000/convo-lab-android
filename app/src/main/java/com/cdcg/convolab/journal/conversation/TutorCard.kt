@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -32,7 +34,7 @@ fun TutorCard(presentation: TutorPresentation) {
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         TextButton(onClick = presentation.controller::showPicker, enabled = !state.busy) { Text("Choose your tutor") }
         state.notice?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-        state.error?.let {
+        state.error?.takeUnless { state.choosing }?.let {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             TextButton(onClick = presentation.controller::retry, enabled = !state.busy) { Text("Retry tutor") }
         }
@@ -67,7 +69,7 @@ fun TutorPortrait(tutor: Tutor, modifier: Modifier = Modifier) {
         else -> null
     }
     if (artwork != null) Image(painterResource(artwork), "${tutor.name}, your tutor", modifier.clip(CircleShape))
-    else Box(modifier.background(Color(0xFFE4EFFC), CircleShape), contentAlignment = Alignment.Center) { Text(tutor.name) }
+    else Box(modifier.background(Color(0xFFE4EFFC), CircleShape), contentAlignment = Alignment.Center) { Text(tutor.name, color = JournalBrand.Ink) }
 }
 
 @Composable
@@ -78,8 +80,8 @@ private fun TutorPicker(presentation: TutorPresentation) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Your choice applies to future questions.")
                 state.preferences?.tutors?.forEach { tutor ->
-                    OutlinedButton(onClick = { presentation.controller.choose(tutor) }, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-                        TutorPortrait(tutor, Modifier.size(64.dp))
+                    OutlinedButton(onClick = { presentation.controller.choose(tutor) }, enabled = !state.busy, modifier = Modifier.fillMaxWidth().semantics { selected = state.preferences.selectedId == tutor.id }) {
+                        TutorPortrait(tutor, Modifier.size(64.dp).clearAndSetSemantics {})
                         Spacer(Modifier.width(12.dp))
                         Text(tutor.name + if (state.preferences.selectedId == tutor.id) " · Selected" else "")
                     }
@@ -88,5 +90,5 @@ private fun TutorPicker(presentation: TutorPresentation) {
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = presentation.controller::retry, enabled = !state.busy) { Text("Retry tutor") } }
             }
-        }, confirmButton = { TextButton(onClick = presentation.controller::dismissPicker, enabled = !state.busy) { Text("Done") } })
+        }, confirmButton = { TextButton(onClick = presentation.controller::dismissPicker) { Text("Done") } })
 }
