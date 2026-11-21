@@ -24,6 +24,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.journal.text.RubyText
+import com.cdcg.convolab.journal.JournalId
+import com.cdcg.convolab.journal.audio.*
 import com.cdcg.convolab.ui.JournalBrand
 
 class FeedbackPresentation(val state: WorkflowState, val controller: WorkflowController) {
@@ -70,7 +72,7 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
             }
             Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, color = Color(0xFF745340), modifier = Modifier.fillMaxWidth())
             Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = JournalBrand.Handwriting, fontSize = 26.sp, color = Color(0xFF452713))
-            if (final) RubyText(analysis.finalReading ?: analysis.finalText.orEmpty())
+            if (final) FinalAudio(presentation, analysis)
             else CorrectionText(analysis.feedback?.segments.orEmpty(), presentation.state.entry?.body.orEmpty())
             if (final) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { clipboard.setText(AnnotatedString(analysis.finalText.orEmpty())) }) { Text("Copy") }
@@ -78,6 +80,17 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
             }
         }
     }
+}
+
+@Composable
+private fun FinalAudio(presentation: FeedbackPresentation, analysis: Analysis) {
+    val entry = presentation.state.entry ?: return
+    val source = remember(entry.id, analysis.id, analysis.replyRevision, analysis.finalText, analysis.finalReading) {
+        AudioSource(JournalId(entry.id), AudioContent.Final(JournalId(analysis.id), analysis.replyRevision,
+            analysis.finalText.orEmpty(), analysis.finalReading ?: analysis.finalText.orEmpty(), analysis.feedback?.title ?: entry.title ?: "Journal entry"))
+    }
+    AudioReading(source)
+    AudioControls(source)
 }
 
 @Composable

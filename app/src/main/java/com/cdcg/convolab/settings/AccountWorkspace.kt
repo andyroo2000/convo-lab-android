@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cdcg.convolab.auth.Account
 import com.cdcg.convolab.auth.SessionController
+import com.cdcg.convolab.journal.audio.AudioWorkspace
 import com.cdcg.convolab.journal.JournalApi
 import com.cdcg.convolab.journal.NotebookRoute
 import com.cdcg.convolab.journal.text.LocalKnownKanji
@@ -31,7 +32,9 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     val settings = controller?.state?.collectAsStateWithLifecycle()?.value
     var showing by rememberSaveable(account.id) { mutableStateOf(false) }
     CompositionLocalProvider(LocalKnownKanji provides settings?.known?.kanji.orEmpty()) {
-        NotebookRoute(account, sessions) { AccountMenu(account.name, actions.signOut, actions.typingLab) { showing = true } }
+        AudioWorkspace(account.id, sessions) {
+            NotebookRoute(account, sessions) { AccountMenu(account.name, actions.signOut, actions.typingLab) { showing = true } }
+        }
     }
     if (showing) {
         if (controller != null && settings != null) SettingsScreen(settings, controller,

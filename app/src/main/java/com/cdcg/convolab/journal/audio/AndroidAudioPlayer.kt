@@ -1,0 +1,124 @@
+package com.cdcg.convolab.journal.audio
+
+import android.content.ComponentName
+import android.content.Context
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+
+@androidx.annotation.OptIn(UnstableApi::class)
+class AndroidAudioPlayer(private val context: Context, private val owner: PlaybackLease, private val scope: CoroutineScope,
+    private val connection: (() -> ListenableFuture<MediaController>)? = null) : JournalAudioPlayer {
+    private val mutableState = MutableStateFlow(AudioPlayback())
+    override val state = mutableState.asStateFlow()
+    private var future: ListenableFuture<MediaController>? = null
+    private var controller: MediaController? = null
+    private var progress: Job? = null
+    private var closed = false
+    private val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) { publish(player); updateProgress(player) }
+        override fun onPlayerError(error: PlaybackException) {
+            progress?.cancel()
+            mutableState.value = state.value.copy(playing = false, buffering = false, error = "Audio could not be played. Try again.")
+        }
+    }
+
+    override suspend fun play(audio: CachedAudio) {
+        check(!closed && PlaybackOwner.active == owner)
+        val player = connect()
+        currentCoroutineContext().ensureActive()
+        check(!closed && PlaybackOwner.active == owner)
+        val metadata = MediaMetadata.Builder().setTitle(audio.request.source.content.title).setArtist("ConvoLab Journal").build()
+        player.setMediaItem(MediaItem.Builder().setMediaId(owner.id + ":" + audio.request.key).setUri(audio.file.toUri()).setMediaMetadata(metadata).build())
+        mutableState.value = AudioPlayback(buffering = true)
+        player.prepare()
+        player.play()
+        updateProgress(player)
+    }
+    override fun toggle() {
+        val player = controller ?: return
+        if (!player.isConnected) { disconnected(player); return }
+        if (player.isPlaying) player.pause() else {
+            if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+            if (player.playerError != null) player.prepare()
+            player.play()
+        }
+        publish(player)
+    }
+    override fun seek(milliseconds: Long) {
+        val player = controller ?: return
+        val position = AudioTimeline.seekPosition(milliseconds, player.duration) ?: return
+        player.seekTo(position)
+        publish(player)
+    }
+    override fun stop() {
+        progress?.cancel()
+        controller?.stop()
+        controller?.clearMediaItems()
+        mutableState.value = AudioPlayback()
+    }
+    override fun close() {
+        closed = true
+        stop()
+        controller?.removeListener(listener)
+        future?.let(MediaController::releaseFuture)
+        controller = null
+        future = null
+    }
+
+    private suspend fun connect(): MediaController {
+        controller?.let { if (it.isConnected) return it else disconnected(it) }
+        val pending = future ?: createConnection().also { future = it }
+        val player = suspendCancellableCoroutine { continuation ->
+            pending.addListener({
+                try {
+                    val connected = pending.get()
+                    if (continuation.isActive) continuation.resume(connected)
+                } catch (failure: Exception) {
+                    if (future === pending) { future = null; MediaController.releaseFuture(pending) }
+                    if (continuation.isActive) continuation.resumeWithException(failure)
+                }
+            }, ContextCompat.getMainExecutor(context))
+        }
+        controller = player
+        player.addListener(listener)
+        return player
+    }
+    private fun createConnection(): ListenableFuture<MediaController> = connection?.invoke()
+        ?: MediaController.Builder(context, SessionToken(context, ComponentName(context, JournalPlaybackService::class.java)))
+            .setListener(object : MediaController.Listener {
+                override fun onDisconnected(controller: MediaController) { disconnected(controller) }
+            }).buildAsync()
+
+    private fun disconnected(player: MediaController) {
+        if (controller !== player) return
+        progress?.cancel()
+        controller = null
+        val previous = future
+        future = null
+        previous?.let(MediaController::releaseFuture)
+        mutableState.value = state.value.copy(playing = false, buffering = false, error = "Playback disconnected. Tap Listen to reconnect.")
+    }
+    private fun updateProgress(player: Player) {
+        if (!player.isPlaying) { progress?.cancel(); return }
+        if (progress?.isActive == true) return
+        progress = scope.launch { while (isActive && player.isPlaying) { publish(player); delay(100) } }
+    }
+    private fun publish(player: Player) {
+        mutableState.value = AudioPlayback(player.isPlaying, player.playbackState == Player.STATE_BUFFERING,
+            player.currentPosition.coerceAtLeast(0), player.duration.coerceAtLeast(0),
+            if (player.playerError == null) null else "Audio could not be played. Try again.")
+    }
+}
