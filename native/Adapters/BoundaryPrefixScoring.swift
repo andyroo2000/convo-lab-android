@@ -31,9 +31,7 @@ extension ZenzContext {
         let vocabulary = Int(llama_vocab_n_tokens(vocab))
         for index in (first + 1)..<tokens.count {
             let row = (index - first - 1) * vocabulary
-            var denominator: Float = 0
-            for word in 0..<vocabulary { denominator += expf(logits[row + word]) }
-            scores.append(logits[row + Int(tokens[index])] - logf(denominator))
+            scores.append(logits[row + Int(tokens[index])] - BoundaryNormalization.logarithm(logits.advanced(by: row), vocabulary: vocabulary))
         }
         return ScoredPrefix(tokens: tokens, scores: scores)
     }
