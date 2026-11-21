@@ -35,6 +35,7 @@ private fun WaniKaniConnect(busy: Boolean, controller: SettingsController) {
     val clear = { token.edit { replace(0, length, "") } }
     DisposableEffect(token) { onDispose(clear) }
     AuthPasswordField("WaniKani API token", token, !busy)
+    if (token.text.length > 512) Text("API tokens must be 512 characters or fewer.", color = MaterialTheme.colorScheme.error)
     Button(onClick = { controller.connect(token.text.toString(), clear) },
         enabled = !busy && token.text.isNotBlank() && token.text.length <= 512,
         modifier = Modifier.testTag("settings-connect-wanikani")) { Text("Connect and Sync") }

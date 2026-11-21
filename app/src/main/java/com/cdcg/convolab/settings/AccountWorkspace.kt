@@ -1,6 +1,7 @@
 package com.cdcg.convolab.settings
 
 import androidx.compose.runtime.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,5 +36,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     if (showing) {
         if (controller != null && settings != null) SettingsScreen(settings, controller,
             SettingsActions({ showing = false }, actions.signOut, actions.typingLab))
+        else AlertDialog(onDismissRequest = { showing = false }, title = { Text("Loading Settings…") },
+            text = { CircularProgressIndicator() }, confirmButton = { TextButton(onClick = { showing = false }) { Text("Close") } })
     }
 }
