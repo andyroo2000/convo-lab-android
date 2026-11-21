@@ -6,7 +6,6 @@ import com.cdcg.convolab.network.ApiFailure
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class WorkflowAccess(val api: FeedbackGateway, val storage: WorkflowStorage, val io: CoroutineDispatcher = Dispatchers.IO)
@@ -44,9 +43,13 @@ class WorkflowSession(
         val analysis = snapshot.analysis
         if (analysis?.status == WorkStatus.Ready) { checkpoint(snapshot.copy(submissionRequested = false)); return }
         if (analysis?.status?.pending == true) { receiveAnalysis(analysis); return }
-        val pending = snapshot.pendingAnswer
-        val clarification = if (pending != null) access.api.answer(entry, pending) else access.api.startClarification(entry)
-        receiveClarification(clarification)
+        receiveClarification(clarificationForResume())
+    }
+
+    private suspend fun clarificationForResume(): Clarification {
+        snapshot.pendingAnswer?.let { return access.api.answer(entry, it) }
+        snapshot.clarification?.takeIf { it.status == WorkStatus.Resolved }?.let { return it }
+        return access.api.startClarification(entry)
     }
 
     suspend fun answer(text: String) {
@@ -61,13 +64,24 @@ class WorkflowSession(
     }
 
     suspend fun refresh() {
-        if (snapshot.submissionRequested) { resume(); return }
+        if (snapshot.submissionRequested) {
+            checkFailedWork()
+            resume()
+            return
+        }
         val response = access.api.analysis(entry)
         checkVersion(response.entry.version)
         val analysis = response.analysis ?: return
         checkVersion(analysis.sourceVersion)
         checkpoint(snapshot.copy(analysis = analysis))
         if (analysis.status.pending) receiveAnalysis(analysis)
+    }
+
+    private fun checkFailedWork() {
+        val analysis = snapshot.analysis
+        if (analysis?.status == WorkStatus.Failed) throw WorkflowFailure(analysis.error ?: "Feedback failed. Retry when you are ready.")
+        val clarification = snapshot.clarification
+        if (clarification?.status == WorkStatus.Failed) throw WorkflowFailure(clarification.error ?: "The meaning check failed. Retry when you are ready.")
     }
 
     suspend fun editFinal(edit: FinalEdit) {
@@ -92,11 +106,12 @@ class WorkflowSession(
 
     private suspend fun receiveClarification(first: Clarification) {
         var current = first
+        val budget = JournalPollBudget()
         while (true) {
             checkVersion(current.sourceVersion)
             checkpoint(snapshot.copy(clarification = current, pendingAnswer = null))
             if (finishClarification(current)) return
-            delay(1_500)
+            budget.pause(1_500)
             current = JournalPolling.read { access.api.clarification(entry) }
                 ?: throw ApiFailure(409)
         }
@@ -110,12 +125,13 @@ class WorkflowSession(
 
     private suspend fun receiveAnalysis(first: Analysis) {
         var current = first
+        val budget = JournalPollBudget()
         while (true) {
             checkVersion(current.sourceVersion)
             checkpoint(snapshot.copy(analysis = current, submissionRequested = current.status != WorkStatus.Ready))
             if (current.status == WorkStatus.Failed) throw WorkflowFailure(current.error ?: "Could not prepare feedback. Please retry.")
             if (!current.status.pending) return
-            delay(2_000)
+            budget.pause(2_000)
             val response = JournalPolling.read { access.api.analysis(entry) }
             checkVersion(response.entry.version)
             current = response.analysis ?: throw WorkflowFailure("Feedback is not available yet. Please retry.")
@@ -125,7 +141,7 @@ class WorkflowSession(
     private fun checkVersion(version: Int) { if (version != entry.version) throw ApiFailure(409) }
 
     private suspend fun checkpoint(next: WorkflowSnapshot) = withContext(NonCancellable) {
-        withContext(access.io) { access.storage.write(next) }
+        if (next != snapshot) withContext(access.io) { access.storage.write(next) }
         snapshot = next
         publish(next)
     }
