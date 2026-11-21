@@ -7,7 +7,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /** Metadata is published after audio, and its digest prevents partial/mismatched cache playback. */
-class AudioDiskStore(noBackupDirectory: File, accountId: Long) : AudioStorage {
+class AudioDiskStore(noBackupDirectory: File, accountId: Long, private val budgetBytes: Long = 128L * 1024 * 1024) : AudioStorage {
     private val directory = File(noBackupDirectory, "journal-audio/$accountId")
 
     @Synchronized override fun read(request: AudioRequest): CachedAudio? = cacheRead {
@@ -17,6 +17,7 @@ class AudioDiskStore(noBackupDirectory: File, accountId: Long) : AudioStorage {
         val bytes = AtomicFile(file).readFully()
         if (bytes.size.toLong() !in 1..MAX_AUDIO_BYTES) return@cacheRead null
         if (audioHash(bytes) != metadata.getString("digest")) return@cacheRead null
+        file.setLastModified(System.currentTimeMillis())
         CachedAudio(request, file, AudioTimeline.validated(AudioJson.sentences(metadata), request.source.content.text))
     }
 
@@ -30,6 +31,7 @@ class AudioDiskStore(noBackupDirectory: File, accountId: Long) : AudioStorage {
         // A missing optional sidecar must not discard already generated, playable audio.
         try { atomic(File(directory, request.key + ".json"), metadata.toString().toByteArray(Charsets.UTF_8)) }
         catch (_: IOException) { File(directory, request.key + ".json").delete() }
+        AudioCacheBudget.prune(directory, budgetBytes, setOf(audio.name, request.key + ".json", request.source.key + "-voices.json"))
         return CachedAudio(request, audio, timings)
     }
 
@@ -40,7 +42,8 @@ class AudioDiskStore(noBackupDirectory: File, accountId: Long) : AudioStorage {
     }
     @Synchronized override fun saveVoices(source: AudioSource, options: VoiceOptions) {
         val json = AudioJson.encodeOptions(options).put("schemaVersion", 1)
-        atomic(File(directory, source.key + "-voices.json"), json.toString().toByteArray(Charsets.UTF_8))
+        val name = source.key + "-voices.json"
+        atomic(File(directory, name), json.toString().toByteArray(Charsets.UTF_8))
     }
 
     private fun json(name: String): JSONObject? {

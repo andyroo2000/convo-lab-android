@@ -73,7 +73,8 @@ class AudioCoordinator(private val access: AudioAccess, private val scope: Corou
         val cached = withContext(access.io) { access.storage.voices(source) }
         cached?.let { publishOptions(source, it) }
         val voices = access.api.voices()
-        val selected = access.api.selectedVoice(source)
+        val remote = access.api.selectedVoice(source)
+        val selected = cached?.selected?.takeIf { id -> voices.any { it.id == id } } ?: remote
         check(voices.any { it.id == selected }) { "The saved narration voice is unavailable. Please retry." }
         val options = VoiceOptions(voices, selected)
         publishOptions(source, options)

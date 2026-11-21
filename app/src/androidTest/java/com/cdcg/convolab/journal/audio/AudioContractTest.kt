@@ -47,6 +47,23 @@ class AudioContractTest {
         catch (failure: ApiFailure) { assertEquals(401, failure.status) }
         assertEquals(1, transport.requests)
     }
+    @Test fun cacheEvictionKeepsTheNewRecordingWithinItsBudget() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = File(context.cacheDir, "audio-budget-${UUID.randomUUID()}")
+        try {
+            val store = AudioDiskStore(directory, 101, 2048)
+            val first = AudioRequest(source, "first")
+            val second = AudioRequest(source, "second")
+            val payload = AudioPayload(ByteArray(1000) { 1 }, emptyList())
+            val old = store.write(first, payload)
+            old.file.setLastModified(1)
+            val current = store.write(second, payload)
+            assertNotNull(store.read(second))
+            assertNull(store.read(first))
+            assertTrue(current.file.parentFile!!.listFiles()!!.sumOf { it.length() } <= 2048)
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun cacheRecoversAtomicBackupAndRejectsAnotherAccountOrCorruptAudio() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val directory = File(context.cacheDir, "audio-contract-${UUID.randomUUID()}")

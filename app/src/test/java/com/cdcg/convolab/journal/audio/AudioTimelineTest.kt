@@ -16,6 +16,12 @@ class AudioTimelineTest {
         assertEquals(2.5, AudioTimeline.adjacent(sentences, 0.0, 1))
         assertEquals(2.5, AudioTimeline.adjacent(sentences, 8.0, 1))
     }
+    @Test fun unknownDurationDoesNotRewindAndKnownSeeksStayWithinTheRecording() {
+        assertNull(AudioTimeline.seekPosition(1000, -9223372036854775807L))
+        assertNull(AudioTimeline.seekPosition(1000, 0))
+        assertEquals(5000L, AudioTimeline.seekPosition(9000, 5000))
+        assertEquals(0L, AudioTimeline.seekPosition(-1, 5000))
+    }
     @Test fun rubyAndEmojiArePreservedAtSentenceBoundaries() {
         assertEquals(listOf("日本[にほん]へ。", "🙂楽[たの]しい。"), AudioTimeline.readings("日本[にほん]へ。🙂楽[たの]しい。", sentences))
         assertNull(AudioTimeline.readings("違[ちが]う文章。", sentences))
