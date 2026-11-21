@@ -11,7 +11,7 @@ object Romaji {
 
     fun hiragana(raw: String, final: Boolean = false): String {
         val input = raw.lowercase(Locale.ROOT)
-        val convertEnding = final || raw.endsWith("nn")
+        val convertEnding = final || input.endsWith("nn")
         val root = if (convertEnding) finalTree else imeTree
         return buildString {
             var cursor = 0

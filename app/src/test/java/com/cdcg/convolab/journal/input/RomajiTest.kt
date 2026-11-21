@@ -23,6 +23,8 @@ class RomajiTest {
         assertEquals("ほn", Romaji.hiragana("hon"))
         assertEquals("ほん", Romaji.hiragana("hon", final = true))
         assertEquals("ん", Romaji.hiragana("nn"))
+        assertEquals("ん", Romaji.hiragana("NN"))
+        assertEquals("ほん", Romaji.hiragana("hoNN"))
         assertEquals("んな", Romaji.hiragana("nna"))
         assertEquals("しんよう", Romaji.hiragana("shin'you"))
         assertEquals("がっこう", Romaji.hiragana("gakkou"))
