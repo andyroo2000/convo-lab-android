@@ -19,9 +19,13 @@ Verification includes matching-session expiration and re-login, replacement-acco
 
 ## Keyboard and full-screen windows
 
-The final editor and Settings explicitly let Compose handle system and keyboard insets. This prevents Android from panning the whole dialog above the status bar while Compose also reserves keyboard space. A long-entry regression checks that the final-editor heading stays visible and Save stays above the keyboard.
+The final editor and Settings explicitly let Compose handle system and keyboard insets. This prevents Android from panning the whole dialog above the status bar while Compose also reserves keyboard space. A long-entry regression checks that the final-editor heading stays visible and Save stays above the keyboard. Dialog status-bar icons use dark foregrounds over the light paper. See Android’s [DialogProperties contract](https://developer.android.com/reference/kotlin/androidx/compose/ui/window/DialogProperties) for explicit inset ownership.
 
 ![Final editor with the keyboard open](lifecycle-screenshots/pixel-final-editor-keyboard.png)
+
+## Integrated validation
+
+At 7e62078, all 89 instrumented tests passed on both Pixel 10a and the API 36 emulator, alongside 136 JVM tests, lint and debug/release builds. The complete suite covers real native inference, learning, cancellation, Gboard, Journal workflows, account isolation, Settings and real Media3 playback using public fixtures. APK inspection verified the 72,298,816-byte model, 3,393 dictionary files, ARM64/x86_64 libraries, production API and no backup/cleartext traffic. Release excludes test fixtures. Final merged-main installation is tracked in #17.
 
 ## Remaining acceptance
 

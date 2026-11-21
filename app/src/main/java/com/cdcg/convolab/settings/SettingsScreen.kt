@@ -1,5 +1,6 @@
 package com.cdcg.convolab.settings
 
+import com.cdcg.convolab.ui.LightDialogStatusBar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,7 @@ fun SettingsScreen(state: SettingsState, controller: SettingsController, actions
     var page by rememberSaveable(state.account.id) { mutableStateOf(SettingsPage.Overview) }
     val close = { if (page == SettingsPage.Overview) actions.close() else { page = SettingsPage.Overview; controller.clearMessage() } }
     Dialog(onDismissRequest = close, properties = DialogProperties(decorFitsSystemWindows = false, usePlatformDefaultWidth = false)) {
+        LightDialogStatusBar()
         Surface(Modifier.fillMaxSize(), color = JournalBrand.Paper, contentColor = JournalBrand.Ink) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {

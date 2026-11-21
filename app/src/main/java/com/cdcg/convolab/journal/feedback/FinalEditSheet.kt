@@ -1,5 +1,6 @@
 package com.cdcg.convolab.journal.feedback
 
+import com.cdcg.convolab.ui.LightDialogStatusBar
 import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ fun FinalEditSheet(presentation: FeedbackPresentation) {
     val input = remember { JournalInputHost() }
     CompositionLocalProvider(LocalInputHost provides input) {
         Dialog(onDismissRequest = {}, properties = DialogProperties(decorFitsSystemWindows = false, usePlatformDefaultWidth = false, dismissOnBackPress = false)) {
+            LightDialogStatusBar()
             Surface(Modifier.fillMaxSize()) { FinalEditorLayout(presentation) }
         }
     }
