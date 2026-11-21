@@ -38,7 +38,7 @@ class AccountCleanupDiskStore(private val root: File) : AccountCleanupStorage {
     }
     private fun purgeAccount(accountId: Long) {
         require(accountId > 0)
-        for (family in listOf("journal", "journal-workflow", "journal-audio", "known-kanji", "journal-typing")) {
+        for (family in listOf("journal", "journal-workflow", "journal-audio", "known-kanji", "journal-typing", "journal-preferences")) {
             val parent = File(root, family).toPath()
             if (Files.isSymbolicLink(parent)) throw IOException("Unsafe account storage path")
             removeTree(parent.resolve(accountId.toString()))

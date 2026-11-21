@@ -34,6 +34,9 @@ data class Analysis(
     val replyResult: Feedback?, val correctedDocument: CorrectedDocument?, val replyRevision: Int,
     val error: String?, val updatedAt: String, val encoded: String, val currentReplyId: String? = null,
 ) {
+    val draftFeedback: List<Feedback> get() = listOfNotNull(result, replyResult)
+    fun copyText(final: Boolean): String = if (final) finalText.orEmpty()
+        else draftFeedback.joinToString("\n\n") { feedback -> feedback.segments.joinToString("") { it.text } }
     val feedback: Feedback? get() = replyResult ?: result
     val finalText: String? get() = correctedDocument?.text ?: replyResult?.entryText ?: result?.correctedText
     val finalReading: String? get() = correctedDocument?.reading ?: replyResult?.entryReading ?: result?.correctedReading

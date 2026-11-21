@@ -3,6 +3,7 @@ package com.cdcg.convolab.journal
 import androidx.compose.material3.CircularProgressIndicator
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -33,7 +34,7 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
             val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
             val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id))
             ConversationController(ConversationAccess(ConversationApi(api), repository, { scope -> WorkflowController(workflows, scope) }, tutor))
-        }) { session ->
+        }, preferences = { session, scope -> JournalViewPreferences(context.noBackupFilesDir, session.account.id, scope) }) { session ->
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
                 JournalDiskStore(context.noBackupFilesDir, session.account.id))
         } }
@@ -50,9 +51,11 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
         val conversation = binding?.conversation?.session?.collectAsStateWithLifecycle()?.value
         val conversationState = conversation?.state?.collectAsStateWithLifecycle()?.value
+        CompositionLocalProvider(LocalJournalViewPreferences provides binding?.preferences) {
         NotebookScreen(state, current, NotebookPanels(feedback = feedback?.let { FeedbackPresentation(it, workflow) },
             tutor = tutorState?.let { TutorPresentation(it, teacher) },
             conversation = conversationState?.let { ConversationPresentation(it, conversation) }), menu = menu)
+        }
     }
 }
 
