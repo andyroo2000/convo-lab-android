@@ -8,10 +8,12 @@ public final class NeuralBoundaryRanker {
     private let context: ZenzContext
     private let batch: BoundaryBatchScorer?
     private var cache = BoundaryScoreCache()
+    private let cancelled: () -> Bool
 
-    public init(converter: KanaKanjiConverter, modelURL: URL) throws {
+    public init(converter: KanaKanjiConverter, modelURL: URL, cancelled: @escaping () -> Bool = { false }) throws {
         guard let context = converter.getModel(modelURL: modelURL)?.zenzContext
         else { throw RankingError.modelUnavailable }
+        self.cancelled = cancelled
         self.context = context
         batch = try context.makeBoundaryBatchScorer()
         _ = try scores(reading: "はし", texts: ["箸"])
@@ -43,7 +45,7 @@ public final class NeuralBoundaryRanker {
         cache.begin(reading: prompt)
         var seen = Set<String>()
         let missing = outputs.filter { cache.score(for: $0) == nil && seen.insert($0).inserted }
-        let values = try context.boundaryScores(texts: missing, prompt: prompt, batch: batch)
+        let values = try context.boundaryScores(texts: missing, prompt: prompt, batch: batch, cancelled: cancelled)
         guard values.allSatisfy(\.isFinite) else { throw RankingError.invalidScore }
         // Keep this request's scores separately: cache eviction must never lose
         // a value that is needed by the current full candidate list.

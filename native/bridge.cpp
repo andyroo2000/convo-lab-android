@@ -7,6 +7,8 @@
 extern "C" {
 void *typing_create(const char *directory);
 void typing_destroy(void *handle);
+void typing_begin_operation(void *handle);
+void typing_cancel_operation(void *handle);
 char *typing_convert(void *handle, const char *request);
 void typing_free(char *text);
 }
@@ -43,4 +45,14 @@ Java_com_cdcg_convolab_typing_NativeTyping_convert(JNIEnv *env, jobject, jlong h
     if (output) env->SetByteArrayRegion(output, 0, length, reinterpret_cast<jbyte *>(result));
     typing_free(result);
     return output;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_cdcg_convolab_typing_NativeTyping_beginOperation(JNIEnv *, jobject, jlong handle) {
+    if (handle) typing_begin_operation(reinterpret_cast<void *>(handle));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_cdcg_convolab_typing_NativeTyping_cancelOperation(JNIEnv *, jobject, jlong handle) {
+    if (handle) typing_cancel_operation(reinterpret_cast<void *>(handle));
 }

@@ -4,27 +4,40 @@ import KanaKanjiConverterModule
 // The Kotlin owner serializes every call, including learning and destruction.
 final class AndroidConverter {
     private let engine: PlaygroundEngine
+    private let cancellation: NativeCancellation
 
     init(configuration: String) throws {
         let config = try EngineConfiguration.read(configuration)
+        let signal = NativeCancellation()
+        cancellation = signal
         engine = try PlaygroundEngine(directory: URL(fileURLWithPath: config.directory),
-            learningDirectory: config.learningDirectory.map { URL(fileURLWithPath: $0) })
+            learningDirectory: config.learningDirectory.map { URL(fileURLWithPath: $0) }, cancelled: { signal.isCancelled })
     }
 
+    func beginOperation() { cancellation.begin() }
+    func cancelOperation() { cancellation.cancel() }
+
     func process(_ json: String) throws -> String {
+        if cancellation.isCancelled { throw PlaygroundFailure.cancelled }
         let data = Data(json.utf8)
         let request = try JSONDecoder().decode(EngineRequest.self, from: data)
         switch request.action {
+        case "benchmarkBoundary":
+            return try JournalScoringDiagnostics.compare(converter: engine.converter, modelPath: engine.modelURL.path, json: json)
         case "learn":
             return try engine.learn(json) ? "{\"learned\":true}" : "{\"learned\":false}"
         case "resetLearning":
             try engine.resetLearning()
             return "{\"reset\":true}"
         case nil, "convert":
-            if request.text != nil { return try legacyConversion(data) }
-            return try engine.convert(json)
+            return try convertRequest(request, json: json)
         default: throw PlaygroundFailure.invalidReading
         }
+    }
+
+    private func convertRequest(_ request: EngineRequest, json: String) throws -> String {
+        if request.text != nil { return try legacyConversion(Data(json.utf8)) }
+        return try engine.convert(json)
     }
 
     // Preserve the romaji playground contract while Journal uses iOS clauses/units.

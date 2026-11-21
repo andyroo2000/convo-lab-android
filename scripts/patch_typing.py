@@ -25,7 +25,11 @@ def patch_typing(root, vendor):
     context = replace_required(original(vendor, 'ZenzContext'),
                                'model_params.split_mode = LLAMA_SPLIT_MODE_NONE',
                                'model_params.split_mode = LLAMA_SPLIT_MODE_LAYER')
+    context = replace_required(context, 'min(8, ProcessInfo.processInfo.processorCount - 2)',
+                               'min(4, ProcessInfo.processInfo.processorCount)')
     scoring = (adapters / 'BoundaryBatchScoring.swift').read_text()
+    scoring += '\n' + (adapters / 'BoundaryPrefixScoring.swift').read_text()
+    scoring += '\n' + (adapters / 'BoundaryDiagnostics.swift').read_text()
     (vendor / ZENZ / 'ZenzContext.swift').write_text(context + '\n' + scoring)
     zenz = replace_required(original(vendor, 'Zenz'),
                             'private var zenzContext: ZenzContext?',
