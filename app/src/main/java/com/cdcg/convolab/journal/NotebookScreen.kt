@@ -62,11 +62,10 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, panels:
 private fun ColumnScope.NotebookBody(presentation: NotebookPresentation, keyboardVisible: Boolean, compact: Boolean) {
     val (state, controller, panels) = Triple(presentation.state, presentation.controller, presentation.panels)
     if (presentation.editing) FinalEditSheet(panels.feedback!!) else {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(Modifier.weight(1f, fill = keyboardVisible || !presentation.writing).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             NotebookPage(state, controller, panels)
-            if (!keyboardVisible && presentation.writing) NotebookActions(state, controller, panels.feedback, compact)
         }
-        JournalInputFooter(compact) { if (keyboardVisible && presentation.writing) NotebookActions(state, controller, panels.feedback, compact) }
+        JournalInputFooter(compact) { if (presentation.writing) NotebookActions(state, controller, panels.feedback, compact) }
     }
 }
 

@@ -17,11 +17,11 @@ replace the older screenshots where the design changed.
 | WaniKani | Inline connection disclosure and styled connect/sync controls; no daily-vocabulary-transfer settings |
 | Appearance | Two-column font cards, selected checkmarks, Japanese preview, fine slider and round thumb |
 | Keyboard choice | Paper sheet and selected choice cards; existing on-device engine, learning, and keyboard ownership retained |
-| Draft notebook | Header and paper spacing, actions directly below the page when the keyboard is closed; fixed reachable actions while typing |
+| Draft notebook | Header and paper spacing, actions directly below the page when the keyboard is closed; fixed reachable actions while typing or reading a long draft |
 | Reviewed entry | Draft/Final capsule controls, handwriting title/date, paper menu, removal of draft-only footer actions |
-| Corrections | Anchored white popover with green original/replacement passage, yellow original text, compact ruby, serif Japanese, bounded scrolling and outside/Back dismissal |
+| Corrections | Anchored white popover with green original/replacement passage, yellow original text, compact ruby, serif Japanese, emphasis formatting, bounded scrolling and outside/Back dismissal |
 | Final editing | Root editor inside the notebook with header retained, matching date/title/paper/rules, locked version/navigation controls, visible save/cancel actions; reply edits use the same editor in an isolated full-screen dialog so the conversation stays mounted |
-| Contents | Paper drawer, close control, white list rows, compact native-style row typography, paper action menus |
+| Contents | Paper drawer, circular close/new-entry controls, selected-row checkmark, compact native-style row typography, paper action menus |
 | Rename/delete/close | Compact paper sheets, green top edge, consistent capsule actions and deletion preview |
 | Clarification | Paper card with green edge, white/sage choices, “Something else” answer, matching submit controls |
 | Tutor choice | Portrait cards and selected borders; choice available from the account menu before an entry has feedback |
@@ -36,16 +36,15 @@ of scope. The typing engine and its performance settings are unchanged.
 ## Verification
 
 - iOS reference run: 17 UI tests passed.
-- Debug/release builds, lint, and all 140 JVM tests pass.
+- Debug/release builds, lint, and all 144 JVM tests pass.
 - Pixel 10a / Android 16: the targeted UI suite covers authentication, account
   deletion, Settings/WaniKani, notebook navigation, feedback/final editing, tutor
-  conversations, audio, appearance, and both keyboard modes: 32 distinct UI tests
-  pass across the full pass and final 13-test editor/deletion rerun. One initial
-  invocation used the wrong deletion-test package name; the corrected rerun passes.
-  PR emulator results are recorded in the PR.
+  conversations, audio, appearance, and both keyboard modes: the final full run
+  passes all 32 UI tests (122 seconds), including the review fixes for long-entry
+  actions and emphasis formatting. PR emulator results are recorded in the PR.
 - [Pixel screenshots](visual-parity-screenshots/README.md) include complete notebook
   screens and isolated component fixtures; the gallery labels the latter.
-- CodeScene MCP reviewed all 43 changed Kotlin files: no remaining findings.
+- CodeScene MCP reviewed all 45 changed Kotlin files: no remaining findings.
   Three Compose-only files (`AccountMenu`, `JournalApp`, `ConvoLabTheme`) return
   no numeric score; build/lint/UI checks also cover those files. Staged and branch
   change-set coverage is checked before publishing.

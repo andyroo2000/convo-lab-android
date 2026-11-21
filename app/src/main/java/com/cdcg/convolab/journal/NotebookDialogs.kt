@@ -38,7 +38,7 @@ fun RenameEntryDialog(record: JournalRecord, dismiss: () -> Unit, enabled: Boole
             colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, unfocusedBorderColor = JournalStyle.Border), modifier = Modifier.fillMaxWidth())
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, androidx.compose.ui.Alignment.End)) {
             JournalDraftButton("Cancel", dismiss, style = DraftButtonStyle(filled = false))
-            JournalDraftButton("Save", { save(title) }, style = DraftButtonStyle(enabled = enabled && title.isNotBlank()))
+            JournalDraftButton("Save", { save(title) }, style = DraftButtonStyle(enabled = enabled))
         }
     }
 }

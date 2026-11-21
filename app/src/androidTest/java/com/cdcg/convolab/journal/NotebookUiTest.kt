@@ -44,6 +44,11 @@ class NotebookUiTest {
         compose.onNodeWithTag("journal-save").assertIsDisplayed().assertIsEnabled()
         assertActionsAboveKeyboard()
         screenshot("notebook-long-keyboard")
+        device.pressBack()
+        compose.waitUntil(10_000) { !compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        compose.onNodeWithTag("journal-save").assertIsDisplayed()
+        compose.onNodeWithText("Close").assertIsDisplayed()
+        screenshot("notebook-long-keyboard-hidden")
     }
 
     @Test fun pendingSaveVisiblyDisablesEditingUntilAcknowledged() {

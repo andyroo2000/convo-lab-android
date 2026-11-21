@@ -14,6 +14,9 @@ class TutorControllerTest {
     @Test fun accountMenuCanChooseTutorBeforeAnEntryHasFeedback() = runTest {
         val api = TutorFixture()
         val controller = TutorController(api, backgroundScope)
+        controller.reload()
+        runCurrent()
+        assertFalse(controller.state.value.busy)
         controller.showPicker()
         runCurrent()
         assertTrue(controller.state.value.choosing)
@@ -21,6 +24,7 @@ class TutorControllerTest {
         controller.choose(api.ren)
         runCurrent()
         assertEquals("ren", controller.state.value.preferences?.selectedId)
+        assertFalse(controller.state.value.busy)
         assertNull(controller.state.value.question)
         assertEquals(0, api.prepared)
         assertFalse(controller.state.value.choosing)

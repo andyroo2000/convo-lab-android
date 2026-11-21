@@ -1,6 +1,8 @@
 package com.cdcg.convolab.journal
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -27,22 +29,24 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
     ModalBottomSheet(onDismissRequest = { controller.showContents(false) }, containerColor = JournalBrand.Paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                JournalCloseButton("Close contents") { controller.showContents(false) }
+                CompositionLocalProvider(LocalContentColor provides JournalStyle.Green) { JournalCloseButton("Close contents") { controller.showContents(false) } }
                 Text("Contents", fontSize = 18.sp, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { controller.newEntry() }, enabled = !state.busy) { Text("New entry") }
+                IconButton(onClick = { controller.newEntry() }, enabled = !state.busy,
+                    modifier = Modifier.size(44.dp).background(JournalStyle.Sage, CircleShape).semantics { contentDescription = "New entry" }) { JournalIcon(JournalSymbol.Compose, color = JournalStyle.Green) }
             }
             state.error?.let { Text(it, color = Color(0xFF974634)) }
-            TextButton(onClick = { controller.refreshContents() }, enabled = !state.busy) { Text("Refresh") }
+            Spacer(Modifier.height(18.dp))
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (state.records.isEmpty()) item { Text("Your entries will appear here.", modifier = Modifier.padding(vertical = 28.dp)) }
                 items(state.records, key = { it.id }) { record ->
-                    ContentsRow(record, state.busy, { controller.select(record) }) { command ->
+                    ContentsRow(record, state, { controller.select(record) }) { command ->
                         if (command == "Rename") editing = record else deleting = record
                     }
                 }
                 if (state.nextCursor != null) item {
                     TextButton(onClick = { controller.more() }, enabled = !state.busy) { Text("Load more") }
                 }
+                item { TextButton(onClick = { controller.refreshContents() }, enabled = !state.busy) { Text("Refresh") } }
                 item { Spacer(Modifier.height(24.dp)) }
             }
         }
@@ -52,19 +56,22 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
 }
 
 @Composable
-private fun ContentsRow(record: JournalRecord, busy: Boolean, select: () -> Unit, command: (String) -> Unit) {
+private fun ContentsRow(record: JournalRecord, state: NotebookState, select: () -> Unit, command: (String) -> Unit) {
+    val busy = state.busy
+    val selected = record.id == state.draft.id
     var menu by remember { mutableStateOf(false) }
-    Card(onClick = select, enabled = !busy, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Row(Modifier.fillMaxWidth().padding(14.dp)) {
+    Card(onClick = select, enabled = !busy, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (selected) Color(0xFFF1EFE6) else Color.White)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(record.displayTitle(), fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                Text(record.displayTitle(), fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, color = Color(0xFF222222))
                 Text(displayDate(record.displayDate()), fontFamily = FontFamily.SansSerif, fontSize = 13.sp, color = Color(0xFF747469))
                 if (record.pendingDelete) Text("Deletion pending", color = Color(0xFF974634))
                 else if (record.draft != null) Text("Draft", color = Color(0xFF46764C))
             }
+            if (selected) JournalIcon(JournalSymbol.Check, color = JournalStyle.Green)
             Box {
                 TextButton(onClick = { menu = true }, enabled = !busy,
-                    modifier = Modifier.semantics { contentDescription = "Actions for ${record.displayTitle()}" }) { Text("•••") }
+                    modifier = Modifier.semantics { contentDescription = "Actions for ${record.displayTitle()}" }) { Text("•••", color = JournalStyle.Green) }
                 PaperMenu(menu, { menu = false }) {
                     PaperMenuItem("Rename", JournalSymbol.Appearance) { menu = false; command("Rename") }
                     PaperMenuItem("Delete", JournalSymbol.Trash) { menu = false; command("Delete") }

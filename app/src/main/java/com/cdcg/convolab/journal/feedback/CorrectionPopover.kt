@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.SpanStyle
 import com.cdcg.convolab.R
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
@@ -33,7 +34,7 @@ fun CorrectionPopover(segment: FeedbackSegment, anchor: Rect, dismiss: () -> Uni
     val density = LocalDensity.current
     val margin = with(density) { 16.dp.roundToPx() }
     var pointer by remember { mutableStateOf(PopoverPointer()) }
-    val position = remember(anchor, margin) { CorrectionPosition(anchor, margin) { pointer = it } }
+    val position = remember(anchor, margin) { CorrectionPosition(anchor, margin) { if (pointer != it) pointer = it } }
     val screen = LocalWindowInfo.current.containerSize
     val width = with(density) { screen.width.toDp() }
     val height = with(density) { screen.height.toDp() }
@@ -59,8 +60,8 @@ private fun CorrectionPassage(segment: FeedbackSegment) {
     val original = segment.reading.ifEmpty { segment.text }.ifEmpty { "Insert" }
     val corrected = (segment.replacementReading ?: replacement).ifEmpty { "Remove" }
     Column(Modifier.fillMaxWidth().background(Color(0xFF398C43)).padding(horizontal = 18.dp, vertical = 14.dp)) {
-        val serif = FontFamily(Font(R.font.noto_serif_jp, weight = FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))))
-        RubyParagraph(listOf(RubyRun(original, ink = Color(0xFFFFF7A9)), RubyRun(" → $corrected", ink = Color(0xFFFFFDF2))),
+        val serif = remember { FontFamily(Font(R.font.noto_serif_jp, weight = FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700)))) }
+        RubyParagraph(listOf(RubyRun(original, style = SpanStyle(color = Color(0xFFFFF7A9))), RubyRun(" → $corrected", style = SpanStyle(color = Color(0xFFFFFDF2)))),
             appearance = RubyAppearance(size, serif, known, Color(0xFFFFFDF2), Color(0xFFFFF7A9), compact = true))
     }
 }
@@ -68,8 +69,12 @@ private fun CorrectionPassage(segment: FeedbackSegment) {
 @Composable
 private fun CorrectionExplanation(segment: FeedbackSegment) {
     val explanation = segment.explanationReading ?: segment.explanation.orEmpty()
+    val runs = remember(explanation) { ExplanationMarkup.parse(explanation).map {
+        RubyRun(it.text, style = SpanStyle(fontWeight = if (it.bold) FontWeight.Bold else FontWeight.Normal,
+            fontStyle = if (it.italic) FontStyle.Italic else FontStyle.Normal))
+    } }
     Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 16.dp)) {
-        if (explanation.isNotEmpty()) RubyText(explanation, appearance = RubyAppearance(maxOf(16, LocalJournalTypography.current.size - 4), JournalBrand.Serif, LocalKnownKanji.current))
+        if (explanation.isNotEmpty()) RubyParagraph(runs, appearance = RubyAppearance(maxOf(14, LocalJournalTypography.current.size - 4), JournalBrand.Serif, LocalKnownKanji.current, compact = true))
         if (segment.replacement == null) segment.suggestion?.let {
             RubyText(segment.suggestionReading ?: it, appearance = RubyAppearance(18, JournalBrand.Handwriting, LocalKnownKanji.current))
         }

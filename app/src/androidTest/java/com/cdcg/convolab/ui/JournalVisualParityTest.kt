@@ -27,11 +27,12 @@ class JournalVisualParityTest {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @Test fun correctionIsAnchoredAndDismissesWithoutChangingText() {
-        showCorrection(1f, "見ました is the polite past form.")
+        showCorrection(1f, "**見ました** is the ***polite*** past form.")
         openCorrection()
         assertInsideWindow()
         capture("parity-correction-popover.png")
         compose.onNodeWithText("Got it").assertDoesNotExist()
+        compose.onNodeWithText("***", substring = true).assertDoesNotExist()
         device.pressBack()
         compose.onNodeWithTag("correction-popover").assertDoesNotExist()
         compose.onNodeWithText("映画を見た。", substring = true).assertExists()
