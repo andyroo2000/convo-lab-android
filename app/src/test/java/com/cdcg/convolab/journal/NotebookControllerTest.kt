@@ -1,6 +1,7 @@
 package com.cdcg.convolab.journal
 
 import java.io.IOException
+import com.cdcg.convolab.network.ApiFailure
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
@@ -100,6 +101,24 @@ class NotebookControllerTest {
         assertTrue(storage.records.isEmpty())
     }
 
+    @Test fun onlySavingTheCurrentDraftOffersConflictCopyRecovery() = runTest {
+        val api = NotebookGateway().apply { archiveFailure = ApiFailure(409) }
+        val controller = NotebookController(JournalRepository(api, NotebookMemory(), StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.start().join()
+        assertFalse(controller.state.value.canRecoverCopy)
+        api.archiveFailure = null
+        controller.edit("残す文章。")
+        api.saveFailure = ApiFailure(409)
+        controller.save().join()
+        assertTrue(controller.state.value.canRecoverCopy)
+        controller.refreshContents().join()
+        api.deleteResult = { throw ApiFailure(409) }
+        api.saveFailure = null
+        controller.save().join()
+        controller.delete(controller.state.value.draft).join()
+        assertFalse(controller.state.value.canRecoverCopy)
+    }
+
     @Test fun typingLimitCountsUnicodeCodePointsAndPreservesLastAcceptedText() = runTest {
         val controller = NotebookController(JournalRepository(NotebookGateway(), NotebookMemory(), StandardTestDispatcher(testScheduler)), backgroundScope)
         controller.start().join()
@@ -127,14 +146,18 @@ internal class NotebookMemory : JournalStorage {
 internal class NotebookGateway : JournalGateway {
     var failSaves = false
     var failArchive = false
+    var archiveFailure: Exception? = null
+    var saveFailure: Exception? = null
     var deleteResult: suspend () -> Unit = {}
     override suspend fun archive(cursor: String?): JournalPage {
+        archiveFailure?.let { throw it }
         if (failArchive) throw IOException("fixture offline")
         return JournalPage(emptyList(), null)
     }
     override suspend fun unfinished() = archive(null)
     override suspend fun entry(id: String): JournalEntry = error("Unexpected request")
     override suspend fun save(draft: JournalDraft): JournalEntry {
+        saveFailure?.let { throw it }
         if (failSaves) throw IOException("fixture offline")
         return JournalEntry(draft.id, draft.title, draft.body, draft.entryDate, draft.expectedVersion + 1, "created", "updated")
     }

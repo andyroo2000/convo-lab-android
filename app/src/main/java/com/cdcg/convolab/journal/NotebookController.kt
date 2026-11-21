@@ -69,7 +69,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = true, pendingDelete = record.pendingDelete, canRecoverCopy = false) }
     }
 
-    fun keepAndClose() = action {
+    fun keepAndClose() = action(recoveryFor = state.value.draft.id) {
         writer.flush()
         val draft = state.value.draft
         persistForClose(draft)
@@ -77,7 +77,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { it.copy(draft = JournalDraft.blank(), closePrompt = false, savedLocally = false, pendingDelete = false, canRecoverCopy = false) }
     }
 
-    fun save(onSaved: (JournalEntry) -> Unit = {}) = action {
+    fun save(onSaved: (JournalEntry) -> Unit = {}) = action(recoveryFor = state.value.draft.id) {
         writer.flush()
         val sent = state.value.draft
         repository.save(sent.key)
@@ -86,7 +86,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         onSaved(saved)
     }
 
-    fun rename(selected: JournalRecord, title: String) = action {
+    fun rename(selected: JournalRecord, title: String) = action(recoveryFor = selected.id) {
         val id = selected.id
         writer.flush()
         val current = requireNotNull(repository.record(JournalId(id))).editableDraft()
@@ -147,12 +147,12 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { it.copy(records = sorted(local.records), recoveryCount = local.recoveryFiles.size) }
     }
 
-    private fun action(block: suspend () -> Unit) = scope.launch {
+    private fun action(recoveryFor: String? = null, block: suspend () -> Unit) = scope.launch {
         if (state.value.busy) return@launch
         mutableState.update { it.copy(busy = true, error = null) }
         try { block() }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { report(failure) }
+        catch (failure: Exception) { report(failure, recoveryFor) }
         finally { mutableState.update { it.copy(busy = false) } }
     }
 
@@ -163,13 +163,15 @@ class NotebookController(private val repository: JournalRepository, private val 
         }
     }
 
-    private fun report(failure: Exception) {
+    private fun report(failure: Exception, recoveryFor: String? = null) {
+        val conflict = failure is ApiFailure && failure.status in setOf(404, 409)
+        val recover = conflict && recoveryFor == state.value.draft.id
         val message = when {
-            failure is ApiFailure && failure.status in setOf(404, 409) -> "This entry changed elsewhere. Your writing is kept here. You can save it as a new entry."
+            recover -> "This entry changed elsewhere. Your writing is kept here. You can save it as a new entry."
             failure is IllegalStateException -> failure.message ?: "Your draft is kept. Please try again."
             else -> failure.userMessage()
         }
-        mutableState.update { it.copy(error = message, canRecoverCopy = failure is ApiFailure && failure.status in setOf(404, 409)) }
+        mutableState.update { it.copy(error = message, canRecoverCopy = recover) }
     }
 
     private fun sorted(records: List<JournalRecord>) = records.filter { it.rootEntryId == null }
