@@ -18,7 +18,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cdcg.convolab.auth.AuthScreen
 import com.cdcg.convolab.auth.AuthViewModel
-import com.cdcg.convolab.journal.NotebookRoute
+import com.cdcg.convolab.settings.AccountWorkspace
+import com.cdcg.convolab.settings.SettingsActions
 
 @Composable
 fun JournalApp(openTypingLab: (() -> Unit)?, model: AuthViewModel = viewModel()) {
@@ -29,7 +30,7 @@ fun JournalApp(openTypingLab: (() -> Unit)?, model: AuthViewModel = viewModel())
             CircularProgressIndicator()
         }
         account == null -> AuthScreen(state, model::submit, model::clearMessage)
-        else -> NotebookRoute(account, model.sessions) { AccountMenu(account.name, model::signOut, openTypingLab) }
+        else -> AccountWorkspace(account, model.sessions, SettingsActions({}, model::signOut, openTypingLab))
     }
     if (account != null && state.error != null) AlertDialog(onDismissRequest = model::clearMessage,
         title = { Text("Account") }, text = { Text(state.error.orEmpty()) },
@@ -37,16 +38,17 @@ fun JournalApp(openTypingLab: (() -> Unit)?, model: AuthViewModel = viewModel())
 }
 
 @Composable
-fun AccountMenu(name: String, signOut: () -> Unit, openTypingLab: (() -> Unit)?) {
+fun AccountMenu(name: String, signOut: () -> Unit, openTypingLab: (() -> Unit)?, settings: (() -> Unit)? = null) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.semantics { contentDescription = "Account menu" }) {
             Box(Modifier.size(40.dp).background(JournalBrand.Paper, CircleShape), contentAlignment = Alignment.Center) {
-                Text(name.take(1).uppercase(), color = JournalBrand.Ink, fontFamily = JournalBrand.Anton, fontSize = 24.sp)
+                Text(name.codePoints().findFirst().orElse(63).let { String(Character.toChars(it)).uppercase() }, color = JournalBrand.Ink, fontFamily = JournalBrand.Anton, fontSize = 24.sp)
             }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text(name) }, enabled = false, onClick = {})
+            settings?.let { DropdownMenuItem(text = { Text("Settings") }, onClick = { expanded = false; it() }) }
             openTypingLab?.let { DropdownMenuItem(text = { Text("Japanese typing lab") }, onClick = { expanded = false; it() }) }
             DropdownMenuItem(text = { Text("Sign out") }, onClick = { expanded = false; signOut() })
         }

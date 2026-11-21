@@ -51,7 +51,11 @@ class HttpApiTransport(
         connection.instanceFollowRedirects = false
         val revoking = connection.url.path == "/api/auth/tokens/current"
         connection.connectTimeout = if (revoking) 5_000 else 15_000
-        connection.readTimeout = if (revoking) 5_000 else 30_000
+        connection.readTimeout = when (connection.url.path) {
+            "/api/auth/tokens/current" -> 5_000
+            "/api/study/wanikani/sync" -> 120_000
+            else -> 30_000
+        }
         connection.useCaches = false
         connection.setRequestProperty("Accept", "application/json")
         token?.let { connection.setRequestProperty("Authorization", "Bearer $it") }
