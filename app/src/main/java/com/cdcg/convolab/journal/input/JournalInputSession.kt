@@ -9,6 +9,7 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     var ready by mutableStateOf(false); private set
     var busy by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null); private set
+    var status by mutableStateOf<String?>(null); private set
     private var preparation: Deferred<Unit>? = null
     private var conversion: Job? = null
     private var learning: Job? = null
@@ -25,9 +26,8 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
         scope.launch { attempt("Japanese input could not start. Your writing is safe; you can use your device keyboard.") { preparation?.await() } }
     }
     fun query(query: CompositionQuery?, expanded: Boolean = false, receive: (List<JapaneseCandidate>) -> Unit) {
-        conversion?.cancel()
-        val ticket = ++generation
-        busy = false
+        cancelConversion()
+        val ticket = generation
         if (query == null || closed) return
         prepare()
         conversion = scope.launch {
@@ -45,7 +45,7 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     }
     fun confirm(choices: List<ConfirmedInput>) {
         if (choices.isEmpty() || closed) return
-        conversion?.cancel()
+        cancelConversion()
         val previous = learning
         learning = scope.launch {
             attempt("Your text is saved, but this choice could not be remembered.") {
@@ -56,12 +56,13 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
         }
     }
     fun reset() {
-        conversion?.cancel()
+        if (closed) return
+        cancelConversion()
         val previous = learning
         learning = scope.launch {
             attempt("Learning could not be reset. Please try again.") {
                 prepare(); previous?.join(); preparation?.await(); engine.reset()
-                error = "Typing learning was reset on this device."
+                status = "Typing learning was reset on this device."
             }
         }
     }
@@ -71,6 +72,12 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
         prepare()
     }
     fun dismissError() { error = null }
+    fun dismissStatus() { status = null }
+    private fun cancelConversion() {
+        generation++
+        conversion?.cancel()
+        busy = false
+    }
     fun close() {
         if (closed) return
         closed = true

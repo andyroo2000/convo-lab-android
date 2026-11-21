@@ -9,6 +9,7 @@ class JournalInputEditor(initial: String, private val session: JournalInputSessi
     val field = TextFieldState(initial, TextRange(initial.length))
     private val model = JournalComposition(initial)
     var snapshot by mutableStateOf(model.snapshot()); private set
+    var validationMessage by mutableStateOf<String?>(null); private set
     private var lastQuery: CompositionQuery? = null
     var builtIn = false
 
@@ -55,7 +56,16 @@ class JournalInputEditor(initial: String, private val session: JournalInputSessi
             if (query != null) snapshot = model.receive(query, candidates)
         }
     }
-    private fun valid(value: String) = value.codePointCount(0, value.length) <= 20_000 && !value.contains('\u0000')
+    private fun valid(value: String): Boolean {
+        val count = value.codePointCount(0, value.length)
+        val previous = snapshot.text.codePointCount(0, snapshot.text.length)
+        validationMessage = when {
+            value.contains('\u0000') -> "This character cannot be included in a journal entry."
+            count > 20_000 -> "Journal entries can contain up to 20,000 characters."
+            else -> null
+        }
+        return !value.contains('\u0000') && (count <= 20_000 || count <= previous)
+    }
     private fun TextRange.input() = InputSelection(start, end)
     private fun InputSelection.range() = TextRange(start, end)
 }

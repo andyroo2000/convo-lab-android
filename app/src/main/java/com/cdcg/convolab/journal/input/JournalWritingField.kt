@@ -63,12 +63,15 @@ private fun InputEditorField(editor: JournalInputEditor, options: WritingOptions
         textStyle = options.style, cursorBrush = SolidColor(JournalBrand.Blue),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false,
             keyboardType = if (mode == JournalKeyboard.BuiltIn) KeyboardType.Ascii else KeyboardType.Text),
-        modifier = modifier.onFocusChanged { if (it.isFocused) host?.focus(editor) else host?.release(editor) }
+        modifier = modifier.onFocusChanged { if (it.isFocused) host?.focus(editor) }
             .semantics { contentDescription = options.label },
         decorator = { inner ->
-            Box {
+            Column {
+                editor.validationMessage?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                Box {
                 if (editor.snapshot.text.isEmpty()) Text(options.placeholder, style = options.style, color = JournalBrand.Ink.copy(alpha = 0.4f))
                 inner()
+                }
             }
         })
 }
