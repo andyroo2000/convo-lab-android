@@ -15,6 +15,14 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     private var generation = 0L
     private var closed = false
 
+    val lifetime: Job get() = scope.coroutineContext.job
+    init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try { awaitCancellation() }
+            finally { withContext(NonCancellable) { engine.close() } }
+        }
+    }
+
     fun prepare() {
         if (preparation != null || closed) return
         preparation = scope.async {
@@ -74,10 +82,9 @@ class JournalInputSession(val preference: KeyboardPreference, private val engine
     fun close() {
         if (closed) return
         closed = true
-        val job = scope.coroutineContext[Job]
         scope.cancel()
-        CoroutineScope(Dispatchers.Default).launch { job?.join(); engine.close() }
     }
+
     private suspend fun attempt(message: String, operation: suspend () -> Unit) {
         try { operation() }
         catch (cancelled: CancellationException) { throw cancelled }

@@ -32,7 +32,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     val controller = binding?.takeIf { it.accountId == account.id }?.controller
     val settings = controller?.state?.collectAsStateWithLifecycle()?.value
     var showing by rememberSaveable(account.id) { mutableStateOf(false) }
-    KeyboardWorkspace(account.id) {
+    KeyboardWorkspace(account.id, sessions.work) {
     CompositionLocalProvider(LocalKnownKanji provides settings?.known?.kanji.orEmpty()) {
         AudioWorkspace(account.id, sessions) {
             NotebookRoute(account, sessions) { AccountMenu(account.name, actions.signOut, actions.typingLab) { showing = true } }
@@ -40,7 +40,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     }
     if (showing) {
         if (controller != null && settings != null) SettingsScreen(settings, controller,
-            SettingsActions({ showing = false }, actions.signOut, actions.typingLab))
+            SettingsActions({ showing = false }, actions.signOut, actions.typingLab, { showing = false; actions.deleteAccount() }))
         else AlertDialog(onDismissRequest = { showing = false }, title = { Text("Loading Settings…") },
             text = { CircularProgressIndicator() }, confirmButton = { TextButton(onClick = { showing = false }) { Text("Close") } })
     }

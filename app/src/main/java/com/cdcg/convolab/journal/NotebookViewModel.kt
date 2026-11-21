@@ -1,5 +1,6 @@
 package com.cdcg.convolab.journal
 
+import kotlinx.coroutines.job
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cdcg.convolab.auth.Session
@@ -33,6 +34,7 @@ class NotebookViewModel(sessions: SessionController,
                 .onEach { mutableBinding.value = null }
                 .collectLatest { session ->
                     if (session != null) coroutineScope {
+                        if (!sessions.work.own(session.account.id, coroutineContext.job)) return@coroutineScope
                         val journal = repository(session)
                         val feedback = workflow?.invoke(session, this)
                         val teacher = tutor?.invoke(session, this)

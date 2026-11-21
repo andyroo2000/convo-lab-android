@@ -1,6 +1,7 @@
 package com.cdcg.convolab.journal.audio
 
 import android.content.Context
+import kotlinx.coroutines.job
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cdcg.convolab.auth.SessionController
@@ -22,6 +23,7 @@ class AudioViewModel(context: Context, sessions: SessionController) : ViewModel(
                 .onEach { mutableBinding.value = null }
                 .collectLatest { session ->
                     if (session != null) coroutineScope {
+                        if (!sessions.work.own(session.account.id, coroutineContext.job)) return@coroutineScope
                         val lease = PlaybackLease(session.account.id)
                         PlaybackOwner.active = lease
                         val api = JournalAudioApi(JournalApi(HttpApiTransport(), session, sessions::snapshot))
