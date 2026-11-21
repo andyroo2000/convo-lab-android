@@ -77,6 +77,8 @@ class ConversationUiTest {
         val first = composer()
         write(first, "残したい答え。")
         device.pressBack()
+        compose.waitUntil(10_000) { !compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
+        device.waitForIdle()
         compose.onNodeWithText("Discard unsent answer").performScrollTo().performClick()
         compose.onNodeWithText("Keep writing").performClick()
         assertEquals("残したい答え。", first.state.value.text)
@@ -123,6 +125,7 @@ class ConversationUiTest {
         compose.onNodeWithTag("conversation-answer-${reply.state.value.record.id}").performScrollTo().performClick().performTextInput(text)
         compose.waitUntil(10_000) { compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
         device.waitForIdle()
+        assertEquals(text, reply.state.value.text)
         val button = compose.onNodeWithTag("conversation-submit-${reply.state.value.record.id}").performScrollTo().assertIsDisplayed()
         val top = compose.runOnIdle { val view = compose.activity.window.decorView; view.height - view.rootWindowInsets.getInsets(WindowInsets.Type.ime()).bottom }
         assertTrue(button.fetchSemanticsNode().boundsInWindow.bottom <= top + 1)
