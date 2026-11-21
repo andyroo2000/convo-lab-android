@@ -15,3 +15,5 @@ The immediate-model microbenchmark and native inference timings are reported sep
 ![Pixel native suggestions](keyboard-screenshots/pixel-native.png)
 ![Actual Pixel English keyboard taps](keyboard-screenshots/pixel-english.png)
 ![Compact emulator landscape](keyboard-screenshots/emulator-landscape.png)
+
+Lifecycle follow-up: the keyboard owner now survives activity recreation through a ViewModel. Account changes close and join the previous owner before creating another engine. Confirmed learning drains before native destruction, and the engine teardown is a child of the owner rather than a detached coroutine. Three lifecycle/cancellation/failure tests pass on both Pixel and emulator, and an activity-recreation/account-switch regression passes on the emulator. Keyboard choice remains a device preference intentionally; learned writing is account-scoped.

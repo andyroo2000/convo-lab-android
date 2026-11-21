@@ -10,6 +10,23 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ConversationSessionTest {
+    @Test fun initialLoadFinishesBeforePublishingAnEditableComposer() = runTest {
+        val fixture = ConversationFixture(this)
+        val gate = CompletableDeferred<Unit>()
+        fixture.gateway.nextLoadGate = gate
+        fixture.start()
+        val session = requireNotNull(fixture.conversation.session.value)
+        assertTrue(session.state.value.busy)
+        assertNull(session.state.value.composer)
+        gate.complete(Unit)
+        runCurrent()
+        val reply = requireNotNull(session.state.value.composer).controller
+        reply.edit("消さないでください。")
+        session.refresh().join()
+        assertSame(reply, session.state.value.composer?.controller)
+        assertEquals("消さないでください。", reply.state.value.text)
+    }
+
     @Test fun submittedAnswerGetsFeedbackAndMovesTheComposerToTheNewLeaf() = runTest {
         val fixture = ConversationFixture(this)
         fixture.start()

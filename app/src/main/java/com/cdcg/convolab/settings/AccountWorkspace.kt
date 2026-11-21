@@ -32,7 +32,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     val controller = binding?.takeIf { it.accountId == account.id }?.controller
     val settings = controller?.state?.collectAsStateWithLifecycle()?.value
     var showing by rememberSaveable(account.id) { mutableStateOf(false) }
-    KeyboardWorkspace(account.id, sessions.work) {
+    KeyboardWorkspace(account.id, sessions) {
     CompositionLocalProvider(LocalKnownKanji provides settings?.known?.kanji.orEmpty()) {
         AudioWorkspace(account.id, sessions) {
             NotebookRoute(account, sessions) { AccountMenu(account.name, actions.signOut, actions.typingLab) { showing = true } }

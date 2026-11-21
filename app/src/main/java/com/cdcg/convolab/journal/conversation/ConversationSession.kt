@@ -37,7 +37,9 @@ class ConversationSession(val root: JournalEntry, private val rootWorkflow: Work
         }
         scope.launch {
             access.tutor.state.map { it.question }.distinctUntilChanged().collect { question ->
-                if (question?.tutor != null) prepareComposer(question) else clearComposer()
+                updates.withLock {
+                    if (question?.tutor != null) prepareComposer(question) else clearComposer()
+                }
             }
         }
     }
