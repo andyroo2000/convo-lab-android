@@ -21,6 +21,17 @@ class JournalRepository(
     suspend fun load(): JournalLoad = disk { storage.load() }
     suspend fun record(key: JournalId): JournalRecord? = disk { storage.read(key.value) }
 
+    suspend fun accept(entry: JournalEntry): JournalRecord = disk { mergeEntry(entry) }
+
+    suspend fun answerDraft(root: JournalEntry, origin: AnswerOrigin): JournalRecord = disk {
+        val local = storage.load()
+        check(local.recoveryFiles.isEmpty()) { "Saved writing needs recovery before starting another answer." }
+        local.records.firstOrNull { it.rootEntryId == root.id && it.answerOrigin == origin }?.let { return@disk it }
+        check(storage.read(root.id)?.pendingDelete != true) { "This conversation is being deleted." }
+        val draft = JournalDraft.blank().copy(rootEntryId = root.id, entryDate = root.entryDate)
+        JournalRecord(draft = draft, answerOrigin = origin).also(storage::write)
+    }
+
     suspend fun edit(draft: JournalDraft) = disk {
         val previous = storage.read(draft.id)
         check(previous?.pendingDelete != true) { "Deletion is awaiting confirmation. Retry deleting this entry first." }
@@ -53,7 +64,8 @@ class JournalRepository(
     suspend fun save(key: JournalId): JournalEntry = saves.withLock {
         val id = key.value
         val sent = disk { prepareSave(requireNotNull(storage.read(id))) } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
-        val received = saveRequest(sent)
+        val origin = disk { storage.read(id)?.takeIf { sent.expectedVersion == 0 }?.answerOrigin }
+        val received = saveRequest(sent, origin)
         disk {
             val current = requireNotNull(storage.read(id)) { "Draft disappeared while saving" }
             storage.write(current.acknowledge(sent, received))
@@ -82,8 +94,8 @@ class JournalRepository(
         }
     }
 
-    private suspend fun saveRequest(sent: JournalDraft): JournalEntry {
-        try { return api.save(sent) }
+    private suspend fun saveRequest(sent: JournalDraft, origin: AnswerOrigin?): JournalEntry {
+        try { return if (origin == null) api.save(sent) else api.answer(sent, origin) }
         catch (failure: ApiFailure) {
             if (failure.isDefinitiveRejection()) disk {
                 val current = requireNotNull(storage.read(sent.id))
@@ -112,7 +124,7 @@ class JournalRepository(
         val local = storage.load()
         check(local.recoveryFiles.isEmpty()) { "Saved records need recovery before deleting a conversation." }
         val children = local.records.filter { it.rootEntryId == id }
-        check(children.none { it.draft != null || it.pendingSave != null }) {
+        check(children.none { it.draft?.body?.isNotBlank() == true || it.pendingSave != null }) {
             "This conversation has unsaved replies. Save or copy them before deleting it."
         }
         storage.write(current.copy(pendingDelete = true))

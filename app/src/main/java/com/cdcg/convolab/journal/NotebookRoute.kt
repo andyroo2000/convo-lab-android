@@ -1,6 +1,7 @@
 package com.cdcg.convolab.journal
 
 import androidx.compose.material3.CircularProgressIndicator
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +29,10 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
             WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id)), scope)
         }, tutor = { session, scope ->
             TutorController(TutorApi(JournalApi(HttpApiTransport(), session, sessions::snapshot)), scope)
+        }, conversation = { session, repository, tutor ->
+            val api = JournalApi(HttpApiTransport(), session, sessions::snapshot)
+            val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id))
+            ConversationController(ConversationAccess(ConversationApi(api), repository, { scope -> WorkflowController(workflows, scope) }, tutor))
         }) { session ->
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot),
                 JournalDiskStore(context.noBackupFilesDir, session.account.id))
@@ -38,21 +43,25 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
     val current = binding?.takeIf { it.accountId == account.id }?.controller
     if (current == null) CircularProgressIndicator() else {
         val state by current.state.collectAsStateWithLifecycle()
-        FlushOnStop(current)
+        FlushOnStop(current, binding?.conversation)
         val workflow = binding?.workflow
         val feedback = workflow?.state?.collectAsStateWithLifecycle()?.value
         val teacher = binding?.tutor
         val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
+        val conversation = binding?.conversation?.session?.collectAsStateWithLifecycle()?.value
+        val conversationState = conversation?.state?.collectAsStateWithLifecycle()?.value
         NotebookScreen(state, current, feedback = feedback?.let { FeedbackPresentation(it, workflow) },
-            tutor = tutorState?.let { TutorPresentation(it, teacher) }, menu = menu)
+            tutor = tutorState?.let { TutorPresentation(it, teacher) },
+            conversation = conversationState?.let { ConversationPresentation(it, conversation) }, menu = menu)
     }
 }
 
 @Composable
-private fun FlushOnStop(controller: NotebookController) {
+private fun FlushOnStop(controller: NotebookController, conversation: ConversationController?) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle, controller) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) controller.flush() }
+    DisposableEffect(lifecycle, controller, conversation) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { controller.flush(); scope.launch { conversation?.flush() } } }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }

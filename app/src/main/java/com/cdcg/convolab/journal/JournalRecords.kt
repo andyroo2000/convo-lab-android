@@ -27,8 +27,10 @@ data class JournalDraft(
     }
 }
 
+data class AnswerOrigin(val parentId: JournalId, val questionId: JournalId)
+
 /** Acknowledged server content and its optional newer local draft share one atomic record. */
-data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null, val pendingDelete: Boolean = false, val acknowledgedVersion: Int = 0) {
+data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraft? = null, val pendingSave: JournalDraft? = null, val pendingDelete: Boolean = false, val acknowledgedVersion: Int = 0, val answerOrigin: AnswerOrigin? = null) {
     init {
         require(entry != null || draft != null)
         require(entry == null || draft == null || entry.id == draft.id)
@@ -54,6 +56,7 @@ interface JournalGateway {
     suspend fun unfinished(): JournalPage
     suspend fun entry(id: String): JournalEntry
     suspend fun save(draft: JournalDraft): JournalEntry
+    suspend fun answer(draft: JournalDraft, origin: AnswerOrigin): JournalEntry = error("Conversation answers are not supported by this gateway")
     suspend fun delete(id: String, version: Int)
 }
 

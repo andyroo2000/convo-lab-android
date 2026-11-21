@@ -18,25 +18,34 @@ class JournalApi(
 ) : JournalGateway {
     override suspend fun archive(cursor: String?): JournalPage {
         val query = cursor?.let { "?cursor=" + URLEncoder.encode(it, "UTF-8") }.orEmpty()
-        return page(request("GET", "/api/journal/entries$query"))
+        return page(request(JournalRequest(JournalMethod.GET, "/api/journal/entries$query")))
     }
 
-    override suspend fun unfinished(): JournalPage = page(request("GET", "/api/journal/entries?unfinished=1"))
+    override suspend fun unfinished(): JournalPage = page(request(JournalRequest(JournalMethod.GET, "/api/journal/entries?unfinished=1")))
 
-    override suspend fun entry(id: String): JournalEntry = decode { JournalJson.entry(request("GET", path(id)).getJSONObject("data")) }
+    override suspend fun entry(id: String): JournalEntry = decode { JournalJson.entry(request(JournalRequest(JournalMethod.GET, path(id))).getJSONObject("data")) }
 
     override suspend fun save(draft: JournalDraft): JournalEntry {
         require(draft.body.isNotBlank())
-        return decode { JournalJson.entry(request("PUT", path(draft.id), JournalJson.savePayload(draft)).getJSONObject("data")) }
+        return decode { JournalJson.entry(request(JournalRequest(JournalMethod.PUT, path(draft.id), JournalJson.savePayload(draft))).getJSONObject("data")) }
     }
+
+    override suspend fun answer(draft: JournalDraft, origin: AnswerOrigin): JournalEntry = decode {
+        require(draft.body.isNotBlank())
+        val body = answerPayload(draft, origin)
+        JournalJson.entry(request(JournalRequest(JournalMethod.POST, path(origin.parentId.value) + "/conversation", body)).getJSONObject("data"))
+    }
+
+    private fun answerPayload(draft: JournalDraft, origin: AnswerOrigin) = JSONObject()
+        .put("id", draft.key.value).put("questionId", origin.questionId.value).put("body", draft.body)
 
     override suspend fun delete(id: String, version: Int) {
-        request("DELETE", path(id), JSONObject().put("expectedVersion", version))
+        request(JournalRequest(JournalMethod.DELETE, path(id), JSONObject().put("expectedVersion", version)))
     }
 
-    suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject {
+    suspend fun request(call: JournalRequest): JSONObject {
         checkSession()
-        val response = transport.request(method, path, session.token, body?.toString())
+        val response = transport.request(call.method.name, call.path, session.token, call.body?.toString())
         checkSession()
         return decode { if (response.isBlank()) JSONObject() else JSONObject(response) }
     }

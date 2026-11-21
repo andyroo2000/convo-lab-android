@@ -1,23 +1,25 @@
 package com.cdcg.convolab.journal.conversation
 
+import com.cdcg.convolab.journal.JournalRequest
+import com.cdcg.convolab.journal.JournalMethod
 import com.cdcg.convolab.journal.*
 import org.json.JSONException
 import org.json.JSONObject
 
 class TutorApi(private val api: JournalApi) : TutorGateway {
-    override suspend fun preferences() = decode { TutorJson.preferences(api.request("GET", "/api/journal/tutor").getJSONObject("data")) }
+    override suspend fun preferences() = decode { TutorJson.preferences(api.request(JournalRequest(JournalMethod.GET, "/api/journal/tutor")).getJSONObject("data")) }
     override suspend fun choose(tutor: Tutor) = decode {
-        TutorJson.preferences(api.request("PUT", "/api/journal/tutor", JSONObject().put("tutorId", tutor.id)).getJSONObject("data"))
+        TutorJson.preferences(api.request(JournalRequest(JournalMethod.PUT, "/api/journal/tutor", JSONObject().put("tutorId", tutor.id))).getJSONObject("data"))
     }
     override suspend fun prepare(source: QuestionSource) = decode {
         val body = JSONObject().put("analysisId", source.analysisId.value).put("replyId", source.replyId?.value ?: JSONObject.NULL)
-        TutorJson.question(api.request("POST", JournalApi.path(source.entryId.value) + "/question", body).getJSONObject("data"))
+        TutorJson.question(api.request(JournalRequest(JournalMethod.POST, JournalApi.path(source.entryId.value) + "/question", body)).getJSONObject("data"))
     }
     override suspend fun question(entryId: JournalId, questionId: JournalId) = decode {
-        TutorJson.question(api.request("GET", path(entryId, questionId)).getJSONObject("data"))
+        TutorJson.question(api.request(JournalRequest(JournalMethod.GET, path(entryId, questionId))).getJSONObject("data"))
     }
     override suspend fun retryAudio(entryId: JournalId, questionId: JournalId) = decode {
-        TutorJson.question(api.request("POST", path(entryId, questionId) + "/retry").getJSONObject("data"))
+        TutorJson.question(api.request(JournalRequest(JournalMethod.POST, path(entryId, questionId) + "/retry")).getJSONObject("data"))
     }
     private fun path(entryId: JournalId, questionId: JournalId) = JournalApi.path(entryId.value) + "/questions/" + questionId.value
     private inline fun <T> decode(read: () -> T): T = try { read() }

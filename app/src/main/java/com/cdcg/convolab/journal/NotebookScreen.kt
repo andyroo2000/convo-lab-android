@@ -23,7 +23,7 @@ import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.journal.conversation.*
 
 @Composable
-fun NotebookScreen(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation? = null, tutor: TutorPresentation? = null, menu: @Composable () -> Unit) {
+fun NotebookScreen(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation? = null, tutor: TutorPresentation? = null, conversation: ConversationPresentation? = null, menu: @Composable () -> Unit) {
     BackHandler(!state.busy && !state.contents && !state.closePrompt) { controller.requestClose() }
     Column(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().imePadding()) {
         NotebookHeader(!state.loading, { controller.showContents(true) }, menu)
@@ -32,8 +32,11 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, feedbac
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (feedback?.visible == true) {
-                    FeedbackContent(feedback)
-                    if (tutor?.state?.source != null) TutorCard(tutor)
+                    if (state.busy) Text("Updating journal…") else {
+                        FeedbackContent(feedback)
+                        if (conversation != null) ConversationContent(conversation, tutor, true)
+                        else if (tutor?.state?.source != null) TutorCard(tutor)
+                    }
                 } else {
                     state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
                     key(state.draft.id) { NotebookPaper(state, controller::edit) }

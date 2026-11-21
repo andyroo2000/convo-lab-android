@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** One controller belongs to one account; network callbacks never share another account's state. */
-class NotebookController(private val repository: JournalRepository, private val scope: CoroutineScope) {
+class NotebookController(private val repository: JournalRepository, private val scope: CoroutineScope,
+    private val beforeDelete: suspend (JournalId) -> Unit = {}) {
     private val mutableState = MutableStateFlow(NotebookState())
     val state = mutableState.asStateFlow()
     private val writer = DraftWriter(repository, ::writeResult).also { it.start(scope) }
@@ -101,6 +102,7 @@ class NotebookController(private val repository: JournalRepository, private val 
     fun delete(selected: JournalDraft) = action {
         val id = selected.id
         writer.flush()
+        beforeDelete(JournalId(id))
         val record = repository.record(JournalId(id))
         if (record != null) {
             try { repository.delete(JournalId(id)) }
