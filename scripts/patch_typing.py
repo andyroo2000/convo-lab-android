@@ -22,12 +22,13 @@ def patch_typing(root, vendor):
     api = vendor / 'Sources/KanaKanjiConverterModule/ConverterAPI'
     for name in ['WholePhraseCandidates', 'NeuralBoundaryRanker', 'BoundaryScoreCache']:
         shutil.copy2(adapters / f'{name}.swift', api / f'ConvoLab{name}.swift')
-    context = replace_required(original(vendor, 'ZenzContext'),
-                               'model_params.split_mode = LLAMA_SPLIT_MODE_NONE',
-                               'model_params.split_mode = LLAMA_SPLIT_MODE_LAYER')
+    # cpu_model.cpp already applies the CPU loader's required LAYER split.
+    # Leave the pinned Swift declaration alone instead of patching it twice.
+    context = original(vendor, 'ZenzContext')
     context = replace_required(context, 'min(8, ProcessInfo.processInfo.processorCount - 2)',
                                'min(4, ProcessInfo.processInfo.processorCount)')
-    scoring = (adapters / 'BoundaryBatchScoring.swift').read_text()
+    scoring = (adapters / 'BoundaryNormalization.swift').read_text()
+    scoring += '\n' + (adapters / 'BoundaryBatchScoring.swift').read_text()
     scoring += '\n' + (adapters / 'BoundaryPrefixScoring.swift').read_text()
     scoring += '\n' + (adapters / 'BoundaryDiagnostics.swift').read_text()
     (vendor / ZENZ / 'ZenzContext.swift').write_text(context + '\n' + scoring)
