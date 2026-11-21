@@ -138,9 +138,7 @@ final class BoundaryBatchScorer {
     }
 
     private func normalization(_ logits: UnsafeMutablePointer<Float>, vocabulary: Int) -> Float {
-        var denominator: Float = 0
-        for word in 0..<vocabulary { denominator += expf(logits[word]) }
-        return logf(denominator)
+        BoundaryNormalization.logarithm(logits, vocabulary: vocabulary)
     }
 
     private func normalizedScores(_ sentences: [[llama_token]], promptCount: Int,
