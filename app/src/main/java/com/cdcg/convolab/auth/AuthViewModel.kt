@@ -1,6 +1,7 @@
 package com.cdcg.convolab.auth
 
 import android.app.Application
+import com.cdcg.convolab.auth.deletion.*
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cdcg.convolab.network.HttpApiTransport
@@ -10,7 +11,11 @@ import kotlinx.coroutines.CancellationException
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val sessions = SessionController(AuthApi(HttpApiTransport()), KeystoreSessionStorage(application))
 
-    init { viewModelScope.launch { sessions.restore() } }
+    val deletion = AccountDeletionController(sessions, AccountDeletionApi(HttpApiTransport()),
+        AccountCleanupDiskStore(application.noBackupFilesDir), viewModelScope) {
+        if (sessions.state.value.restoring) sessions.restore()
+    }
+    init { viewModelScope.launch { deletion.recover() } }
 
     fun submit(page: AuthPage, form: AuthForm) {
         if (sessions.state.value.busy || !form.valid(page)) return

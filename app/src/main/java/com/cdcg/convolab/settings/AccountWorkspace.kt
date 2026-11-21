@@ -40,7 +40,7 @@ fun AccountWorkspace(account: Account, sessions: SessionController, actions: Set
     }
     if (showing) {
         if (controller != null && settings != null) SettingsScreen(settings, controller,
-            SettingsActions({ showing = false }, actions.signOut, actions.typingLab))
+            SettingsActions({ showing = false }, actions.signOut, actions.typingLab, { showing = false; actions.deleteAccount() }))
         else AlertDialog(onDismissRequest = { showing = false }, title = { Text("Loading Settings…") },
             text = { CircularProgressIndicator() }, confirmButton = { TextButton(onClick = { showing = false }) { Text("Close") } })
     }

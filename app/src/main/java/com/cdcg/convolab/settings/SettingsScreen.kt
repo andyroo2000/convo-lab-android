@@ -21,7 +21,7 @@ import com.cdcg.convolab.journal.input.KeyboardPanel
 import com.cdcg.convolab.journal.appearance.AppearancePanel
 
 enum class SettingsPage(val title: String) { Overview("Settings"), Profile("Edit profile"), Password("Change password"), WaniKani("WaniKani"), Appearance("Appearance"), Keyboard("Keyboard") }
-class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typingLab: (() -> Unit)?)
+class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typingLab: (() -> Unit)?, val deleteAccount: () -> Unit = {})
 
 @Composable
 fun SettingsScreen(state: SettingsState, controller: SettingsController, actions: SettingsActions) {
@@ -66,6 +66,7 @@ private fun SettingsOverview(state: SettingsState, actions: SettingsActions, nav
         Text(state.account.email)
         TextButton(onClick = { navigate(SettingsPage.Profile) }) { Text("Edit Profile") }
         TextButton(onClick = { navigate(SettingsPage.Password) }) { Text("Change Password") }
+        TextButton(onClick = actions.deleteAccount) { Text("Delete Account", color = MaterialTheme.colorScheme.error) }
         TextButton(onClick = actions.signOut) { Text("Sign Out") }
     }
     SettingsChapter("Connections", expanded, { expanded = it }) {

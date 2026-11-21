@@ -18,6 +18,11 @@ class KeyboardViewModel(sessions: SessionController, create: (Long) -> JournalIn
                 mutable.value = null
                 if (id != null) {
                     val input = create(id)
+                    if (!sessions.work.own(id, input.lifetime)) {
+                        input.close()
+                        withContext(NonCancellable) { input.lifetime.join() }
+                        return@collectLatest
+                    }
                     mutable.value = KeyboardBinding(id, input)
                     try { awaitCancellation() }
                     finally {

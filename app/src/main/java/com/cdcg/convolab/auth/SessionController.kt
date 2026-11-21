@@ -18,6 +18,7 @@ class SessionController(
     private val storage: SessionStorage,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
+    val work = AccountWorkRegistry()
     private val mutex = Mutex()
     private var generation = 0L
     private var session: Session? = null
@@ -95,6 +96,17 @@ class SessionController(
         session = updated
         mutableState.value = mutableState.value.copy(account = account)
         true
+    } }
+
+    suspend fun forgetDeletedAccount(accountId: Long) = withContext(NonCancellable) { mutex.withLock {
+        if (session?.account?.id == accountId) {
+            generation++
+            session = null
+            mutableState.value = AuthState(restoring = false)
+        }
+        withContext(io) {
+            if (storage.read()?.account?.id == accountId) storage.clear()
+        }
     } }
 
     suspend fun clearMessage() = mutex.withLock {

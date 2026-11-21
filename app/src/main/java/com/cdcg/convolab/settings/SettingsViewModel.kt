@@ -1,5 +1,6 @@
 package com.cdcg.convolab.settings
 
+import kotlinx.coroutines.job
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cdcg.convolab.auth.Session
@@ -20,6 +21,7 @@ class SettingsViewModel(sessions: SessionController, create: (Session, Coroutine
                 .onEach { mutableBinding.value = null }
                 .collectLatest { session ->
                     if (session != null) coroutineScope {
+                        if (!sessions.work.own(session.account.id, coroutineContext.job)) return@coroutineScope
                         val controller = create(session, this)
                         mutableBinding.value = SettingsBinding(session.account.id, controller)
                         controller.start()
