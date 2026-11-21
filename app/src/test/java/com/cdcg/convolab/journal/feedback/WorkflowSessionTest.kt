@@ -253,6 +253,39 @@ class WorkflowSessionTest {
         assertEquals(WorkStatus.Ready, controller.state.value.snapshot?.analysis?.status)
     }
 
+    @Test fun renamingKeepsCurrentBodyFeedbackAndAllowsEditingItsFinalText() = runTest {
+        val renamed = entry.copy(title = "A new title", version = 2)
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            analysisResult = { AnalysisResponse(renamed, analysis()) }
+            editResult = { analysis("手動で直した文章。") }
+        }
+        val session = WorkflowSession(renamed, WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))) {}
+        session.refresh()
+        assertEquals(1, session.snapshot.analysis?.sourceVersion)
+        assertEquals(2, session.snapshot.sourceVersion)
+        session.editFinal(FinalEdit(analysisId, 1, "手動で直した文章。"))
+        assertEquals("手動で直した文章。", session.snapshot.analysis?.finalText)
+        assertNull(session.snapshot.pendingFinalEdit)
+        assertEquals(0, api.starts)
+    }
+
+    @Test fun currentBodyProofStillRejectsAnotherEntryOrNewerAnalysis() = runTest {
+        val api = FakeFeedback()
+        val session = WorkflowSession(entry, WorkflowAccess(api, MemoryWorkflow(), StandardTestDispatcher(testScheduler))) {}
+        val invalid = listOf(
+            AnalysisResponse(entry.copy(body = "Different writing"), analysis()),
+            AnalysisResponse(entry.copy(id = JournalIds.newId()), analysis()),
+            AnalysisResponse(entry, analysis().copy(sourceVersion = 2)),
+        )
+        for (response in invalid) {
+            api.analysisResult = { response }
+            try { session.refresh(); fail("Expected source mismatch") }
+            catch (failure: ApiFailure) { assertEquals(409, failure.status) }
+            assertNull(session.snapshot.analysis)
+        }
+    }
+
     @Test fun pollingStopsAfterThreeTransportFailures() = runTest {
         var calls = 0
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }

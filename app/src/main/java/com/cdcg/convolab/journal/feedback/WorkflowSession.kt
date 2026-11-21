@@ -70,9 +70,9 @@ class WorkflowSession(
             return
         }
         val response = access.api.analysis(entry)
-        checkVersion(response.entry.version)
+        checkEntry(response.entry)
         val analysis = response.analysis ?: return
-        checkVersion(analysis.sourceVersion)
+        checkAnalysis(analysis)
         checkpoint(snapshot.copy(analysis = analysis))
         if (analysis.status.pending) receiveAnalysis(analysis)
     }
@@ -88,7 +88,8 @@ class WorkflowSession(
         checkpoint(snapshot.copy(pendingFinalEdit = edit))
         val analysis = try { access.api.editFinal(entry, edit) }
         catch (failure: ApiFailure) { reconcileFinalEdit(edit, failure) }
-        checkVersion(analysis.sourceVersion)
+        checkAnalysis(analysis)
+        if (analysis.id != edit.analysisId) throw ApiFailure(409)
         checkpoint(snapshot.copy(analysis = analysis, pendingFinalEdit = null))
     }
 
@@ -97,7 +98,7 @@ class WorkflowSession(
     private suspend fun reconcileFinalEdit(edit: FinalEdit, failure: ApiFailure): Analysis {
         if (failure.status != 409) throw failure
         val response = access.api.analysis(entry)
-        checkVersion(response.entry.version)
+        checkEntry(response.entry)
         val analysis = response.analysis ?: throw failure
         val alreadyApplied = analysis.id == edit.analysisId && analysis.finalText == edit.text
         if (!alreadyApplied) throw failure
@@ -127,15 +128,26 @@ class WorkflowSession(
         var current = first
         val budget = JournalPollBudget()
         while (true) {
-            checkVersion(current.sourceVersion)
+            checkAnalysis(current)
             checkpoint(snapshot.copy(analysis = current, submissionRequested = current.status != WorkStatus.Ready))
             if (current.status == WorkStatus.Failed) throw WorkflowFailure(current.error ?: "Could not prepare feedback. Please retry.")
             if (!current.status.pending) return
             budget.pause(2_000)
             val response = JournalPolling.read { access.api.analysis(entry) }
-            checkVersion(response.entry.version)
+            checkEntry(response.entry)
             current = response.analysis ?: throw WorkflowFailure("Feedback is not available yet. Please retry.")
         }
+    }
+
+    private fun checkEntry(remote: JournalEntry) {
+        checkVersion(remote.version)
+        if (remote.id != entry.id || remote.body != entry.body) throw ApiFailure(409)
+    }
+
+    private fun checkAnalysis(analysis: Analysis) {
+        // The API only returns analysis for the current body. A title/date-only save can
+        // advance entry.version while deliberately retaining feedback from an older version.
+        if (analysis.sourceVersion !in 1..entry.version) throw ApiFailure(409)
     }
 
     private fun checkVersion(version: Int) { if (version != entry.version) throw ApiFailure(409) }
