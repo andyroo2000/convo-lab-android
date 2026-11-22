@@ -116,6 +116,8 @@ class JournalRepository(
         deleteRequest(current)
         disk {
             val children = storage.load().records.filter { it.rootEntryId == id }
+            val removedIds = children.map { it.id }.toSet() + id
+            archive.read()?.let { archive.write(it.excluding(removedIds)) }
             children.forEach { storage.remove(it.id) }
             storage.remove(id)
             removalRevision++

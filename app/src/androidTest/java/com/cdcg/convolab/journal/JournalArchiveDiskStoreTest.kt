@@ -3,10 +3,41 @@ package com.cdcg.convolab.journal
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import java.util.UUID
+import android.os.Looper
+import android.os.SystemClock
+import com.cdcg.convolab.journal.feedback.WorkflowDiskStore
+import com.cdcg.convolab.journal.feedback.WorkflowSnapshot
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 
 class JournalArchiveDiskStoreTest {
+    @Test fun largeCachedJournalAndFeedbackLoadOffTheMainThread() = isolated { directory ->
+        val records = JournalDiskStore(directory, 101)
+        val workflows = WorkflowDiskStore(directory, 101)
+        repeat(250) {
+            val draft = JournalDraft.blank().edited("Cached writing $it")
+            records.write(JournalRecord(entry = JournalEntry(draft.id, null, draft.body, draft.entryDate, 1, "created", "updated")))
+            workflows.write(WorkflowSnapshot(draft.key, 1))
+        }
+        val api = object : JournalGateway {
+            override suspend fun archive(cursor: String?) = error("No network expected")
+            override suspend fun unfinished() = error("No network expected")
+            override suspend fun entry(id: String) = error("No network expected")
+            override suspend fun save(draft: JournalDraft) = error("No network expected")
+            override suspend fun delete(id: String, version: Int) = error("No network expected")
+        }
+        val repository = JournalRepository(api, records, archive = JournalArchiveDiskStore(directory, 101), localWork = JournalLocalWork {
+            assertNotEquals(Looper.getMainLooper(), Looper.myLooper())
+            workflows.read(it)?.pendingAnswer != null
+        })
+        val started = SystemClock.elapsedRealtime()
+        val load = runBlocking { repository.load() }
+        println("ARCHIVE_LOAD_250_MS=${SystemClock.elapsedRealtime() - started}")
+        assertEquals(250, load.records.size)
+        assertTrue(load.localWorkRoots.isEmpty())
+    }
+
     @Test fun membershipSurvivesReopenAndDoesNotBecomeAJournalRecord() = isolated { directory ->
         val draft = JournalDraft.blank().edited("Local writing")
         JournalDiskStore(directory, 101).write(JournalRecord(draft = draft))

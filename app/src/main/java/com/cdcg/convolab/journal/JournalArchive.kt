@@ -1,10 +1,13 @@
 package com.cdcg.convolab.journal
 
+import kotlinx.coroutines.CancellationException
+
 /** Server list membership is separate from the durable copies used for offline writing. */
 data class JournalArchive(val entryIds: Set<String>, val nextCursor: String?) {
     fun append(page: JournalPage) = JournalArchive(entryIds + page.entries.map { it.id }, page.nextCursor)
     fun including(entry: JournalEntry): JournalArchive =
         if (entry.rootEntryId == null) copy(entryIds = entryIds + entry.id) else this
+    fun excluding(ids: Set<String>) = copy(entryIds = entryIds - ids)
 
     companion object {
         fun from(page: JournalPage) = JournalArchive(page.entries.map { it.id }.toSet(), page.nextCursor)
@@ -30,9 +33,16 @@ class JournalLocalWork(private val feedbackPending: (JournalId) -> Boolean = { f
     }
 
     private fun needsRecovery(record: JournalRecord): Boolean {
-        if (record.draft != null) return true
+        if (record.hasDraftWriting()) return true
         if (record.pendingSave != null || record.pendingDelete) return true
         // An unreadable workflow must remain reachable for recovery, too.
-        return try { feedbackPending(JournalId(record.id)) } catch (_: Exception) { true }
+        return try { feedbackPending(JournalId(record.id)) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { true }
     }
+}
+
+private fun JournalRecord.hasDraftWriting(): Boolean {
+    val writing = draft ?: return false
+    return rootEntryId == null || writing.body.isNotBlank()
 }

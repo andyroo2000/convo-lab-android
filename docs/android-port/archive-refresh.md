@@ -8,7 +8,7 @@ Android already refreshed when opening Contents and when pressing Refresh. `Jour
 
 ## Change
 
-Persist the server list's IDs and next cursor separately from offline journal records. A successful first-page refresh replaces list membership; Load more appends only to the matching cursor. Contents displays that list plus roots containing local drafts, pending saves/deletes, unsent replies, or pending/unreadable feedback work. The full cached records remain available to an already-open entry and are never deleted by a list refresh. An unreadable journal record conservatively keeps all potential parent entries reachable.
+Persist the server list's IDs and next cursor separately from offline journal records. A successful first-page refresh replaces list membership; Load more appends only to the matching cursor. Contents displays that list plus roots containing local drafts, pending saves/deletes, unsent replies containing writing, or pending/unreadable feedback work. Automatically created empty reply placeholders do not retain an otherwise absent root entry. The full cached records remain available to an already-open entry and are never deleted by a list refresh. An unreadable journal record conservatively keeps all potential parent entries reachable.
 
 Failed requests keep the last successful list, including across app restarts. Before a successful index exists, the legacy offline cache remains visible. Older cached pages stay on disk and become listed when Load more fetches them, matching the iOS pagination model. No absence from a single page is interpreted as proof of deletion, and no server writes are made by refresh.
 
@@ -19,3 +19,5 @@ The derived index shares the existing account-owned journal directory and is exc
 Regression coverage includes remote deletion, pagination replacement/append, empty versus failed refreshes, restart while offline, local drafts and child replies, pending feedback recovery, stale concurrent responses, save/index write failure, account isolation, interrupted index writes, and index corruption. Physical-device checks exercise Contents refresh while retaining locally typed writing, plus existing submission, correction, conversation, and process-recovery flows.
 
 The production account is read-only during verification. Fixture tests use isolated storage and fake services.
+
+Final local checks: 178 unit tests and 24 focused Pixel tests passed, along with build and lint. Loading a 250-entry fixture plus its workflow files took 194 ms on the Pixel, off the main thread. The live account had nine cached roots and eight server-listed roots; the excluded root had an empty auto-created child draft. After the fix, only the surviving same-title entry appeared in Contents. Cached writing remained intact.

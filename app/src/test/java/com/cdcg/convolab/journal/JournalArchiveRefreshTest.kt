@@ -2,6 +2,7 @@ package com.cdcg.convolab.journal
 
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -21,6 +22,47 @@ class JournalArchiveRefreshTest {
     @Test fun unreadableChildRecordsKeepPotentialParentsReachable() {
         val local = JournalLoad(listOf(JournalRecord(entry = first), JournalRecord(entry = second)), listOf("unreadable.json"))
         assertEquals(setOf(first.id, second.id), JournalLocalWork().roots(local))
+    }
+
+    @Test fun automaticEmptyReplyDoesNotKeepARemotelyDeletedParentListed() = runTest {
+        cache(first)
+        val reply = JournalDraft.blank().copy(rootEntryId = first.id)
+        memory.records[reply.id] = JournalRecord(draft = reply)
+        val controller = NotebookController(JournalRepository(api, memory, StandardTestDispatcher(testScheduler), index), backgroundScope)
+        controller.start().join()
+        assertTrue(controller.state.value.contentsRecords.isEmpty())
+        assertEquals(reply, memory.records[reply.id]?.draft)
+        assertNotNull(memory.records[first.id])
+    }
+
+    @Test fun cancellationIsNotMistakenForUnreadableFeedback() {
+        val local = JournalLoad(listOf(JournalRecord(entry = first)), emptyList())
+        val work = JournalLocalWork { throw CancellationException("Cancelled") }
+        assertThrows(CancellationException::class.java) { work.roots(local) }
+    }
+
+    @Test fun localDeletionRemovesMembershipBeforeOfflineReopen() = runTest {
+        cache(first)
+        api.page = JournalPage(listOf(first), null)
+        val repository = JournalRepository(api, memory, StandardTestDispatcher(testScheduler), index)
+        repository.refresh()
+        repository.delete(JournalId(first.id))
+        assertTrue(index.read()!!.entryIds.isEmpty())
+        assertNull(repository.record(JournalId(first.id)))
+        api.offline = true
+        val controller = NotebookController(JournalRepository(api, memory, StandardTestDispatcher(testScheduler), index), backgroundScope)
+        controller.start().join()
+        assertTrue(controller.state.value.contentsRecords.isEmpty())
+    }
+
+    @Test fun loadMoreWithoutAnIndexRequiresAFirstPageRefresh() = runTest {
+        val repository = JournalRepository(api, memory, StandardTestDispatcher(testScheduler), index)
+        api.page = JournalPage(listOf(second), null)
+        repository.refresh("obsolete-page")
+        assertNull(repository.load().archive)
+        assertTrue(memory.records.isEmpty())
+        repository.refresh()
+        assertEquals(setOf(second.id), repository.load().archive?.entryIds)
     }
 
     @Test fun serverDeletionDisappearsFromContentsWithoutDeletingCachedWriting() = runTest {
@@ -114,20 +156,26 @@ class JournalArchiveRefreshTest {
         assertNull(repository.record(JournalId(first.id)))
     }
 
-    @Test fun aSaveAcknowledgedAfterRefreshStartedRemainsListed() = runTest {
+    @Test fun aSaveAcknowledgedAfterLoadMoreStartedKeepsTheCursorForRetry() = runTest {
         val repository = JournalRepository(api, memory, StandardTestDispatcher(testScheduler), index)
+        api.page = JournalPage(listOf(first), "page-two")
         repository.refresh()
         val old = CompletableDeferred<JournalPage>()
         api.response = { old.await() }
-        val request = launch { repository.refresh() }
+        val request = launch { repository.refresh("page-two") }
         runCurrent()
         val draft = JournalDraft.blank().edited("Saved while list was loading")
         repository.edit(draft)
         repository.save(draft.key)
-        old.complete(JournalPage(emptyList(), null))
+        old.complete(JournalPage(listOf(second), null))
         request.join()
-        assertEquals(setOf(draft.id), repository.load().archive?.entryIds)
+        assertEquals(setOf(first.id, draft.id), repository.load().archive?.entryIds)
+        assertEquals("page-two", repository.load().archive?.nextCursor)
         assertNull(repository.record(draft.key)?.pendingSave)
+        api.response = null
+        api.page = JournalPage(listOf(second), null)
+        repository.refresh("page-two")
+        assertEquals(setOf(first.id, second.id, draft.id), repository.load().archive?.entryIds)
     }
 
     @Test fun failedIndexWriteKeepsTheSaveRetryPayload() = runTest {
