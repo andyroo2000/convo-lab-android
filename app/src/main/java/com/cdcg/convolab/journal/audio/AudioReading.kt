@@ -15,6 +15,6 @@ fun AudioReading(source: AudioSource) {
     if (coordinator == null || readings.isNullOrEmpty()) { RubyText(source.content.reading); return }
     val selected = AudioTimeline.current(sentences, (playback?.position ?: 0) / 1000.0)
     RubyParagraph(readings.mapIndexed { index, text ->
-        RubyRun(text, if (index == selected) Color(0xFFFFED96) else Color.Transparent) { coordinator.seek(sentences[index].start) }
+        RubyRun(text, if (index == selected) Color(0xFF007AFF).copy(alpha = .12f) else Color.Transparent) { coordinator.seek(sentences[index].start) }
     })
 }

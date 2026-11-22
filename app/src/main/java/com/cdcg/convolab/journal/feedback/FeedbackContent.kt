@@ -25,6 +25,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cdcg.convolab.journal.text.RubyText
+import com.cdcg.convolab.journal.text.LocalRubyOnPaper
 import com.cdcg.convolab.journal.JournalId
 import com.cdcg.convolab.journal.audio.*
 import com.cdcg.convolab.ui.JournalBrand
@@ -63,16 +64,36 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
     Column {
     FeedbackToolbar(final, choose, presentation, analysis)
     if (final) FinalAudio(presentation, analysis, header = true)
-    Surface(color = JournalBrand.Paper, shape = NotebookPaperShape, shadowElevation = 3.dp) {
-        Column(Modifier.fillMaxWidth().heightIn(min = 280.dp).drawBehind {
-            drawLine(Color(0xFFD58B78), Offset(15.dp.toPx(), 0f), Offset(15.dp.toPx(), size.height), 1.dp.toPx())
-        }.padding(start = 28.dp, end = 14.dp, top = 18.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 18.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
-            Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 30.sp, color = Color(0xFF4B1800), modifier = Modifier.padding(bottom = 18.dp))
-            if (final) FinalAudio(presentation, analysis, header = false)
-            else DraftFeedback(analysis, presentation.state.entry?.body.orEmpty())
+    Surface(color = JournalBrand.Paper, shape = NotebookPaperShape, shadowElevation = 3.dp, border = androidx.compose.foundation.BorderStroke(.6.dp, Color(0xFFE6DECC))) {
+        Column(Modifier.fillMaxWidth().drawBehind {
+            drawLine(Color(0xFFD58B78), Offset(14.dp.toPx(), 0f), Offset(14.dp.toPx(), size.height), 1.dp.toPx())
+        }.padding(start = 28.dp, end = 14.dp, top = 20.dp, bottom = 36.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 17.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
+                Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 27.sp, color = Color(0xFF4B1800))
+            }
+            FeedbackPaperBody(includeBottomRule = final) {
+                if (final) FinalAudio(presentation, analysis, header = false)
+                else DraftFeedback(analysis, presentation.state.entry?.body.orEmpty())
+            }
         }
     }
+    }
+}
+
+@Composable
+private fun FeedbackPaperBody(includeBottomRule: Boolean, content: @Composable () -> Unit) {
+    val fontSize = LocalJournalTypography.current.size
+    Column(Modifier.fillMaxWidth().drawBehind {
+        val pitch = (fontSize * 2.7).sp.toPx()
+        var y = pitch
+        val end = size.height + if (includeBottomRule) .5f else -.5f
+        while (y <= end) {
+            drawLine(Color(0xFFC4CFCF), Offset(0f, y), Offset(size.width, y), .5.dp.toPx())
+            y += pitch
+        }
+    }) {
+        CompositionLocalProvider(LocalRubyOnPaper provides true, content = content)
     }
 }
 

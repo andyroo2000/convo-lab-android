@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 @Composable
 fun VoicePicker(options: VoiceOptions, busy: Boolean, dismiss: () -> Unit, choose: (NarrationVoice) -> Unit) {
     JournalSheet("Narration voice", dismiss) {
-        Text("Used when you play the corrected version.")
+        Text("Used when you play the corrected version.", color = JournalStyle.Ink.copy(alpha = .5f))
         options.voices.chunked(2).forEach { voices ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 voices.forEach { voice ->

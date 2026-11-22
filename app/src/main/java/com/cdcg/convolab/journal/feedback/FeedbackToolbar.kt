@@ -30,7 +30,7 @@ fun FeedbackToolbar(final: Boolean, choose: (Boolean) -> Unit, presentation: Fee
         VersionPill("Final", final, presentation.state.finalEdit == null) { choose(true) }
         Spacer(Modifier.weight(1f))
         Box {
-            TextButton(onClick = { menu = true }, modifier = Modifier.semantics { contentDescription = "More journal options" }) { Text("⋯", fontSize = 24.sp) }
+            TextButton(onClick = { menu = true }, modifier = Modifier.semantics { contentDescription = "More journal options" }) { Text("⋯", fontSize = 24.sp, color = Color(0xFF398B49)) }
             PaperMenu(menu, { menu = false }) {
                 PaperMenuItem(if (copied) "Copied" else "Copy text", JournalSymbol.Contents, action = {
                     clipboard.setText(AnnotatedString(presentation.state.finalEdit?.text ?: analysis.copyText(final))); copied = true; menu = false
