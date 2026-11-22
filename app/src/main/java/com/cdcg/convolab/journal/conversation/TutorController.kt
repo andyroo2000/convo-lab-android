@@ -15,7 +15,27 @@ data class TutorState(val source: QuestionSource? = null, val question: TutorQue
 class TutorController(private val api: TutorGateway, private val scope: CoroutineScope) {
     private val mutableState = MutableStateFlow(TutorState())
     val state = mutableState.asStateFlow()
+    private val mutableWaitingTutor = MutableStateFlow<Tutor?>(null)
+    val waitingTutor = mutableWaitingTutor.asStateFlow()
+    private var preferenceRevision = 0L
     private var work: Job? = null
+
+    fun loadWaitingTutor() {
+        val revision = preferenceRevision
+        scope.launch {
+            try {
+                val preferences = api.preferences()
+                if (preferenceRevision == revision) rememberTutor(preferences)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Artwork is optional; submission remains available. */ }
+        }
+    }
+
+    private fun rememberTutor(preferences: TutorPreferences) {
+        preferenceRevision++
+        mutableWaitingTutor.value = preferences.tutors.firstOrNull { it.id == preferences.selectedId } ?: preferences.tutors.firstOrNull()
+    }
+
     private var generation = 0L
 
     suspend fun follow(workflow: WorkflowController) {
@@ -49,6 +69,7 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
 
     fun choose(tutor: Tutor) = action { source, epoch ->
         val preferences = api.choose(tutor)
+        rememberTutor(preferences)
         publish(epoch) { it.copy(preferences = preferences, choosing = false,
             notice = "${tutor.name} will teach future questions. Earlier questions keep their original tutor.") }
         if (source != null && state.value.question?.tutor == null) {
@@ -60,6 +81,7 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
     private suspend fun loadPicker(epoch: Long) {
         publish(epoch) { it.copy(choosing = true) }
         val preferences = api.preferences()
+        rememberTutor(preferences)
         publish(epoch) { it.copy(preferences = preferences) }
     }
 

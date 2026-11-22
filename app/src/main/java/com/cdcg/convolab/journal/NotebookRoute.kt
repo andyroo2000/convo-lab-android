@@ -25,14 +25,14 @@ import com.cdcg.convolab.journal.conversation.*
 fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
     val factory = remember(context, sessions) { viewModelFactory {
-        initializer { NotebookViewModel(sessions, workflow = { session, scope ->
+        initializer { NotebookViewModel(sessions, workflow = { session, scope, repository ->
             val api = JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)
-            WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id)), scope)
+            WorkflowController(WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id), acceptMetadata = repository::acceptFeedbackMetadata), scope)
         }, tutor = { session, scope ->
             TutorController(TutorApi(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)), scope)
         }, conversation = { session, repository, tutor ->
             val api = JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire)
-            val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id))
+            val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id), acceptMetadata = repository::acceptFeedbackMetadata)
             ConversationController(ConversationAccess(ConversationApi(api), repository, { scope -> WorkflowController(workflows, scope) }, tutor))
         }, preferences = { session, scope -> JournalViewPreferences(context.noBackupFilesDir, session.account.id, scope) }) { session ->
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire),
@@ -48,10 +48,11 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         val workflow = binding?.workflow
         val feedback = workflow?.state?.collectAsStateWithLifecycle()?.value
         val teacher = binding?.tutor
+        val waitingTutor = teacher?.waitingTutor?.collectAsStateWithLifecycle()?.value
         val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
         val conversation = binding?.conversation?.session?.collectAsStateWithLifecycle()?.value
         val conversationState = conversation?.state?.collectAsStateWithLifecycle()?.value
-        CompositionLocalProvider(LocalJournalViewPreferences provides binding?.preferences) {
+        CompositionLocalProvider(LocalJournalViewPreferences provides binding?.preferences, LocalThinkingTutor provides waitingTutor) {
         NotebookScreen(state, current, NotebookPanels(feedback = feedback?.let { FeedbackPresentation(it, workflow) },
             tutor = tutorState?.let { TutorPresentation(it, teacher) },
             conversation = conversationState?.let { ConversationPresentation(it, conversation) }), menu = menu)

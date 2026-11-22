@@ -114,6 +114,32 @@ class TutorControllerTest {
         assertEquals(api.ren, controller.state.value.question?.tutor)
         assertEquals(2, api.prepared)
     }
+    @Test fun waitingPortraitLoadsWithoutOpeningThePickerOrPreparingAQuestion() = runTest {
+        val api = TutorFixture()
+        val controller = TutorController(api, backgroundScope)
+        controller.loadWaitingTutor()
+        runCurrent()
+        assertEquals(api.hana, controller.waitingTutor.value)
+        assertFalse(controller.state.value.choosing)
+        assertEquals(0, api.prepared)
+        controller.close()
+        assertEquals(api.hana, controller.waitingTutor.value)
+    }
+
+    @Test fun anOlderPortraitReadCannotUndoANewTutorChoice() = runTest {
+        val api = TutorFixture()
+        val response = CompletableDeferred<TutorPreferences>()
+        api.catalogResult = { response.await() }
+        val controller = TutorController(api, backgroundScope)
+        controller.loadWaitingTutor()
+        runCurrent()
+        controller.choose(api.ren)
+        runCurrent()
+        response.complete(TutorPreferences("hana", listOf(api.hana, api.ren)))
+        runCurrent()
+        assertEquals(api.ren, controller.waitingTutor.value)
+    }
+
 }
 
 private class TutorFixture : TutorGateway {
@@ -122,11 +148,12 @@ private class TutorFixture : TutorGateway {
     val sample = TutorQuestion(JournalIds.newId(), "何をしましたか。", "何[なに]をしましたか。", "What did you do?", hana, "ready", null)
     var prepared = 0
     var failCatalog = false
+    var catalogResult: suspend () -> TutorPreferences = { TutorPreferences("hana", listOf(hana, ren)) }
     var prepareResult: suspend () -> TutorQuestion = { sample }
     override suspend fun prepare(source: QuestionSource): TutorQuestion { prepared++; return prepareResult() }
     override suspend fun preferences(): TutorPreferences {
         if (failCatalog) throw java.io.IOException("offline")
-        return TutorPreferences("hana", listOf(hana, ren))
+        return catalogResult()
     }
     var chooseResult: suspend (Tutor) -> TutorPreferences = { TutorPreferences(it.id, listOf(hana, ren)) }
     override suspend fun choose(tutor: Tutor) = chooseResult(tutor)

@@ -31,10 +31,13 @@ class ReplyController(initial: JournalRecord, private val repository: JournalRep
             writer.enqueue(draft)
         } catch (_: IllegalArgumentException) { mutableState.update { it.copy(error = "Use up to 20,000 characters without null characters.") } }
     }
-    fun beginEditing() {
-        if (state.value.busy || workflow.state.value.busy) return
+    fun beginEditing() = action {
+        if (workflow.state.value.busy) return@action
+        writer.flush()
+        val record = repository.record(draft.key) ?: return@action
+        draft = record.editableDraft()
         workflow.cancel()
-        mutableState.update { it.copy(editing = true) }
+        mutableState.update { it.copy(record = record, text = draft.body, editing = true) }
     }
     suspend fun flush() = writer.flush()
     fun retryLocal() = action { writer.flush() }

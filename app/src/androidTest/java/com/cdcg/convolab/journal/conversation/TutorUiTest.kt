@@ -53,7 +53,7 @@ class TutorUiTest {
         compose.onNodeWithText("What did you do today?").assertIsDisplayed()
         capture("tutor-question.png")
         compose.onNodeWithContentDescription("Account menu").performClick()
-        compose.onNodeWithText("Tutor").performClick()
+        compose.onNodeWithText("Choose your tutor").performClick()
         compose.waitUntil(5_000) { controller.state.value.preferences != null && !controller.state.value.busy }
         compose.onNodeWithContentDescription("Hana").assertIsDisplayed()
         capture("tutor-picker.png")

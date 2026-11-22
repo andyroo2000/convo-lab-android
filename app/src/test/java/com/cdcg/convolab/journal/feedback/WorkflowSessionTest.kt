@@ -291,6 +291,87 @@ class WorkflowSessionTest {
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }
         catch (_: IOException) { assertEquals(3, calls) }
     }
+
+    @Test fun generatedTitleDuringPollingCompletesWithoutResubmitting() = runTest {
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Resolved) }
+            submitResult = { analysis().copy(status = WorkStatus.Processing) }
+            analysisResult = { AnalysisResponse(entry.copy(title = "A sunny day", version = 2), analysis()) }
+        }
+        var accepted: JournalEntry? = null
+        val access = WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)) { _, remote -> accepted = remote }
+        val session = WorkflowSession(entry, access) {}
+        session.begin()
+        assertEquals(2, accepted?.version)
+        assertEquals("A sunny day", accepted?.title)
+        api.editResult = { analysis("手動で直した文章。") }
+        session.editFinal(FinalEdit(analysisId, 1, "手動で直した文章。"))
+        assertEquals(1, api.edits.single().expectedRevision)
+        assertEquals(WorkStatus.Ready, session.snapshot.analysis?.status)
+        assertFalse(storage.record!!.submissionRequested)
+        assertEquals(1, api.starts)
+        assertEquals(1, api.analysisReads)
+        val reopened = WorkflowSession(entry, access) {}
+        reopened.load()
+        reopened.refresh()
+        assertEquals(WorkStatus.Ready, reopened.snapshot.analysis?.status)
+        assertEquals(1, api.starts)
+    }
+
+    @Test fun aRealWritingChangeDuringPollingKeepsThePendingWork() = runTest {
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Resolved) }
+            submitResult = { analysis().copy(status = WorkStatus.Processing) }
+            analysisResult = { AnalysisResponse(entry.copy(body = "別の文章。", version = 2), analysis()) }
+        }
+        val session = WorkflowSession(entry, WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))) {}
+        try { session.begin(); fail("Expected writing conflict") }
+        catch (failure: ApiFailure) { assertEquals(409, failure.status) }
+        assertTrue(storage.record!!.submissionRequested)
+        assertEquals(WorkStatus.Processing, storage.record?.analysis?.status)
+        assertEquals(entry.body, session.entry.body)
+    }
+    @Test fun finalEditSurvivesReopenAfterTheServerGeneratesATitle() = runTest {
+        val titled = entry.copy(title = "Generated title", version = 2)
+        val api = FakeFeedback().apply {
+            analysisResult = { AnalysisResponse(titled, analysis()) }
+            editResult = { throw IOException("response lost") }
+        }
+        val storage = MemoryWorkflow()
+        val access = WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))
+        val session = WorkflowSession(entry, access) {}
+        session.refresh()
+        val edit = FinalEdit(analysisId, 1, "残したい修正。")
+        try { session.editFinal(edit); fail("Expected lost response") } catch (_: IOException) { }
+        val reopened = WorkflowSession(titled, access) {}
+        reopened.load()
+        assertEquals(edit, reopened.snapshot.pendingFinalEdit)
+        assertEquals(2, reopened.snapshot.sourceVersion)
+        assertEquals(1, reopened.snapshot.analysis?.sourceVersion)
+    }
+
+    @Test fun aBusyAnswerCannotReplaceTheDurableAnswerOrWaitingCaption() = runTest {
+        val response = CompletableDeferred<Clarification>()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Waiting) }
+            answerResult = { response.await() }
+        }
+        val storage = MemoryWorkflow()
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.submit(entry)
+        runCurrent()
+        controller.answer("First answer")
+        runCurrent()
+        controller.answer("Second answer")
+        runCurrent()
+        assertEquals("First answer", controller.state.value.lastAnswer)
+        assertEquals("First answer", storage.record?.pendingAnswer?.text)
+        assertEquals(1, api.answers.size)
+        controller.cancel()
+    }
+
 }
 
 private class MemoryWorkflow : WorkflowStorage {

@@ -31,7 +31,7 @@ import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
 class FeedbackPresentation(val state: WorkflowState, val controller: WorkflowController) {
-    val visible: Boolean get() = state.recovery != null || state.snapshot?.let { it.analysis != null || it.clarification != null || it.submissionRequested } == true
+    val visible: Boolean get() = state.busy || state.error != null || state.recovery != null || state.snapshot?.let { it.analysis != null || it.clarification != null || it.submissionRequested } == true
 }
 
 @Composable
@@ -40,21 +40,13 @@ fun FeedbackContent(presentation: FeedbackPresentation) {
     if (state.recovery != null) { WorkflowRecoveryCard(presentation); return }
     val analysis = state.snapshot?.analysis
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (analysis?.status == WorkStatus.Ready) FeedbackDocument(presentation, analysis)
-        else {
-            Surface(color = JournalBrand.Paper, shape = RoundedCornerShape(6.dp)) {
-                Column(Modifier.fillMaxWidth().padding(24.dp)) {
-                    Text(state.entry?.title ?: "Your draft", fontFamily = LocalJournalTypography.current.family, fontSize = 26.sp, color = Color(0xFF452713))
-                    Spacer(Modifier.height(18.dp))
-                    RubyText(state.entry?.body.orEmpty())
-                }
+        when {
+            analysis?.status == WorkStatus.Ready -> FeedbackDocument(presentation, analysis)
+            state.busy -> JournalThinking(lastAnswer = state.lastAnswer ?: state.snapshot?.pendingAnswer?.text, returnToDraft = presentation.controller::cancel)
+            state.snapshot?.clarification?.status == WorkStatus.Waiting -> {
+                WaitingTutorPortrait(Modifier.size(40.dp))
+                ClarificationCard(presentation, state.snapshot.clarification)
             }
-            val clarification = state.snapshot?.clarification
-            if (clarification?.status == WorkStatus.Waiting) ClarificationCard(presentation, clarification)
-        }
-        if (state.busy) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text("Preparing your feedback…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         FeedbackError(presentation)
     }
@@ -98,6 +90,7 @@ private fun FinalAudio(presentation: FeedbackPresentation, analysis: Analysis, h
 fun FeedbackError(presentation: FeedbackPresentation) {
     presentation.state.error?.let { message ->
         Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        if (!presentation.state.canRetry) TextButton(onClick = presentation.controller::cancel) { Text("Back to draft") }
         if (presentation.state.canRetry) TextButton(onClick = { presentation.controller.retry() }, enabled = !presentation.state.busy) { Text("Retry") }
     }
 }

@@ -25,11 +25,11 @@ fun AccountMenu(name: String, signOut: () -> Unit, openTypingLab: (() -> Unit)?,
     val navigationEnabled = LocalJournalNavigationEnabled.current
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.semantics { contentDescription = "Account menu" }) { AccountInitial(name) }
-        PaperMenu(expanded, { expanded = false }) {
+        PaperMenu(expanded, { expanded = false }, pointsToAccount = true) {
             PaperMenuGroup("Journal")
-            tutor?.let { PaperMenuItem("Tutor", JournalSymbol.Person, enabled = navigationEnabled) { expanded = false; it() } }
             PaperMenuItem("Appearance", JournalSymbol.Appearance) { expanded = false; panel = "Journal appearance" }
             PaperMenuItem("Keyboard", JournalSymbol.Keyboard) { expanded = false; panel = "How would you like to type?" }
+            tutor?.let { PaperMenuItem("Choose your tutor", JournalSymbol.Person, enabled = navigationEnabled) { expanded = false; it() } }
             HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
             PaperMenuGroup("Account")
             settings?.let { PaperMenuItem("Settings", JournalSymbol.Settings, enabled = navigationEnabled) { expanded = false; it() } }

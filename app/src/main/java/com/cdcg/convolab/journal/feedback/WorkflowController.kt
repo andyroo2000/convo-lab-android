@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 data class WorkflowState(
     val entry: JournalEntry? = null, val snapshot: WorkflowSnapshot? = null, val busy: Boolean = false,
     val error: String? = null, val canRetry: Boolean = true, val finalEdit: FinalEdit? = null,
-    val recovery: WorkflowRecovery? = null,
+    val recovery: WorkflowRecovery? = null, val lastAnswer: String? = null,
 )
 
 class WorkflowController(private val access: WorkflowAccess, private val scope: CoroutineScope) {
@@ -50,7 +50,10 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
         }
     }
 
-    fun answer(text: String) = request { it.answer(text) }
+    fun answer(text: String) = request { session ->
+        mutableState.update { it.copy(lastAnswer = text.trim()) }
+        session.answer(text)
+    }
 
     fun beginFinalEdit() {
         val analysis = state.value.snapshot?.analysis ?: return

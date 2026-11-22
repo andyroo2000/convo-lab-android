@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 @Composable
 fun ClarificationCard(presentation: FeedbackPresentation, clarification: Clarification) {
     val question = clarification.question ?: return
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var selected by rememberSaveable(question.id) { mutableStateOf<String?>(null) }
     var other by rememberSaveable(question.id) { mutableStateOf("") }
     val custom = "Something else"
@@ -31,7 +33,7 @@ fun ClarificationCard(presentation: FeedbackPresentation, clarification: Clarifi
                 ClarificationOption(choice, choice == selected, enabled) { selected = choice }
             }
             if (selected == custom) CustomAnswer(other, enabled) { other = it }
-            JournalDraftButton("Answer", { presentation.controller.answer(answer) }, style = DraftButtonStyle(enabled = enabled && answer.isNotBlank()),
+            JournalDraftButton("Answer", { focus.clearFocus(); keyboard?.hide(); presentation.controller.answer(answer) }, style = DraftButtonStyle(enabled = enabled && answer.isNotBlank()),
                 modifier = Modifier.testTag("clarification-send"))
             TextButton(onClick = presentation.controller::cancel) { Text("Back to draft", color = JournalStyle.Green) }
             if (pending) Text("Your answer is saved. Retry to confirm it was received.")
@@ -54,7 +56,7 @@ private fun ClarificationOption(title: String, chosen: Boolean, enabled: Boolean
     OutlinedButton(onClick = choose, enabled = enabled, modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, if (chosen) JournalStyle.Green else JournalStyle.Border),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = if (chosen) JournalStyle.Sage else Color.White, contentColor = JournalStyle.Ink)) {
-        RadioButton(selected = chosen, onClick = null)
+        RadioButton(selected = chosen, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = JournalStyle.Green, unselectedColor = JournalStyle.Ink))
         Text(title, Modifier.weight(1f).padding(start = 8.dp))
     }
 }

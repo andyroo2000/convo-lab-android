@@ -55,11 +55,14 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
             parsed[index].forEachIndexed { tokenIndex, token ->
                 if (token.reading == null) append(token.text) else {
                     val key = "$index-$tokenIndex"
-                    val baseWidth = measurer.measure(token.text, style.merge(run.style).copy(lineHeight = size.sp)).size.width
-                    val rubyWidth = measurer.measure(token.reading, style.copy(fontSize = (size * 0.48).sp)).size.width
-                    val width = with(density) { (maxOf(baseWidth, rubyWidth) + 2).toSp() }
-                    inline[key] = InlineTextContent(Placeholder(width, (size * if (appearance.compact) 1.6 else 2.0).sp, PlaceholderVerticalAlign.TextBottom)) {
-                        RubyInlineText(token, appearance, run)
+                    val (readingStyle, baseStyle) = rubyInlineStyles(appearance, run)
+                    val base = measurer.measure(token.text, baseStyle).size
+                    val reading = measurer.measure(token.reading, readingStyle).size
+                    val width = with(density) { (maxOf(base.width, reading.width) + 2).toSp() }
+                    // Font fallback metrics can exceed the requested line height, especially in compact serif text.
+                    val height = with(density) { (base.height + reading.height).toSp() }
+                    inline[key] = InlineTextContent(Placeholder(width, height, PlaceholderVerticalAlign.TextBottom)) {
+                        RubyInlineText(token, run, readingStyle, baseStyle)
                     }
                     appendInlineContent(key, token.text)
                 }
@@ -76,12 +79,22 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
     })
 }
 
-@Composable
-private fun RubyInlineText(token: RubyToken, appearance: RubyAppearance, run: RubyRun) {
+private fun rubyInlineStyles(appearance: RubyAppearance, run: RubyRun): Pair<TextStyle, TextStyle> {
     val (size, font) = appearance
+    val reading = TextStyle(letterSpacing = 0.sp, fontSize = (size * .48).sp,
+        lineHeight = (size * if (appearance.compact) .5 else .6).sp,
+        color = if (appearance.compact) run.style.color.takeOrElse { appearance.readingColor } else appearance.readingColor)
+    val base = TextStyle(fontFamily = font, fontWeight = run.style.fontWeight, fontStyle = run.style.fontStyle,
+        letterSpacing = 0.sp, fontSize = size.sp, lineHeight = (size * if (appearance.compact) 1.1 else 1.4).sp,
+        color = run.style.color.takeOrElse { appearance.color })
+    return reading to base
+}
+
+@Composable
+private fun RubyInlineText(token: RubyToken, run: RubyRun, readingStyle: TextStyle, baseStyle: TextStyle) {
     val click = run.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
     Column(Modifier.fillMaxSize().background(run.background).then(click), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(token.reading.orEmpty(), softWrap = false, letterSpacing = 0.sp, fontSize = (size * 0.48).sp, lineHeight = (size * if (appearance.compact) .5 else .6).sp, color = if (appearance.compact) run.style.color.takeOrElse { appearance.readingColor } else appearance.readingColor)
-        Text(token.text, fontFamily = font, fontWeight = run.style.fontWeight, fontStyle = run.style.fontStyle, softWrap = false, letterSpacing = 0.sp, fontSize = size.sp, lineHeight = (size * if (appearance.compact) 1.1 else 1.4).sp, color = run.style.color.takeOrElse { appearance.color })
+        Text(token.reading.orEmpty(), softWrap = false, style = readingStyle)
+        Text(token.text, softWrap = false, style = baseStyle)
     }
 }

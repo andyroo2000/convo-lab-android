@@ -62,7 +62,7 @@ fun NotebookScreen(state: NotebookState, controller: NotebookController, panels:
 private fun ColumnScope.NotebookBody(presentation: NotebookPresentation, keyboardVisible: Boolean, compact: Boolean) {
     val (state, controller, panels) = Triple(presentation.state, presentation.controller, presentation.panels)
     if (presentation.editing) FinalEditSheet(panels.feedback!!) else {
-        Column(Modifier.weight(1f, fill = keyboardVisible || !presentation.writing).verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(Modifier.weight(1f, fill = keyboardVisible || !presentation.writing).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 22.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             NotebookPage(state, controller, panels)
         }
         JournalInputFooter(compact) { if (presentation.writing) NotebookActions(state, controller, panels.feedback, compact) }
@@ -125,13 +125,15 @@ private fun RowScope.NotebookHeaderBrand(navigationColor: Color) {
 @Composable
 private fun NotebookActions(state: NotebookState, controller: NotebookController, feedback: FeedbackPresentation?, compact: Boolean) {
     val input = LocalInputHost.current
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Row(Modifier.fillMaxWidth().background(Color(0xFFFAF9F6)).padding(horizontal = 14.dp, vertical = actionPadding(compact)),
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         JournalDraftButton("Close", { input?.finish(); controller.requestClose() }, style = DraftButtonStyle(enabled = !state.busy, filled = false))
         JournalDraftButton(when { state.busy -> "Saving…"; feedback?.visible == true -> "Back to draft"; feedback != null -> "Submit"; else -> "Save draft" }, action = {
             input?.finish()
             if (feedback?.visible == true) feedback.controller.cancel()
-            else controller.save { feedback?.controller?.submit(it) }
+            else { focus.clearFocus(); keyboard?.hide(); controller.save { feedback?.controller?.submit(it) } }
         }, style = DraftButtonStyle(enabled = state.canEdit && state.draft.body.isNotBlank()), modifier = Modifier.testTag("journal-save"))
     }
 }

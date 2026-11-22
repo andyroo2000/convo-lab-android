@@ -8,7 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
-class WorkflowAccess(val api: FeedbackGateway, val storage: WorkflowStorage, val io: CoroutineDispatcher = Dispatchers.IO)
+class WorkflowAccess(val api: FeedbackGateway, val storage: WorkflowStorage, val io: CoroutineDispatcher = Dispatchers.IO,
+    val acceptMetadata: suspend (JournalEntry, JournalEntry) -> Unit = { _, _ -> })
 
 /** One entry/version, with durable answer and submission state before every retryable mutation. */
 class WorkflowSession(
@@ -16,6 +17,7 @@ class WorkflowSession(
     private val access: WorkflowAccess,
     private val publish: (WorkflowSnapshot) -> Unit,
 ) {
+    private var verifiedVersion = entry.version
     var snapshot = WorkflowSnapshot(JournalId(entry.id), entry.version)
         private set
 
@@ -73,7 +75,7 @@ class WorkflowSession(
         checkEntry(response.entry)
         val analysis = response.analysis ?: return
         checkAnalysis(analysis)
-        checkpoint(snapshot.copy(analysis = analysis))
+        checkpoint(snapshot.copy(analysis = analysis, sourceVersion = checkpointVersion(analysis)))
         if (analysis.status.pending) receiveAnalysis(analysis)
     }
 
@@ -129,7 +131,7 @@ class WorkflowSession(
         val budget = JournalPollBudget()
         while (true) {
             checkAnalysis(current)
-            checkpoint(snapshot.copy(analysis = current, submissionRequested = current.status != WorkStatus.Ready))
+            checkpoint(snapshot.copy(analysis = current, sourceVersion = checkpointVersion(current), submissionRequested = current.status != WorkStatus.Ready))
             if (current.status == WorkStatus.Failed) throw WorkflowFailure(current.error ?: "Could not prepare feedback. Please retry.")
             if (!current.status.pending) return
             budget.pause(2_000)
@@ -139,10 +141,20 @@ class WorkflowSession(
         }
     }
 
-    private fun checkEntry(remote: JournalEntry) {
-        checkVersion(remote.version)
+    private suspend fun checkEntry(remote: JournalEntry) {
+        // Feedback can atomically generate a title and advance the entry version.
+        // Keep the submission's source version for retries, but accept newer metadata
+        // only when the analysis response proves that the writing is still identical.
+        if (remote.version < verifiedVersion) throw ApiFailure(409)
         if (remote.id != entry.id || remote.body != entry.body) throw ApiFailure(409)
+        access.acceptMetadata(entry, remote)
+        verifiedVersion = remote.version
     }
+
+    // Pending work keeps its mutation identity. Completed feedback can use the
+    // acknowledged metadata version so reopening a final edit is not a false conflict.
+    private fun checkpointVersion(analysis: Analysis) =
+        if (analysis.status == WorkStatus.Ready) verifiedVersion else snapshot.sourceVersion
 
     private fun checkAnalysis(analysis: Analysis) {
         // The API only returns analysis for the current body. A title/date-only save can
