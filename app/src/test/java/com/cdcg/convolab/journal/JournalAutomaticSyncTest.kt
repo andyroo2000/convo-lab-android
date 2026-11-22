@@ -162,6 +162,51 @@ class JournalAutomaticSyncTest {
         assertEquals("Saved on this device", controller.state.value.syncStatus)
     }
 
+    @Test fun finishingAnOlderSaveDoesNotHideAFailedNewerLocalWrite() = runTest {
+        val storage = NotebookMemory()
+        val response = CompletableDeferred<Unit>()
+        val api = SyncGateway().apply { beforeResponse = { response.await() } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Old durable text")
+        val saving = launch { controller.synchronize() }
+        runCurrent()
+        storage.failWrites = true
+        controller.edit("New text still only in memory")
+        runCurrent()
+        response.complete(Unit)
+        saving.join()
+        assertFalse(controller.state.value.savedLocally)
+        assertEquals("New text still only in memory", controller.state.value.draft.body)
+        assertTrue(controller.state.value.error.orEmpty().contains("could not be saved on this device"))
+    }
+
+    @Test fun rejectedWritingShowsWhyAutomaticSyncPaused() = runTest {
+        val api = SyncGateway().apply { fail = ApiFailure(422) }
+        val repository = JournalRepository(api, NotebookMemory(), StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Rejected writing")
+        controller.synchronize()
+        assertTrue(controller.state.value.error.orEmpty().contains("could not sync"))
+        assertTrue(controller.state.value.savedLocally)
+    }
+
+    @Test fun temporaryServerFailureAllowsKeepAndCloseWithDurableWriting() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway().apply { fail = ApiFailure(500) }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Keep through server outage")
+        controller.requestClose()
+        controller.keepAndClose().join()
+        assertFalse(controller.state.value.closePrompt)
+        assertEquals("", controller.state.value.draft.body)
+        assertEquals("Keep through server outage", storage.records.values.single().draft?.body)
+    }
+
     @Test fun blankRepliesAndPendingDeletionsAreNotAutomaticallySaved() = runTest {
         val storage = NotebookMemory()
         val api = SyncGateway()

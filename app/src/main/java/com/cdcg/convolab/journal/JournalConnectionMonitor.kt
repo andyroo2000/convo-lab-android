@@ -13,12 +13,15 @@ class JournalConnectionMonitor(context: Context, private val connected: () -> Un
     private var registered = false
     fun start() {
         if (registered) return
-        manager.registerDefaultNetworkCallback(callback)
-        registered = true
+        try {
+            manager?.registerDefaultNetworkCallback(callback) ?: return
+            registered = true
+        } catch (_: RuntimeException) { /* Foreground polling remains available. */ }
     }
     fun stop() {
         if (!registered) return
-        manager.unregisterNetworkCallback(callback)
+        try { manager?.unregisterNetworkCallback(callback) }
+        catch (_: RuntimeException) { /* Already unregistered or service unavailable. */ }
         registered = false
     }
 }

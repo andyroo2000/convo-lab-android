@@ -222,9 +222,23 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { current ->
             if (current.draft.id != record.id) current else current.copy(
                 draft = current.draft.copy(expectedVersion = maxOf(current.draft.expectedVersion, record.acknowledgedVersion)),
-                savedLocally = record.hasPendingWriting,
+                savedLocally = localSaveStatus(current, record),
+                error = syncError(current, record),
                 canRecoverCopy = record.syncRejection in setOf(404, 409))
         }
+    }
+
+    private fun localSaveStatus(current: NotebookState, record: JournalRecord): Boolean {
+        val pending = record.draft ?: record.pendingSave
+        if (pending != null) return pending.editId == current.draft.editId || current.savedLocally
+        return if (record.entry?.body == current.draft.body) false else current.savedLocally
+    }
+
+    private fun syncError(current: NotebookState, record: JournalRecord): String? = when (record.syncRejection) {
+        400, 422 -> "This writing could not sync. Edit it or try Save again. It is kept on this device."
+        403 -> "This account cannot sync right now. Your writing is kept on this device; try Save after signing in again."
+        null -> if (!record.hasPendingWriting && record.entry?.body == current.draft.body) null else current.error
+        else -> current.error
     }
 
     private fun writeResult(editId: String, success: Boolean) {
