@@ -26,7 +26,7 @@ import com.cdcg.convolab.ui.JournalStyle
 internal fun SettingsField(input: AuthInput, value: String, onEdit: (String) -> Unit, enabled: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(input.label)
-        BasicTextField(value, onEdit, fieldModifier(input.label), enabled = enabled, singleLine = true,
+        BasicTextField(value, onEdit, Modifier.settingsField(input.label), enabled = enabled, singleLine = true,
             textStyle = JournalStyle.Body.copy(color = JournalBrand.Ink), cursorBrush = SolidColor(JournalBrand.Blue),
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = input.keyboard),
             decorationBox = { FieldSurface { it() } })
@@ -37,7 +37,7 @@ internal fun SettingsField(input: AuthInput, value: String, onEdit: (String) -> 
 internal fun SettingsPasswordField(label: String, state: TextFieldState, enabled: Boolean, placeholder: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         if (!placeholder) Text(label)
-        BasicSecureTextField(state, fieldModifier(label), enabled = enabled,
+        BasicSecureTextField(state, Modifier.settingsField(label), enabled = enabled,
             textStyle = JournalStyle.Body.copy(color = JournalBrand.Ink), cursorBrush = SolidColor(JournalBrand.Blue),
             decorator = { inner -> FieldSurface {
                 if (placeholder && state.text.isEmpty()) Text(label, color = JournalBrand.Ink.copy(alpha = .5f))
@@ -46,7 +46,7 @@ internal fun SettingsPasswordField(label: String, state: TextFieldState, enabled
     }
 }
 
-private fun fieldModifier(label: String) = Modifier.fillMaxWidth().testTag("auth-$label").semantics { contentDescription = label }
+private fun Modifier.settingsField(label: String) = fillMaxWidth().testTag("auth-$label").semantics { contentDescription = label }
 
 @Composable
 private fun FieldSurface(content: @Composable () -> Unit) {
