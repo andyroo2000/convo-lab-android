@@ -23,6 +23,8 @@ import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.AccountMenu
 import com.cdcg.convolab.ui.ConvoLabTheme
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import androidx.compose.ui.geometry.Offset
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -52,7 +54,9 @@ class FeedbackUiTest {
         assertEquals(entry.body, notebook.state.value.draft.body)
         assertEquals(0, notebook.state.value.draft.expectedVersion)
         assertTrue(notebook.state.value.records.any { it.entry == entry })
-        assertEquals(cached, workflow.state.value.snapshot?.analysis)
+        compose.onNodeWithText("404 · Entry Not Found").assertDoesNotExist()
+        compose.onNodeWithTag("journal-editor").assertTextEquals(entry.body)
+        assertNull(workflow.state.value.entry)
     }
 
     @Test fun missingEntryKeepsCachedWritingAndOffersRecoveryAtLargeText() {
@@ -150,7 +154,10 @@ class FeedbackUiTest {
         compose.onNodeWithText("I did").performClick()
         compose.onNodeWithTag("clarification-send").performScrollTo().performClick()
         compose.onNodeWithTag("journal-thinking").assertIsDisplayed()
-        compose.onNodeWithText("Hide English").performScrollTo().performClick()
+        val toggle = compose.onNodeWithText("Hide English").performScrollTo().fetchSemanticsNode().boundsInRoot
+        val targetInset = 20 * compose.activity.resources.displayMetrics.density
+        compose.onRoot().performTouchInput { click(Offset(toggle.center.x, toggle.center.y - targetInset)) }
+        compose.onNodeWithText("Show English").assertIsDisplayed()
         compose.onNodeWithText("I did").performScrollTo().assertIsDisplayed()
         screenshot("feedback-illustrated-waiting")
         compose.runOnIdle { api.finishFeedback!!.complete(Unit) }
@@ -185,6 +192,11 @@ class FeedbackUiTest {
         val storage = FeedbackNotebookStorage(JournalRecord(entry, JournalDraft.from(entry)))
         notebook = NotebookController(JournalRepository(FeedbackNotebookGateway(), storage), scope)
         workflow = WorkflowController(WorkflowAccess(api, UiWorkflowStorage(saved)), scope)
+        scope.launch {
+            notebook.state.filterNot { it.loading }.map { it.draft.id }.distinctUntilChanged().collect { id ->
+                if (workflow.state.value.entry?.id != id) workflow.cancel()
+            }
+        }
         compose.setContent {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()

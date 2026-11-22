@@ -59,6 +59,22 @@ class WorkflowSessionTest {
         assertTrue(controller.state.value.readyForConversation)
     }
 
+    @Test fun readyEntryBecomingMissingStopsConversationWithoutErasingFeedback() = runTest {
+        val api = FakeFeedback().apply { analysisResult = { AnalysisResponse(it, analysis()) } }
+        val storage = MemoryWorkflow()
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        assertTrue(controller.state.value.readyForConversation)
+        val cached = storage.record
+        api.analysisResult = { throw ApiFailure(404) }
+        controller.retry()
+        runCurrent()
+        assertFalse(controller.state.value.readyForConversation)
+        assertTrue(controller.state.value.missingEntry)
+        assertEquals(cached, storage.record)
+    }
+
     @Test fun failedReadAndMissingClarificationAreNotTreatedAsDeletedEntries() = runTest {
         val api = FakeFeedback().apply {
             analysisResult = { throw ApiFailure(503) }

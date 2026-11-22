@@ -31,6 +31,6 @@ Large-text recovery: ![](submission-parity/pixel-missing-large.png)
 
 ## Verification
 
-Local build, lint, and 162 JVM tests passed. Pixel checks cover clarification submission and custom answers, illustrated waiting, generated titles, corrected-version audio controls, final editing with the keyboard and double-size text, local recovery of missing entries, conversation retries without losing writing, additional reply turns, and audio playback. CodeScene MCP reviews and staged/branch checks are required before landing this change.
+Local build, lint, and 164 JVM tests passed. Pixel checks cover clarification submission and custom answers, illustrated waiting, generated titles, corrected-version audio controls, final editing with the keyboard and double-size text, local recovery of missing entries, conversation retries without losing writing, additional reply turns, and audio playback. CodeScene MCP reviewed all 23 changed source files clean; staged and branch checks passed. Review follow-up adds a Ready-to-404 regression, production NotebookViewModel recovery coverage, and a Pixel tap 20 dp above the language label’s center to verify its expanded touch target. The missing-entry Pixel test also confirms that recovery reveals the copied draft.
 
 The account diagnostic only read existing entries. Submission and recovery mutations use isolated fake gateways and storage, not the personal account.
