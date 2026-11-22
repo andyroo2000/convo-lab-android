@@ -291,6 +291,42 @@ class WorkflowSessionTest {
         try { JournalPolling.read { calls++; throw IOException("offline") }; fail("Expected bounded failure") }
         catch (_: IOException) { assertEquals(3, calls) }
     }
+
+    @Test fun generatedTitleDuringPollingCompletesWithoutResubmitting() = runTest {
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Resolved) }
+            submitResult = { analysis().copy(status = WorkStatus.Processing) }
+            analysisResult = { AnalysisResponse(entry.copy(title = "A sunny day", version = 2), analysis()) }
+        }
+        val access = WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))
+        val session = WorkflowSession(entry, access) {}
+        session.begin()
+        assertEquals(WorkStatus.Ready, session.snapshot.analysis?.status)
+        assertFalse(storage.record!!.submissionRequested)
+        assertEquals(1, api.starts)
+        assertEquals(1, api.analysisReads)
+        val reopened = WorkflowSession(entry, access) {}
+        reopened.load()
+        reopened.refresh()
+        assertEquals(WorkStatus.Ready, reopened.snapshot.analysis?.status)
+        assertEquals(1, api.starts)
+    }
+
+    @Test fun aRealWritingChangeDuringPollingKeepsThePendingWork() = runTest {
+        val storage = MemoryWorkflow()
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Resolved) }
+            submitResult = { analysis().copy(status = WorkStatus.Processing) }
+            analysisResult = { AnalysisResponse(entry.copy(body = "別の文章。", version = 2), analysis()) }
+        }
+        val session = WorkflowSession(entry, WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler))) {}
+        try { session.begin(); fail("Expected writing conflict") }
+        catch (failure: ApiFailure) { assertEquals(409, failure.status) }
+        assertTrue(storage.record!!.submissionRequested)
+        assertEquals(WorkStatus.Processing, storage.record?.analysis?.status)
+        assertEquals(entry.body, session.entry.body)
+    }
 }
 
 private class MemoryWorkflow : WorkflowStorage {

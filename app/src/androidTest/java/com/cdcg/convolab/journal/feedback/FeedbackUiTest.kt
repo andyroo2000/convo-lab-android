@@ -107,6 +107,37 @@ class FeedbackUiTest {
         compose.onNodeWithText("Final").performScrollTo().assertIsDisplayed()
     }
 
+    @Test fun generatedTitleCompletesSubmissionAfterIllustratedWaiting() {
+        api.finishFeedback = CompletableDeferred()
+        launchNotebook(submit = true)
+        compose.onNodeWithText("I did").performClick()
+        compose.onNodeWithTag("clarification-send").performScrollTo().performClick()
+        compose.onNodeWithTag("journal-thinking").assertIsDisplayed()
+        compose.onNodeWithText("Hide English").performScrollTo().performClick()
+        compose.onNodeWithText("I did").performScrollTo().assertIsDisplayed()
+        screenshot("feedback-illustrated-waiting")
+        compose.runOnIdle { api.finishFeedback!!.complete(Unit) }
+        compose.waitUntil(5_000) { workflow.state.value.snapshot?.analysis?.status == WorkStatus.Ready }
+        assertNull(workflow.state.value.error)
+        compose.onNodeWithTag("journal-thinking").assertDoesNotExist()
+        compose.onNodeWithText("Final").performScrollTo().performClick()
+        screenshot("feedback-generated-title-final")
+        assertEquals("映画を見ました。", workflow.state.value.snapshot?.analysis?.finalText)
+    }
+
+    @Test fun waitingAtDoubleTextSizeKeepsTheAnswerAndLanguageControlReachable() {
+        api.finishFeedback = CompletableDeferred()
+        launchNotebook(submit = true, scale = 2f)
+        compose.onNodeWithText("I did").performScrollTo().performClick()
+        compose.onNodeWithTag("clarification-send").performScrollTo().performClick()
+        compose.onNodeWithText("Hide English").performScrollTo().performClick()
+        compose.onNodeWithText("I did").performScrollTo().assertIsDisplayed()
+        screenshot("feedback-waiting-double-text")
+        compose.runOnIdle { api.finishFeedback!!.complete(Unit) }
+        compose.waitUntil(5_000) { !workflow.state.value.busy }
+        assertNull(workflow.state.value.error)
+    }
+
     private fun launchNotebook(submit: Boolean, saved: WorkflowSnapshot? = null, scale: Float = 1f) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             // Match MainActivity: older Android does not force edge-to-edge on test hosts.
@@ -152,6 +183,7 @@ private class UiFeedbackGateway : FeedbackGateway {
     private val clarificationId = JournalIds.newId()
     private val questionId = JournalIds.newId()
     private val analysisId = JournalIds.newId()
+    var finishFeedback: CompletableDeferred<Unit>? = null
     var answerText: String? = null
     var editedText: String? = null
     private fun clarification(status: WorkStatus) = Clarification(clarificationId, 1, 1, status,
@@ -166,8 +198,11 @@ private class UiFeedbackGateway : FeedbackGateway {
     override suspend fun startClarification(entry: JournalEntry) = clarification(WorkStatus.Waiting)
     override suspend fun clarification(entry: JournalEntry) = clarification(WorkStatus.Waiting)
     override suspend fun answer(entry: JournalEntry, answer: ClarificationAnswer): Clarification { answerText = answer.text; return clarification(WorkStatus.Resolved) }
-    override suspend fun submit(entry: JournalEntry, clarificationId: String) = analysis()
-    override suspend fun analysis(entry: JournalEntry) = AnalysisResponse(entry, analysis())
+    override suspend fun submit(entry: JournalEntry, clarificationId: String) = analysis().let { if (finishFeedback == null) it else it.copy(status = WorkStatus.Queued) }
+    override suspend fun analysis(entry: JournalEntry): AnalysisResponse {
+        finishFeedback?.await()
+        return AnalysisResponse(if (finishFeedback == null) entry else entry.copy(title = "A generated title", version = entry.version + 1), analysis())
+    }
     override suspend fun editFinal(entry: JournalEntry, edit: FinalEdit): Analysis { editedText = edit.text; return analysis() }
 }
 

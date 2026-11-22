@@ -55,11 +55,13 @@ class JournalVisualParityTest {
     @Test fun accountMenuGroupsJournalPreferencesAndOpensPaperAppearance() {
         compose.setContent {
             ConvoLabTheme { Box(Modifier.fillMaxSize().background(JournalBrand.Green).safeDrawingPadding().padding(20.dp)) {
-                CompositionLocalProvider(LocalTutorPicker provides {}) { AccountMenu("Naomi", {}, null, {}) }
+                Box(Modifier.align(androidx.compose.ui.Alignment.TopEnd)) {
+                    CompositionLocalProvider(LocalTutorPicker provides {}) { AccountMenu("Naomi", {}, null, {}) }
+                }
             } }
         }
         compose.onNodeWithContentDescription("Account menu").performClick()
-        compose.onNodeWithText("Tutor").assertIsDisplayed()
+        compose.onNodeWithText("Choose your tutor").assertIsDisplayed()
         compose.onNodeWithText("Settings").assertIsDisplayed()
         capture("parity-account-menu.png")
         compose.onNodeWithText("Appearance").performClick()

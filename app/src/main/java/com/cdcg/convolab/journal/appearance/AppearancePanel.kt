@@ -19,8 +19,8 @@ import com.cdcg.convolab.ui.*
 fun AppearancePanel() {
     val store = LocalAppearanceStore.current
     val typography = LocalJournalTypography.current
-    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, JournalStyle.Border)) {
-        Text("今日はいい一日でした。", style = typography.style,
+    Surface(color = Color.White, contentColor = JournalStyle.Ink, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, JournalStyle.Border)) {
+        Text("今日はいい一日でした。", style = typography.style.copy(lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified),
             modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("appearance-preview"))
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -46,7 +46,7 @@ fun AppearancePanel() {
 @Composable
 private fun FontCard(font: JournalFont, chosen: Boolean, modifier: Modifier, choose: () -> Unit) {
     Surface(onClick = choose, modifier = modifier.semantics { selected = chosen }, color = if (chosen) JournalStyle.Sage else Color.White,
-        shape = RoundedCornerShape(12.dp), border = BorderStroke(if (chosen) 2.dp else 1.dp, if (chosen) JournalStyle.Green else JournalStyle.Border)) {
+        contentColor = JournalStyle.Ink, shape = RoundedCornerShape(12.dp), border = BorderStroke(if (chosen) 2.dp else 1.dp, if (chosen) JournalStyle.Green else JournalStyle.Border)) {
         Box {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Aa あ", fontFamily = JournalTypography(font).family, fontSize = 28.sp, modifier = Modifier.clearAndSetSemantics {})

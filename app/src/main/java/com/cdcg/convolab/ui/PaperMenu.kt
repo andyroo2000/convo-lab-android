@@ -10,17 +10,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun PaperMenu(expanded: Boolean, dismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun PaperMenu(expanded: Boolean, dismiss: () -> Unit, pointsToAccount: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     DropdownMenu(expanded, dismiss, modifier = Modifier.widthIn(min = 260.dp, max = 350.dp),
-        shape = RoundedCornerShape(24.dp), containerColor = JournalBrand.Paper, tonalElevation = 0.dp, shadowElevation = 8.dp) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
+        shape = if (pointsToAccount) AccountPopoverShape else RoundedCornerShape(24.dp), containerColor = androidx.compose.ui.graphics.Color(0xFFFBF5E0), tonalElevation = 0.dp, shadowElevation = 8.dp) {
+        Column(Modifier.padding(top = if (pointsToAccount) 8.dp else 0.dp).padding(horizontal = 14.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp), content = content)
     }
 }
 
 @Composable
 fun PaperMenuGroup(title: String) {
-    Text(title.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.5.sp,
-        color = JournalBrand.Ink.copy(alpha = .67f), modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+    Text(title.uppercase(), fontSize = 10.sp, lineHeight = 12.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Medium, letterSpacing = 1.5.sp,
+        color = JournalBrand.Ink.copy(alpha = .67f), modifier = Modifier.padding(horizontal = 12.dp))
 }
 
 @Composable

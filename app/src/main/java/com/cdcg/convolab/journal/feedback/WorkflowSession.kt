@@ -140,7 +140,10 @@ class WorkflowSession(
     }
 
     private fun checkEntry(remote: JournalEntry) {
-        checkVersion(remote.version)
+        // Feedback can atomically generate a title and advance the entry version.
+        // Keep the submission's source version for retries, but accept newer metadata
+        // only when the analysis response proves that the writing is still identical.
+        if (remote.version < entry.version) throw ApiFailure(409)
         if (remote.id != entry.id || remote.body != entry.body) throw ApiFailure(409)
     }
 

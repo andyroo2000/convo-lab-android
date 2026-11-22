@@ -69,7 +69,7 @@ private fun InputEditorField(editor: JournalInputEditor, options: WritingOptions
             Column {
                 editor.validationMessage?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
                 Box {
-                if (editor.snapshot.text.isEmpty()) Text(options.placeholder, style = options.style, color = JournalBrand.Ink.copy(alpha = 0.4f))
+                if (editor.snapshot.text.isEmpty()) Text(options.placeholder, style = options.style, color = androidx.compose.ui.graphics.Color(0x4D3C3C43))
                 inner()
                 }
             }

@@ -40,6 +40,7 @@ class NotebookViewModel(sessions: SessionController,
                         val journal = repository(session)
                         val feedback = workflow?.invoke(session, this)
                         val teacher = tutor?.invoke(session, this)
+                        teacher?.loadWaitingTutor()
                         val replies = teacher?.let { conversation?.invoke(session, journal, it) }
                         val notebook = NotebookController(journal, this) { replies?.beforeDelete(it) }
                         mutableBinding.value = NotebookBinding(session.account.id, notebook, feedback, teacher, replies, preferences?.invoke(session, this))

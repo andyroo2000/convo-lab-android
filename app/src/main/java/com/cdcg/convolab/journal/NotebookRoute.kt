@@ -48,10 +48,11 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
         val workflow = binding?.workflow
         val feedback = workflow?.state?.collectAsStateWithLifecycle()?.value
         val teacher = binding?.tutor
+        val waitingTutor = teacher?.waitingTutor?.collectAsStateWithLifecycle()?.value
         val tutorState = teacher?.state?.collectAsStateWithLifecycle()?.value
         val conversation = binding?.conversation?.session?.collectAsStateWithLifecycle()?.value
         val conversationState = conversation?.state?.collectAsStateWithLifecycle()?.value
-        CompositionLocalProvider(LocalJournalViewPreferences provides binding?.preferences) {
+        CompositionLocalProvider(LocalJournalViewPreferences provides binding?.preferences, LocalThinkingTutor provides waitingTutor) {
         NotebookScreen(state, current, NotebookPanels(feedback = feedback?.let { FeedbackPresentation(it, workflow) },
             tutor = tutorState?.let { TutorPresentation(it, teacher) },
             conversation = conversationState?.let { ConversationPresentation(it, conversation) }), menu = menu)
