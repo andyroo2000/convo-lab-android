@@ -33,7 +33,7 @@ class NotebookWorkflowTest {
         val api = BoundFeedbackGateway()
         val workflows = BoundWorkflowStorage()
         val factory = viewModelFactory { initializer {
-            NotebookViewModel(sessions, workflow = { _, scope -> WorkflowController(WorkflowAccess(api, workflows, dispatcher), scope) }) {
+            NotebookViewModel(sessions, workflow = { _, scope, repository -> WorkflowController(WorkflowAccess(api, workflows, dispatcher, repository::acceptFeedbackMetadata), scope) }) {
                 JournalRepository(NotebookGateway(), storage, dispatcher)
             }
         } }

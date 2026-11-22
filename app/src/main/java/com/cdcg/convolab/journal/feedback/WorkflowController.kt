@@ -50,10 +50,9 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
         }
     }
 
-    fun answer(text: String) {
-        if (state.value.busy || !state.value.canRetry) return
+    fun answer(text: String) = request { session ->
         mutableState.update { it.copy(lastAnswer = text.trim()) }
-        request { it.answer(text) }
+        session.answer(text)
     }
 
     fun beginFinalEdit() {

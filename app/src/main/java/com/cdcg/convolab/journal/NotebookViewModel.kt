@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /** Retained by the activity across rotation; account transitions await the previous writer's flush. */
 class NotebookViewModel(sessions: SessionController,
-    workflow: ((Session, CoroutineScope) -> WorkflowController)? = null,
+    workflow: ((Session, CoroutineScope, JournalRepository) -> WorkflowController)? = null,
     tutor: ((Session, CoroutineScope) -> TutorController)? = null,
     conversation: ((Session, JournalRepository, TutorController) -> ConversationController)? = null,
     preferences: ((Session, CoroutineScope) -> JournalViewPreferences)? = null,
@@ -38,7 +38,7 @@ class NotebookViewModel(sessions: SessionController,
                     if (session != null) coroutineScope {
                         if (!sessions.work.own(session.account.id, coroutineContext.job)) return@coroutineScope
                         val journal = repository(session)
-                        val feedback = workflow?.invoke(session, this)
+                        val feedback = workflow?.invoke(session, this, journal)
                         val teacher = tutor?.invoke(session, this)
                         teacher?.loadWaitingTutor()
                         val replies = teacher?.let { conversation?.invoke(session, journal, it) }

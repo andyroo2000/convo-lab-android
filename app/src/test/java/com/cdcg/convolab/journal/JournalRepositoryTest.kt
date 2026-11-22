@@ -276,6 +276,55 @@ class JournalRepositoryTest {
         assertEquals(2, storage.records.size)
         assertEquals(draft, storage.records[draft.id]?.pendingSave)
     }
+    @Test fun generatedTitleMetadataAdvancesTheNextSaveAndKeepsPendingPayloads() = runTest {
+        val source = saved(draft)
+        val pending = JournalDraft.from(source).edited("保存中の文章。")
+        val newer = pending.edited("次に保存する文章。")
+        val storage = MemoryJournal().apply {
+            records[source.id] = JournalRecord(source, newer, pending, acknowledgedVersion = 1)
+        }
+        val api = FakeJournal().apply { saveResult = { saved(it) } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val titled = source.copy(title = "A generated title", version = 2)
+        repository.acceptFeedbackMetadata(source, titled)
+        val merged = storage.records[source.id]!!
+        assertEquals(titled, merged.entry)
+        assertEquals(pending, merged.pendingSave)
+        assertEquals(newer.body, merged.draft?.body)
+        assertEquals(2, merged.draft?.expectedVersion)
+        // A definitive rejection releases only the old retry payload; the newer writing survives.
+        api.saveResult = { throw ApiFailure(409) }
+        try { repository.save(draft.key); fail("Expected old payload conflict") } catch (_: ApiFailure) { }
+        api.saveResult = { saved(it) }
+        repository.save(draft.key)
+        assertEquals(2, api.saved.last().expectedVersion)
+        assertEquals(newer.body, api.saved.last().body)
+    }
+
+    @Test fun metadataCannotReplaceNewerWritingOrResurrectADeletedRecord() = runTest {
+        val source = saved(draft)
+        val changed = source.copy(body = "別の端末の文章。", version = 3)
+        val storage = MemoryJournal().apply { records[source.id] = JournalRecord(entry = changed) }
+        val repository = JournalRepository(FakeJournal(), storage, StandardTestDispatcher(testScheduler))
+        repository.acceptFeedbackMetadata(source, source.copy(title = "Old title", version = 2))
+        assertEquals(changed, storage.records[source.id]?.entry)
+        storage.records.clear()
+        repository.acceptFeedbackMetadata(source, source.copy(title = "Old title", version = 2))
+        assertTrue(storage.records.isEmpty())
+    }
+
+    @Test fun editingAfterTitleGenerationUsesTheAcknowledgedVersion() = runTest {
+        val source = saved(draft)
+        val storage = MemoryJournal().apply { records[source.id] = JournalRecord(entry = source) }
+        val api = FakeJournal().apply { saveResult = { saved(it) } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        repository.acceptFeedbackMetadata(source, source.copy(title = "Generated title", version = 2))
+        repository.edit(JournalDraft.from(source).edited("次の文章。"))
+        repository.save(draft.key)
+        assertEquals(2, api.saved.single().expectedVersion)
+        assertEquals("次の文章。", api.saved.single().body)
+    }
+
 }
 
 private class MemoryJournal : JournalStorage {

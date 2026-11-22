@@ -23,6 +23,21 @@ class JournalRepository(
 
     suspend fun accept(entry: JournalEntry): JournalRecord = disk { mergeEntry(entry) }
 
+    /** Adopt a proven unchanged body without rewriting any in-flight save payload. */
+    suspend fun acceptFeedbackMetadata(source: JournalEntry, received: JournalEntry) = disk {
+        require(source.id == received.id && source.body == received.body)
+        require(received.version >= source.version)
+        val current = storage.read(source.id) ?: return@disk
+        val known = current.entry ?: return@disk
+        if (current.pendingDelete || known.version > received.version) return@disk
+        if (known.body != source.body) return@disk
+        val draft = current.draft?.let { it.copy(expectedVersion = maxOf(it.expectedVersion, received.version)) }
+        val merged = current.copy(entry = received, draft = draft,
+            acknowledgedVersion = maxOf(current.acknowledgedVersion, received.version))
+        if (merged != current) storage.write(merged)
+    }
+
+
     suspend fun answerDraft(root: JournalEntry, origin: AnswerOrigin): JournalRecord = disk {
         check(storage.read(root.id)?.pendingDelete != true) { "This conversation is being deleted." }
         val local = storage.load()

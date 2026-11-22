@@ -8,9 +8,12 @@ because the returned version differed from the submitted version, producing
 “This entry changed” even when the body was identical.
 
 Analysis reads now accept a nondecreasing version only when both entry identity
-and writing match. The original submission version remains the retry identity;
-clarification mutations, genuinely changed writing, older responses, and final
-edit revision checks retain their existing conflict guards. Regression tests
+and writing match. Pending work retains the original submission version as its retry identity.
+Verified metadata is adopted into the shared account repository, rebasing future
+writes without changing an in-flight save payload. After feedback is ready, its
+checkpoint adopts the acknowledged version so a pending final edit can reopen
+without a false recovery warning. Genuine writing conflicts, older responses,
+and final-edit revision guards remain in place. Regression tests
 cover both generated-title completion and a real body change during polling.
 
 The affected live Pixel entry was reopened successfully: the server result was
@@ -37,13 +40,15 @@ The iOS waiting counterpart is tracked in
 
 ## Verification
 
-Debug/release builds, Android lint, and 150 JVM tests pass. Pixel 10a coverage
+Debug/release builds, Android lint, and 155 JVM tests pass. Pixel 10a coverage
 includes 21 UI tests for feedback, generated-title submission, double text size,
-notebook, keyboard bounds, appearance, and tutor selection. A separate waiting
+notebook, keyboard bounds, appearance, and tutor selection. A further 11/11
+checks cover feedback, conversation replies, and process recovery (26 distinct
+Pixel tests overall). A separate waiting
 flow also passes with the device animation scale disabled; the original setting
 is restored afterward. PR CI runs the complete emulator suite.
 
-CodeScene MCP covers all 28 changed Kotlin files with no findings or declines.
+CodeScene MCP covers all 32 changed Kotlin files with no findings or declines.
 `AccountMenu` and the static illustration table return no numeric score.
 
 The screenshots below use isolated fixtures. iOS appearance captures use Serif
