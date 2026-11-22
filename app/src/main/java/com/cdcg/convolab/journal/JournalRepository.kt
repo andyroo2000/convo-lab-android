@@ -92,7 +92,7 @@ class JournalRepository(
         val id = key.value
         val sent = disk {
             val record = requireNotNull(storage.read(id))
-            if (automatic) record.syncRejection?.let { throw ApiFailure(it) }
+            if (automatic) record.syncRejection?.takeUnless { it == 403 }?.let { throw ApiFailure(it) }
             prepareSave(record)
         } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
         val origin = disk { storage.read(id)?.takeIf { sent.expectedVersion == 0 }?.answerOrigin }
@@ -134,7 +134,7 @@ class JournalRepository(
         catch (failure: ApiFailure) {
             if (failure.isDefinitiveRejection()) disk {
                 val current = requireNotNull(storage.read(sent.id))
-                storage.write(current.copy(pendingSave = null, syncRejection = failure.status))
+                storage.write(current.copy(draft = current.draft ?: sent, pendingSave = null, syncRejection = failure.status))
             }
             throw failure
         }

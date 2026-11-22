@@ -207,6 +207,48 @@ class JournalAutomaticSyncTest {
         assertEquals("Keep through server outage", storage.records.values.single().draft?.body)
     }
 
+    @Test fun pendingOnlyWritingCanCloseDuringAnOutage() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway().apply { fail = IOException("offline") }
+        val draft = JournalDraft.blank().edited("Pending payload").copy(expectedVersion = 1)
+        val original = JournalEntry(draft.id, null, "Original", draft.entryDate, 1, "now", "now")
+        storage.records[draft.id] = JournalRecord(entry = original, pendingSave = draft)
+        val controller = NotebookController(JournalRepository(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.start().join()
+        controller.requestClose()
+        controller.keepAndClose().join()
+        assertFalse(controller.state.value.closePrompt)
+        assertEquals(draft, storage.records[draft.id]?.pendingSave)
+    }
+
+    @Test fun restoredPermissionRetriesTheSameWritingAutomatically() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway().apply { fail = ApiFailure(403) }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val draft = JournalDraft.blank().edited("Kept for the same account")
+        repository.edit(draft)
+        val sync = JournalAutomaticSync(repository) {}
+        sync.synchronize(0)
+        api.fail = null
+        sync.reconnect()
+        sync.synchronize(0)
+        assertEquals(draft.body, storage.records[draft.id]?.entry?.body)
+        assertNull(storage.records[draft.id]?.syncRejection)
+    }
+
+    @Test fun typingDoesNotBypassNetworkFailureBackoff() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway().apply { fail = IOException("offline") }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val draft = JournalDraft.blank().edited("First offline writing")
+        repository.edit(draft)
+        val sync = JournalAutomaticSync(repository) {}
+        sync.synchronize(0)
+        repository.edit(draft.edited("More offline writing"))
+        sync.synchronize(1)
+        assertEquals(1, api.attempts.size)
+    }
+
     @Test fun blankRepliesAndPendingDeletionsAreNotAutomaticallySaved() = runTest {
         val storage = NotebookMemory()
         val api = SyncGateway()

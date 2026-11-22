@@ -1,5 +1,6 @@
 package com.cdcg.convolab.journal
 
+import com.cdcg.convolab.network.ApiFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -24,7 +25,7 @@ class JournalAutomaticSync(private val repository: JournalRepository,
         retryAt.keys.retainAll(ids)
         failedEdits.keys.retainAll(ids)
         for (record in records) {
-            if (!eligible(record) || isBackingOff(record, now)) continue
+            if (!record.isAutomaticSyncCandidate || isBackingOff(record, now)) continue
             attempt(record, now)
         }
     }
@@ -37,17 +38,24 @@ class JournalAutomaticSync(private val repository: JournalRepository,
             retryAt.remove(record.id)
             failedEdits.remove(record.id)
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) {
+        catch (failure: Exception) {
             val count = ((failures[record.id] ?: 0) + 1).coerceAtMost(5)
-            failedEdits[record.id] = record.draft?.editId
+            if (failure is ApiFailure && failure.status in setOf(400, 422)) failedEdits[record.id] = record.draft?.editId
+            else failedEdits.remove(record.id)
             failures[record.id] = count
             retryAt[record.id] = now + (1L shl count) * 1000
-        } finally { withContext(NonCancellable) { notify(null) } }
+        } finally { withContext(NonCancellable) { runCatching { notify(null) } } }
     }
 
-    private fun isBackingOff(record: JournalRecord, now: Long) =
-        failedEdits[record.id] == record.draft?.editId && now < (retryAt[record.id] ?: 0)
+    private fun isBackingOff(record: JournalRecord, now: Long): Boolean {
+        if (failedEdits.containsKey(record.id) && failedEdits[record.id] != record.draft?.editId) return false
+        return now < (retryAt[record.id] ?: 0)
+    }
+}
 
-    private fun eligible(record: JournalRecord) = record.rootEntryId == null && !record.pendingDelete &&
-        record.syncRejection == null && (record.pendingSave ?: record.draft)?.body?.isNotBlank() == true
+internal val JournalRecord.isAutomaticSyncCandidate: Boolean get() = when {
+    rootEntryId != null -> false
+    pendingDelete -> false
+    syncRejection in setOf(400, 404, 409, 422) -> false
+    else -> (pendingSave ?: draft)?.body?.isNotBlank() == true
 }

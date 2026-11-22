@@ -43,12 +43,19 @@ class NotebookController(private val repository: JournalRepository, private val 
         try {
             writer.flush()
             val snapshot = state.value
-            if (snapshot.savedLocally || snapshot.records.any { it.hasPendingWriting }) {
+            if (hasSyncWork(snapshot)) {
                 automaticSync.synchronize()
             }
         }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* A failed local write must never be sent or discarded. */ }
+    }
+
+    private fun hasSyncWork(snapshot: NotebookState): Boolean {
+        if (snapshot.records.any { it.isAutomaticSyncCandidate }) return true
+        if (!snapshot.savedLocally || snapshot.draft.body.isBlank()) return false
+        val recorded = snapshot.records.firstOrNull { it.id == snapshot.draft.id }
+        return recorded?.draft?.editId != snapshot.draft.editId
     }
 
     fun start() = scope.launch {
@@ -183,7 +190,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: java.io.IOException) {
             if (failure is ApiFailure && failure.status in setOf(400, 401, 403, 404, 409, 422)) throw failure
-            check(repository.record(draft.key)?.draft != null) { "Keep the entry open until it is saved on this device." }
+            check(repository.record(draft.key)?.hasPendingWriting == true) { "Keep the entry open until it is saved on this device." }
         }
     }
 

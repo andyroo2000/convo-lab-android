@@ -28,7 +28,7 @@ class JournalProcessRecoveryTest {
     private val marker get() = File(root, "process.json")
     @After fun stop() = runBlocking { scope.cancel(); scope.coroutineContext.job.join() }
 
-    @Test fun persistedRequestSurvivesRestartAndRetriesItsOriginalIdentity() {
+    @Test fun persistedRequestAutomaticallySyncsAfterAProcessRestart() {
         val phase = InstrumentationRegistry.getArguments().getString("restartPhase", "complete")
         compose.setContent {
             ConvoLabTheme { notebook?.let { controller ->
@@ -47,13 +47,14 @@ class JournalProcessRecoveryTest {
         compose.onNodeWithTag("journal-editor").assertTextContains(text)
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).waitForIdle()
         compose.waitForIdle()
-        compose.onNodeWithTag("journal-save").performClick()
+        compose.runOnIdle { controller.startSync() }
         compose.waitUntil(5_000) { !controller.state.value.busy && api.sent.isNotEmpty() }
-        val sent = api.sent.single()
+        val sent = api.sent.first()
         val pending = requireNotNull(JournalDiskStore(root, 101).read(sent.id)?.pendingSave)
         assertEquals(sent, pending)
         marker.writeText(JSONObject().put("pid", Process.myPid()).put("id", sent.id).put("editId", sent.editId)
             .put("version", sent.expectedVersion).toString())
+        compose.onNodeWithText("Saved on this device").assertIsDisplayed()
         screenshot("journal-before-process-stop")
     }
     private fun resume(requireNewProcess: Boolean) {
@@ -64,8 +65,8 @@ class JournalProcessRecoveryTest {
         compose.onNodeWithTag("journal-editor").assertTextContains(text)
         assertEquals(expected.getString("id"), controller.state.value.draft.id)
         screenshot("journal-after-process-restart")
-        compose.onNodeWithTag("journal-save").performClick()
-        compose.waitUntil(5_000) { !controller.state.value.busy && api.sent.isNotEmpty() }
+        compose.runOnIdle { controller.startSync() }
+        compose.waitUntil(5_000) { controller.state.value.syncStatus == "Synced" }
         val sent = api.sent.single()
         assertEquals(expected.getString("id"), sent.id)
         assertEquals(expected.getString("editId"), sent.editId)
@@ -74,6 +75,8 @@ class JournalProcessRecoveryTest {
         val acknowledged = requireNotNull(JournalDiskStore(root, 101).read(sent.id))
         assertNull(acknowledged.pendingSave)
         assertEquals(text, acknowledged.entry?.body)
+        compose.onNodeWithText("Synced").assertIsDisplayed()
+        screenshot("journal-automatically-synced-after-process-restart")
         runBlocking { scope.cancel(); scope.coroutineContext.job.join() }
         root.deleteRecursively()
     }
