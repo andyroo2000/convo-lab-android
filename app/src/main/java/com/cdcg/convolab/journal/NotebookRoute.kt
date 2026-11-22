@@ -35,8 +35,11 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
             val workflows = WorkflowAccess(FeedbackApi(api), WorkflowDiskStore(context.noBackupFilesDir, session.account.id), acceptMetadata = repository::acceptFeedbackMetadata)
             ConversationController(ConversationAccess(ConversationApi(api), repository, { scope -> WorkflowController(workflows, scope) }, tutor))
         }, preferences = { session, scope -> JournalViewPreferences(context.noBackupFilesDir, session.account.id, scope) }) { session ->
+            val workflows = WorkflowDiskStore(context.noBackupFilesDir, session.account.id)
             JournalRepository(JournalApi(HttpApiTransport(), session, sessions::snapshot, sessions::expire),
-                JournalDiskStore(context.noBackupFilesDir, session.account.id))
+                JournalDiskStore(context.noBackupFilesDir, session.account.id),
+                archive = JournalArchiveDiskStore(context.noBackupFilesDir, session.account.id),
+                localWork = JournalLocalWork { workflows.read(it)?.needsArchiveRecovery() == true })
         } }
     } }
     val model: NotebookViewModel = viewModel(key = "active-journal", factory = factory)
@@ -65,8 +68,13 @@ private fun FlushOnStop(controller: NotebookController, conversation: Conversati
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, controller, conversation) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) { controller.flush(); scope.launch { conversation?.flush() } } }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) controller.refreshVisibleContents()
+            if (event == Lifecycle.Event.ON_STOP) { controller.flush(); scope.launch { conversation?.flush() } }
+        }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
 }
+
+private fun WorkflowSnapshot.needsArchiveRecovery() = pendingAnswer != null || pendingFinalEdit != null || submissionRequested

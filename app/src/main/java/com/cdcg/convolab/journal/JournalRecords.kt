@@ -49,7 +49,8 @@ data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraf
 }
 
 data class JournalPage(val entries: List<JournalEntry>, val nextCursor: String?)
-data class JournalLoad(val records: List<JournalRecord>, val recoveryFiles: List<String>)
+data class JournalLoad(val records: List<JournalRecord>, val recoveryFiles: List<String>,
+    val archive: JournalArchive? = null, val localWorkRoots: Set<String> = emptySet())
 
 interface JournalGateway {
     suspend fun archive(cursor: String? = null): JournalPage

@@ -13,12 +13,18 @@ class JournalRepository(
     private val api: JournalGateway,
     private val storage: JournalStorage,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val archive: JournalArchiveStorage = MemoryJournalArchive(),
+    private val localWork: JournalLocalWork = JournalLocalWork(),
 ) {
     private val mutex = Mutex()
     private val saves = Mutex()
     private var removalRevision = 0L
+    private var archiveGeneration = 0L
 
-    suspend fun load(): JournalLoad = disk { storage.load() }
+    suspend fun load(): JournalLoad = disk {
+        val local = storage.load()
+        local.copy(archive = archive.read(), localWorkRoots = localWork.roots(local))
+    }
     suspend fun record(key: JournalId): JournalRecord? = disk { storage.read(key.value) }
 
     suspend fun accept(entry: JournalEntry): JournalRecord = disk { mergeEntry(entry) }
@@ -60,9 +66,14 @@ class JournalRepository(
     }
 
     suspend fun refresh(cursor: String? = null): JournalPage {
-        val revision = disk { removalRevision }
+        val request = disk {
+            if (cursor == null) archiveGeneration++
+            Pair(removalRevision, archiveGeneration)
+        }
         val page = api.archive(cursor)
-        disk { if (revision == removalRevision) mergePage(page) }
+        disk {
+            if (request == Pair(removalRevision, archiveGeneration)) mergeArchivePage(page, cursor)
+        }
         return page
     }
 
@@ -83,6 +94,8 @@ class JournalRepository(
         val received = saveRequest(sent, origin)
         disk {
             val current = requireNotNull(storage.read(id)) { "Draft disappeared while saving" }
+            archiveGeneration++ // A list requested before this acknowledgement must not hide the new entry.
+            archive.read()?.let { archive.write(it.including(received)) }
             storage.write(current.acknowledge(sent, received))
         }
         received
@@ -103,6 +116,8 @@ class JournalRepository(
         deleteRequest(current)
         disk {
             val children = storage.load().records.filter { it.rootEntryId == id }
+            val removedIds = children.map { it.id }.toSet() + id
+            archive.read()?.let { archive.write(it.excluding(removedIds)) }
             children.forEach { storage.remove(it.id) }
             storage.remove(id)
             removalRevision++
@@ -149,6 +164,13 @@ class JournalRepository(
     private fun mergePage(page: JournalPage) {
         val unreadable = storage.load().recoveryFiles.toSet()
         page.entries.filterNot { "${it.id}.json" in unreadable }.forEach(::mergeEntry)
+    }
+
+    private fun mergeArchivePage(page: JournalPage, cursor: String?) {
+        val previous = archive.read()
+        if (cursor != null && cursor != previous?.nextCursor) return
+        mergePage(page)
+        archive.write(if (cursor == null) JournalArchive.from(page) else requireNotNull(previous).append(page))
     }
 
     private fun mergeEntry(entry: JournalEntry): JournalRecord {
