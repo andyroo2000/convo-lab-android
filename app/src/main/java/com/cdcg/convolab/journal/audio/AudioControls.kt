@@ -2,6 +2,9 @@ package com.cdcg.convolab.journal.audio
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Alignment
@@ -47,10 +50,11 @@ private fun SourceAudioControls(presentation: AudioPresentation) {
     val source = presentation.source
     val coordinator = presentation.coordinator
     var choosing by rememberSaveable(source.key) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().background(Color(0xFFE4EEFC)), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+    Column(Modifier.fillMaxWidth().zIndex(1f).background(Color(0xFFE4EEFC)), verticalArrangement = Arrangement.spacedBy(0.dp)) {
         AudioButtons(presentation) { choosing = true }
         if (presentation.preparing || presentation.loadingVoices) LinearProgressIndicator(Modifier.fillMaxWidth())
         presentation.active?.let { AudioTransport(presentation.playback, it, coordinator) }
+        if (source.content is AudioContent.Final && presentation.active == null) IdleAudioRibbon()
         AudioError(source, presentation.error, presentation.voices, coordinator)
     }
     if (choosing) presentation.voices?.let { voices ->
@@ -63,19 +67,35 @@ private fun SourceAudioControls(presentation: AudioPresentation) {
 @Composable
 private fun AudioButtons(presentation: AudioPresentation, choose: () -> Unit) {
     val source = presentation.source
-    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    val final = source.content is AudioContent.Final
+    Row(Modifier.padding(horizontal = if (final) 14.dp else 0.dp, vertical = if (final) 10.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         if (source.content is AudioContent.Final) {
             Surface(onClick = choose, shape = CircleShape, color = Color.Transparent, modifier = Modifier.size(88.dp).semantics { contentDescription = "Voice" }) {
                 presentation.voices?.let { voices -> voices.voices.firstOrNull { it.id == voices.selected }?.let { VoicePortrait(it, Modifier.size(88.dp)) } }
             }
         }
         OutlinedButton(onClick = { presentation.coordinator.toggle(source) }, enabled = source.content is AudioContent.Question || presentation.voices != null,
+            modifier = Modifier.heightIn(min = 44.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
             shape = CircleShape, border = BorderStroke(1.dp, Color(0xFFBDD1E8)),
             colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = Color(0xFF6393EF))) {
-            JournalIcon(if (presentation.playing) JournalSymbol.Pause else JournalSymbol.Play, Modifier.size(14.dp))
+            JournalIcon(if (presentation.playing) JournalSymbol.Pause else JournalSymbol.Speaker, Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
             Text(when { presentation.preparing -> "Cancel audio"; presentation.playing -> "Pause"; else -> "Listen" })
         }
+    }
+}
+
+@Composable
+private fun IdleAudioRibbon() {
+    Canvas(Modifier.fillMaxWidth().height(3.dp).semantics {
+        contentDescription = "Corrected version audio position"
+        progressBarRangeInfo = ProgressBarRangeInfo(0f, 0f..1f)
+        disabled()
+    }) {
+        drawRect(Color(0xFFCFDEED))
+        val radius = 5.dp.toPx()
+        drawCircle(Color.White, radius, Offset(radius, size.height / 2))
+        drawCircle(Color(0xFF6393EF), radius - 2.dp.toPx(), Offset(radius, size.height / 2))
     }
 }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cdcg.convolab.auth.*
+import com.cdcg.convolab.network.ApiFailure
 import com.cdcg.convolab.journal.feedback.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,24 +24,31 @@ class NotebookWorkflowTest {
     @Before fun setMain() { Dispatchers.setMain(dispatcher) }
     @After fun stop() { store.clear(); dispatcher.scheduler.runCurrent(); Dispatchers.resetMain() }
 
-    @Test fun editingHidesOldFeedbackAndOnlyAcknowledgedVersionIsSubmitted() = runTest {
-        val session = Session("fixture-token", Account(1, "Sample", "sample@example.invalid"))
-        val sessions = SessionController(FakeAuth().apply { loginResult = { session } }, MemoryStorage(), dispatcher)
-        val draft = JournalDraft.blank().edited("最初の文章。")
-        val entry = JournalEntry(draft.id, null, draft.body, draft.entryDate, 1, "created", "updated")
-        val record = JournalRecord(entry = entry, draft = JournalDraft.from(entry))
-        val storage = NotebookMemory().apply { records[entry.id] = record }
-        val api = BoundFeedbackGateway()
-        val workflows = BoundWorkflowStorage()
-        val factory = viewModelFactory { initializer {
-            NotebookViewModel(sessions, workflow = { _, scope, repository -> WorkflowController(WorkflowAccess(api, workflows, dispatcher, repository::acceptFeedbackMetadata), scope) }) {
-                JournalRepository(NotebookGateway(), storage, dispatcher)
-            }
-        } }
-        val model = ViewModelProvider(owner, factory)["active-journal", NotebookViewModel::class.java]
-        sessions.login("sample@example.invalid", "fixture-password")
+    private val draft = JournalDraft.blank().edited("最初の文章。")
+    private val entry = JournalEntry(draft.id, null, draft.body, draft.entryDate, 1, "created", "updated")
+    private val record = JournalRecord(entry = entry, draft = JournalDraft.from(entry))
+    private val storage = NotebookMemory().apply { records[entry.id] = record }
+    private val api = BoundFeedbackGateway()
+    private val workflows = BoundWorkflowStorage()
+    private lateinit var sessions: SessionController
+    private lateinit var model: NotebookViewModel
+
+    @Test fun recoveringMissingEntryTearsDownFeedbackAndOpensTheCopiedDraft() = runTest {
+        val binding = openNotebook(missing = true)
+        val feedback = requireNotNull(binding.workflow)
+        assertTrue(feedback.state.value.missingEntry)
+        binding.controller.recoverCopy().join()
         runCurrent()
-        val binding = requireNotNull(model.binding.value)
+        assertNull(feedback.state.value.entry)
+        assertFalse(feedback.state.value.missingEntry)
+        assertNotEquals(entry.id, binding.controller.state.value.draft.id)
+        assertEquals(entry.body, binding.controller.state.value.draft.body)
+        assertEquals(record, storage.records[entry.id])
+        assertEquals(0, api.submissions)
+    }
+
+    @Test fun editingHidesOldFeedbackAndOnlyAcknowledgedVersionIsSubmitted() = runTest {
+        val binding = openNotebook()
         val feedback = requireNotNull(binding.workflow)
         assertEquals(1, feedback.state.value.snapshot?.sourceVersion)
         binding.controller.edit("次の文章。")
@@ -55,6 +63,22 @@ class NotebookWorkflowTest {
         runCurrent()
         assertNull(model.binding.value)
     }
+
+    private suspend fun openNotebook(missing: Boolean = false): NotebookBinding {
+        api.missing = missing
+        val session = Session("fixture-token", Account(1, "Sample", "sample@example.invalid"))
+        sessions = SessionController(FakeAuth().apply { loginResult = { session } }, MemoryStorage(), dispatcher)
+        val factory = viewModelFactory { initializer {
+            NotebookViewModel(sessions, workflow = { _, scope, repository -> WorkflowController(WorkflowAccess(api, workflows, dispatcher, repository::acceptFeedbackMetadata), scope) }) {
+                JournalRepository(NotebookGateway(), storage, dispatcher)
+            }
+        } }
+        model = ViewModelProvider(owner, factory)["active-journal", NotebookViewModel::class.java]
+        sessions.login("sample@example.invalid", "fixture-password")
+        dispatcher.scheduler.runCurrent()
+        return requireNotNull(model.binding.value)
+    }
+
 }
 
 private class BoundWorkflowStorage : WorkflowStorage {
@@ -66,6 +90,7 @@ private class BoundWorkflowStorage : WorkflowStorage {
 
 private class BoundFeedbackGateway : FeedbackGateway {
     var submissions = 0
+    var missing = false
     private fun result(entry: JournalEntry) = Analysis(JournalIds.newId(), entry.version, WorkStatus.Ready,
         null, null, CorrectedDocument(entry.body, entry.body), 0, null, "updated", "{}")
     override suspend fun startClarification(entry: JournalEntry) = Clarification(JournalIds.newId(), entry.version, 1,
@@ -73,6 +98,9 @@ private class BoundFeedbackGateway : FeedbackGateway {
     override suspend fun clarification(entry: JournalEntry) = startClarification(entry)
     override suspend fun answer(entry: JournalEntry, answer: ClarificationAnswer): Clarification = error("Unexpected answer")
     override suspend fun submit(entry: JournalEntry, clarificationId: String): Analysis { submissions++; return result(entry) }
-    override suspend fun analysis(entry: JournalEntry) = AnalysisResponse(entry, result(entry))
+    override suspend fun analysis(entry: JournalEntry): AnalysisResponse {
+        if (missing) throw ApiFailure(404)
+        return AnalysisResponse(entry, result(entry))
+    }
     override suspend fun editFinal(entry: JournalEntry, edit: FinalEdit): Analysis = error("Unexpected edit")
 }

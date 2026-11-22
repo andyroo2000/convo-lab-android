@@ -16,7 +16,12 @@ data class WorkflowState(
     val entry: JournalEntry? = null, val snapshot: WorkflowSnapshot? = null, val busy: Boolean = false,
     val error: String? = null, val canRetry: Boolean = true, val finalEdit: FinalEdit? = null,
     val recovery: WorkflowRecovery? = null, val lastAnswer: String? = null,
-)
+    val verified: Boolean = false, val missingEntry: Boolean = false,
+) {
+    val canReturnToDraft: Boolean get() = error != null && canRetry && snapshot?.analysis?.status != WorkStatus.Ready
+    // Verified during this opened entry session; transient failures retain offline feedback.
+    val readyForConversation: Boolean get() = verified && !missingEntry && snapshot?.analysis?.status == WorkStatus.Ready
+}
 
 class WorkflowController(private val access: WorkflowAccess, private val scope: CoroutineScope) {
     private val mutableState = MutableStateFlow(WorkflowState())
@@ -114,7 +119,10 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     }
 
     private suspend fun run(epoch: Long, action: suspend () -> Unit) {
-        try { action() }
+        try {
+            action()
+            if (generation == epoch && session?.verified == true) mutableState.update { it.copy(verified = true, missingEntry = false) }
+        }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) {
             if (generation == epoch) report(failure)
@@ -124,6 +132,10 @@ class WorkflowController(private val access: WorkflowAccess, private val scope: 
     }
 
     private fun report(failure: Exception) {
+        if (failure is MissingJournalEntry) {
+            mutableState.update { it.copy(missingEntry = true, verified = false, error = failure.message, canRetry = true) }
+            return
+        }
         if (failure is WorkflowRecoveryFailure) {
             mutableState.update { it.copy(recovery = failure.recovery, error = null, canRetry = false) }
             return

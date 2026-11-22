@@ -90,7 +90,7 @@ class JournalRepository(
 
     suspend fun saveAsNew(key: JournalId): JournalDraft = disk {
         val id = key.value
-        val old = requireNotNull(storage.read(id)?.draft)
+        val old = requireNotNull(storage.read(id)).editableDraft()
         val copy = old.copy(id = JournalIds.newId(), expectedVersion = 0, rootEntryId = null)
             .edited(old.body, old.title)
         storage.write(JournalRecord(draft = copy))

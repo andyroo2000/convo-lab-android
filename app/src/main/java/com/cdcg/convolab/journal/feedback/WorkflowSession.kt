@@ -17,6 +17,8 @@ class WorkflowSession(
     private val access: WorkflowAccess,
     private val publish: (WorkflowSnapshot) -> Unit,
 ) {
+    var verified = false
+        private set
     private var verifiedVersion = entry.version
     var snapshot = WorkflowSnapshot(JournalId(entry.id), entry.version)
         private set
@@ -71,12 +73,20 @@ class WorkflowSession(
             resume()
             return
         }
-        val response = access.api.analysis(entry)
+        val response = readAnalysis()
         checkEntry(response.entry)
         val analysis = response.analysis ?: return
         checkAnalysis(analysis)
         checkpoint(snapshot.copy(analysis = analysis, sourceVersion = checkpointVersion(analysis)))
         if (analysis.status.pending) receiveAnalysis(analysis)
+    }
+
+    // A missing analysis route means its parent entry is unavailable, unlike a child mutation's 404.
+    private suspend fun readAnalysis(): AnalysisResponse = try {
+        access.api.analysis(entry)
+    } catch (failure: ApiFailure) {
+        if (failure.status == 404) { verified = false; throw MissingJournalEntry() }
+        throw failure
     }
 
     private fun checkFailedWork() {
@@ -99,7 +109,7 @@ class WorkflowSession(
 
     private suspend fun reconcileFinalEdit(edit: FinalEdit, failure: ApiFailure): Analysis {
         if (failure.status != 409) throw failure
-        val response = access.api.analysis(entry)
+        val response = readAnalysis()
         checkEntry(response.entry)
         val analysis = response.analysis ?: throw failure
         val alreadyApplied = analysis.id == edit.analysisId && analysis.finalText == edit.text
@@ -131,11 +141,12 @@ class WorkflowSession(
         val budget = JournalPollBudget()
         while (true) {
             checkAnalysis(current)
+            verified = true
             checkpoint(snapshot.copy(analysis = current, sourceVersion = checkpointVersion(current), submissionRequested = current.status != WorkStatus.Ready))
             if (current.status == WorkStatus.Failed) throw WorkflowFailure(current.error ?: "Could not prepare feedback. Please retry.")
             if (!current.status.pending) return
             budget.pause(2_000)
-            val response = JournalPolling.read { access.api.analysis(entry) }
+            val response = JournalPolling.read { readAnalysis() }
             checkEntry(response.entry)
             current = response.analysis ?: throw WorkflowFailure("Feedback is not available yet. Please retry.")
         }
@@ -149,6 +160,7 @@ class WorkflowSession(
         if (remote.id != entry.id || remote.body != entry.body) throw ApiFailure(409)
         access.acceptMetadata(entry, remote)
         verifiedVersion = remote.version
+        verified = true
     }
 
     // Pending work keeps its mutation identity. Completed feedback can use the
@@ -177,3 +189,5 @@ private fun WorkflowSnapshot?.requiresRecovery(version: Int): Boolean {
     if (this == null) return false
     return sourceVersion != version && hasPendingWriting()
 }
+
+class MissingJournalEntry : Exception("This entry is no longer available on the server. Your saved writing is kept on this device.")
