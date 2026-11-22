@@ -20,6 +20,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 
@@ -84,7 +85,13 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
         highlights = rubyHighlightLayout(layout)
         text.getLinkAnnotations(0, text.length).forEach { link ->
             val index = (link.item as? LinkAnnotation.Clickable)?.tag?.removePrefix("correction-")?.toIntOrNull()
-            if (index != null && link.start < link.end) onRunBounds?.invoke(index, layout.getPathForRange(link.start, link.end).getBounds())
+            if (index != null && link.start < link.end) {
+                val selection = layout.getPathForRange(link.start, link.end).getBounds()
+                val baseline = layout.getLineBaseline(layout.getLineForOffset(link.start))
+                val padding = with(density) { 2.dp.toPx() }
+                onRunBounds?.invoke(index, Rect(selection.left, baseline + ink.top - padding,
+                    selection.right, baseline + ink.bottom + padding))
+            }
         }
     })
 }

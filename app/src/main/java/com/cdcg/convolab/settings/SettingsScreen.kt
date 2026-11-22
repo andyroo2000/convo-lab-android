@@ -12,11 +12,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import com.cdcg.convolab.R
 import com.cdcg.convolab.ui.*
+
+private val SettingsTitleFont = FontFamily(Font(R.font.crimson_pro, weight = FontWeight.Medium,
+    variationSettings = FontVariation.Settings(FontVariation.weight(500))))
 
 enum class SettingsPage(val title: String) { Overview("Settings"), Profile("Edit profile"), Password("Change password") }
 class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typingLab: (() -> Unit)?, val deleteAccount: () -> Unit = {})
@@ -24,16 +32,19 @@ class SettingsActions(val close: () -> Unit, val signOut: () -> Unit, val typing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(state: SettingsState, controller: SettingsController, actions: SettingsActions) {
+    val density = LocalDensity.current
     var page by rememberSaveable(state.account.id) { mutableStateOf(SettingsPage.Overview) }
     val close = { if (page == SettingsPage.Overview) actions.close() else { page = SettingsPage.Overview; controller.clearMessage() } }
     ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = JournalStyle.Paper, contentColor = JournalBrand.Ink, dragHandle = {
             Box(Modifier.padding(top = 6.dp, bottom = 10.dp).size(width = 36.dp, height = 5.dp).background(JournalBrand.Ink.copy(alpha = .25f), CircleShape))
         }) {
+        // Modal sheets create another window; preserve the caller's inherited text scale.
+        CompositionLocalProvider(LocalDensity provides density) {
         ProvideTextStyle(JournalStyle.Body) {
             Column(Modifier.fillMaxHeight(.96f).imePadding().padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(page.title, fontFamily = JournalBrand.Serif, fontWeight = FontWeight.SemiBold, fontSize = 34.sp, modifier = Modifier.weight(1f))
+                    Text(page.title, fontFamily = SettingsTitleFont, fontWeight = FontWeight.Medium, fontSize = 34.sp, modifier = Modifier.weight(1f))
                     JournalCloseButton("Close ${page.title}", close)
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -48,6 +59,7 @@ fun SettingsScreen(state: SettingsState, controller: SettingsController, actions
             }
         }
     }
+    }
 }
 
 @Composable
@@ -61,22 +73,25 @@ private fun SettingsMessages(state: SettingsState) {
 private fun SettingsOverview(state: SettingsState, controller: SettingsController, actions: SettingsActions, navigate: (SettingsPage) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf("Account") }
     SettingsChapter("Account", null, expanded, { expanded = it }) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AccountInitial(state.account.name, 48)
-            Text(state.account.name, fontFamily = JournalBrand.Serif, fontWeight = FontWeight.SemiBold, fontSize = 23.sp)
-        }
-        Column {
-            SettingsAction("Edit Profile", JournalSymbol.Person) { navigate(SettingsPage.Profile) }
-            SettingsAction("Change Password", JournalSymbol.Lock) { navigate(SettingsPage.Password) }
-            SettingsAction("Sign Out", JournalSymbol.Logout, action = actions.signOut)
-            SettingsAction("Delete Account", JournalSymbol.Trash, true, actions.deleteAccount)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AccountInitial(state.account.name, 48)
+                Text(state.account.name, fontFamily = SettingsTitleFont, fontWeight = FontWeight.Medium, fontSize = 23.sp)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                SettingsAction("Edit Profile", JournalSymbol.Person) { navigate(SettingsPage.Profile) }
+                SettingsAction("Change Password", JournalSymbol.Lock) { navigate(SettingsPage.Password) }
+                SettingsAction("Sign Out", JournalSymbol.Logout, action = actions.signOut)
+                SettingsAction("Delete Account", JournalSymbol.Trash, true, actions.deleteAccount)
+            }
         }
     }
     SettingsChapter("Connections", JournalSymbol.Link, expanded, { expanded = it }) {
         var wanikani by rememberSaveable { mutableStateOf(false) }
-        Row(Modifier.fillMaxWidth().clickable { wanikani = !wanikani }.heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { wanikani = !wanikani; if (wanikani) controller.reload() }
+            .semantics { stateDescription = if (wanikani) "Expanded" else "Collapsed" }.heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("WaniKani", Modifier.weight(1f))
-            JournalIcon(if (wanikani) JournalSymbol.Up else JournalSymbol.Down, color = JournalBrand.Blue)
+            JournalIcon(if (wanikani) JournalSymbol.Down else JournalSymbol.Chevron, Modifier.size(13.dp), JournalBrand.Ink.copy(alpha = .5f))
         }
         if (wanikani) WaniKaniSettings(state, controller)
     }
@@ -89,10 +104,10 @@ private fun SettingsOverview(state: SettingsState, controller: SettingsControlle
 
 @Composable
 private fun SettingsAction(title: String, icon: JournalSymbol, destructive: Boolean = false, action: () -> Unit) {
-    val color = if (destructive) JournalStyle.Red else JournalBrand.Ink
+    val color = if (destructive) Color(0xFFAE513F) else JournalBrand.Ink
     Row(Modifier.fillMaxWidth().clickable(onClick = action).heightIn(min = 45.dp).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        JournalIcon(icon, color = color)
+        JournalIcon(icon, Modifier.size(18.dp), color)
         Text(title, Modifier.weight(1f), color = color)
         JournalIcon(JournalSymbol.Chevron, Modifier.size(12.dp), color)
     }
@@ -105,8 +120,8 @@ private fun SettingsChapter(title: String, icon: JournalSymbol?, expanded: Strin
         .semantics { stateDescription = if (title == expanded) "Expanded" else "Collapsed" }
         .heightIn(min = 56.dp).padding(vertical = 17.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        icon?.let { JournalIcon(it, color = JournalStyle.Green) }
-        Text(title, fontFamily = JournalBrand.Serif, fontWeight = FontWeight.SemiBold, fontSize = 23.sp, modifier = Modifier.weight(1f))
+        icon?.let { JournalIcon(it, Modifier.size(18.dp), JournalStyle.Green) }
+        Text(title, fontFamily = SettingsTitleFont, fontWeight = FontWeight.Medium, fontSize = 23.sp, modifier = Modifier.weight(1f))
         JournalIcon(if (title == expanded) JournalSymbol.Up else JournalSymbol.Down, Modifier.size(13.dp), JournalBrand.Ink.copy(alpha = .5f))
     }
     if (title == expanded) Column(Modifier.padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)

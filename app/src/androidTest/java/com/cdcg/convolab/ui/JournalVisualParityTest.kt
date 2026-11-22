@@ -18,6 +18,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.journal.feedback.*
+import com.cdcg.convolab.journal.appearance.*
 import com.cdcg.convolab.typing.TestOutput
 import org.junit.Assert.*
 import org.junit.Rule
@@ -28,7 +29,7 @@ class JournalVisualParityTest {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @Test fun correctionIsAnchoredAndDismissesWithoutChangingText() {
-        showCorrection(1f, "**見ました** is the ***polite*** past form.")
+        showCorrection(1f, "**見ました** is the polite past form.")
         openCorrection()
         assertInsideWindow()
         assertReadingTextFits()
@@ -38,6 +39,22 @@ class JournalVisualParityTest {
         device.pressBack()
         compose.onNodeWithTag("correction-popover").assertDoesNotExist()
         compose.onNodeWithText("映画を見た。", substring = true).assertExists()
+    }
+
+    @Test fun correctionUsesSmallJournalType() {
+        showCorrection(1f, "**見ました** is the polite past form.", 16)
+        openCorrection()
+        assertInsideWindow()
+        assertReadingTextFits()
+        capture("parity-correction-16.png")
+    }
+
+    @Test fun correctionUsesLargeJournalType() {
+        showCorrection(1f, "**見ました** is the polite past form.", 30)
+        openCorrection()
+        assertInsideWindow()
+        assertReadingTextFits()
+        capture("parity-correction-30.png")
     }
 
     @Test fun longCorrectionScrollsAtLargeTypeWithoutLeavingWindow() {
@@ -75,13 +92,13 @@ class JournalVisualParityTest {
         compose.onNodeWithText("Journal appearance").assertDoesNotExist()
     }
 
-    private fun showCorrection(scale: Float, explanation: String) {
-        val segment = FeedbackSegment("映画を見た。", "映画を見た。", SegmentKind.Optional, null, null,
+    private fun showCorrection(scale: Float, explanation: String, size: Int = 20) {
+        val segment = FeedbackSegment("映画を見た。", "映画[えいが]を見[み]た。", SegmentKind.Optional, null, null,
             explanation, null, "映画を見ました。", "映画[えいが]を見[み]ました。")
         compose.setContent {
             ConvoLabTheme {
                 val density = LocalDensity.current
-                CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
+                CompositionLocalProvider(LocalDensity provides Density(density.density, scale), LocalJournalTypography provides JournalTypography(JournalFont.Sans, size)) {
                     Column(Modifier.fillMaxSize().background(JournalStyle.Paper).safeDrawingPadding().padding(24.dp)) {
                         Spacer(Modifier.height(170.dp))
                         Box(Modifier.testTag("correction-anchor")) { CorrectionText(listOf(segment), "") }
@@ -105,8 +122,10 @@ class JournalVisualParityTest {
     private fun assertReadingTextFits() {
         for (text in listOf("映画", "見", "えいが", "み")) {
             val layouts = mutableListOf<TextLayoutResult>()
-            compose.onNodeWithText(text, useUnmergedTree = true)
-                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().indices.forEach { index ->
+                compose.onAllNodesWithText(text, useUnmergedTree = true)[index]
+                    .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            }
             assertTrue("$text must have a measured layout", layouts.isNotEmpty())
             assertTrue("$text must not be clipped", layouts.all { !it.didOverflowHeight })
         }
