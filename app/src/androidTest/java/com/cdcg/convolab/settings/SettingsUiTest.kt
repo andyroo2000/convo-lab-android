@@ -6,6 +6,11 @@ import android.view.View
 import android.view.inspector.WindowInspector
 import java.io.File
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.*
@@ -38,6 +43,7 @@ class SettingsUiTest {
         launchSettings()
         screenshot(TestOutput.file("settings-account.png"))
         compose.onNodeWithText("Edit Profile").performClick()
+        screenshot(TestOutput.file("settings-profile.png"))
         compose.onNodeWithTag("auth-Name").performClick().performTextReplacement("Naomi Updated")
         aboveKeyboard(compose.onNodeWithTag("settings-save-profile"))
         screenshot(TestOutput.file("settings-profile-keyboard.png"))
@@ -47,6 +53,7 @@ class SettingsUiTest {
         // Successful form replacement dismisses its input; Back can navigate away after that.
         device.waitForIdle()
         compose.onNodeWithText("Change Password").performScrollTo().performClick()
+        screenshot(TestOutput.file("settings-password.png"))
         compose.onNodeWithTag("auth-Current password").performClick().performTextInput("fixture-current")
         compose.onNodeWithTag("auth-New password").performScrollTo().performClick().performTextInput("fixture-new-password")
         compose.onNodeWithTag("auth-Confirm password").performScrollTo().performClick().performTextInput("fixture-new-password")
@@ -61,7 +68,9 @@ class SettingsUiTest {
     @Test fun wanikaniConnectSyncAndConfirmedDisconnectOmitStudyOptions() {
         launchSettings()
         compose.onNodeWithText("Connections").performClick()
+        screenshot(TestOutput.file("settings-connections.png"))
         compose.onNodeWithText("WaniKani").performClick()
+        screenshot(TestOutput.file("settings-wanikani-empty.png"))
         compose.onNodeWithTag("auth-WaniKani API token").performScrollTo().performClick().performTextInput("fixture-provider-token")
         screenshot(TestOutput.file("settings-wanikani-focus.png"))
         aboveKeyboard(compose.onNodeWithTag("settings-connect-wanikani"))
@@ -71,7 +80,11 @@ class SettingsUiTest {
         compose.waitUntil(5_000) { controller.state.value.known.connected && !controller.state.value.busy }
         // Successful form replacement dismisses its input; Back can navigate away after that.
         device.waitForIdle()
-        compose.onNodeWithText("Known kanji: 2").assertExists()
+        compose.onNodeWithText("Known kanji").assertExists()
+        compose.onNodeWithText("2").assertExists()
+        compose.onNodeWithText("WaniKani synced").assertExists()
+        compose.onNodeWithText("2026-11-22T16:30:00Z").assertDoesNotExist()
+        compose.onNodeWithText("Refresh connection").assertDoesNotExist()
         compose.onNodeWithText("Daily vocabulary transfer").assertDoesNotExist()
         screenshot(TestOutput.file("settings-wanikani-connected.png"))
         compose.onNodeWithText("Disconnect WaniKani").performScrollTo().performClick()
@@ -83,14 +96,31 @@ class SettingsUiTest {
         assertEquals(2, controller.state.value.known.kanji.size)
     }
 
-    private fun launchSettings() {
+    @Test fun largeTextFieldsGrowAndKeepSaveAboveKeyboard() {
+        launchSettings(2f)
+        compose.onNodeWithText("Edit Profile").performScrollTo().performClick()
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Name").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        assertTrue("Exercise actual enlarged text inside the modal window", layouts.single().layoutInput.density.fontScale >= 1.9f)
+        compose.onNodeWithTag("auth-Name").performClick().performTextReplacement("Large text name")
+        aboveKeyboard(compose.onNodeWithTag("settings-save-profile"))
+        screenshot(TestOutput.file("settings-profile-large-keyboard.png"))
+        compose.activity.cancelFixtureAutofill()
+        compose.onNodeWithTag("settings-save-profile").performClick()
+        compose.waitUntil(5_000) { controller.state.value.account.name == "Large text name" }
+    }
+
+    private fun launchSettings(scale: Float = 1f) {
         val auth = AuthApi(SettingsTransport { """{"data":{"id":101,"name":"Naomi","email":"naomi@example.invalid"}}""" })
         val sessions = SessionController(auth, UiSettingsSessionStorage(session))
         runBlocking { sessions.restore() }
         controller = SettingsController(SettingsAccess(session, api, UiKnownStorage(), sessions), scope)
         compose.setContent {
             val state by controller.state.collectAsState()
-            ConvoLabTheme { SettingsScreen(state, controller, SettingsActions({}, {}, {})) }
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
+                ConvoLabTheme { SettingsScreen(state, controller, SettingsActions({}, {}, {})) }
+            }
         }
         compose.runOnIdle { controller.start() }
         compose.waitUntil(5_000) { !controller.state.value.busy }
@@ -130,7 +160,7 @@ private class UiSettingsGateway(var account: Account) : SettingsGateway {
     override suspend fun profile(change: ProfileChange): Account { account = account.copy(name = change.name, email = change.email); return account }
     override suspend fun password(change: PasswordChange) { passwordChanged = true }
     override suspend fun knownKanji() = snapshot
-    override suspend fun connect(token: String): KnownKanjiSnapshot { snapshot = KnownKanjiSnapshot(1, setOf('映'.code, '画'.code), true); return snapshot }
+    override suspend fun connect(token: String): KnownKanjiSnapshot { snapshot = KnownKanjiSnapshot(1, setOf('映'.code, '画'.code), true, "2026-11-22T16:30:00Z"); return snapshot }
     override suspend fun sync() = Unit
     override suspend fun disconnect() { snapshot = snapshot.copy(connected = false) }
 }

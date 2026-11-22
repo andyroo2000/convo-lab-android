@@ -16,6 +16,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.takeOrElse
 
 internal class RubyTextMetrics(val measurer: TextMeasurer, val density: Density, val fonts: FontFamily.Resolver) {
     fun typeface(style: TextStyle): Typeface = fonts.resolve(style.fontFamily, style.fontWeight ?: FontWeight.Normal,
@@ -70,9 +71,10 @@ private fun measureRubyInline(token: RubyToken, styles: Pair<TextStyle, TextStyl
 }
 
 private fun rubyInlineStyles(appearance: RubyAppearance, run: RubyRun): Pair<TextStyle, TextStyle> {
-    val reading = TextStyle(letterSpacing = 0.sp, fontSize = (appearance.size * .42).sp,
+    val size = run.style.fontSize.takeOrElse { appearance.size.sp }
+    val reading = TextStyle(letterSpacing = 0.sp, fontSize = size * .42f,
         color = if (appearance.compact) run.style.color.takeOrElse { appearance.readingColor } else appearance.readingColor)
-    val base = TextStyle(fontFamily = appearance.font, fontWeight = run.style.fontWeight, fontStyle = run.style.fontStyle,
-        letterSpacing = 0.sp, fontSize = appearance.size.sp, color = run.style.color.takeOrElse { appearance.color })
+    val base = TextStyle(fontFamily = run.style.fontFamily ?: appearance.font, fontWeight = run.style.fontWeight, fontStyle = run.style.fontStyle,
+        letterSpacing = 0.sp, fontSize = size, color = run.style.color.takeOrElse { appearance.color })
     return reading to base
 }

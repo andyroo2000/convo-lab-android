@@ -9,25 +9,31 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.ui.JournalStyle
-import com.cdcg.convolab.auth.AuthPasswordField
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun WaniKaniSettings(state: SettingsState, controller: SettingsController) {
     var disconnect by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (state.known.connected) {
-            Text("Connected", style = MaterialTheme.typography.titleLarge)
-            Text("Known kanji: ${state.known.kanji.size}")
-            state.known.lastSyncedAt?.let { Text("Last synced: $it") }
+            ConnectionValue("WaniKani", "Connected")
+            ConnectionValue("Known kanji", state.known.kanji.size.toString())
+            state.known.lastSyncedAt?.let { ConnectionValue("WaniKani synced", connectionDate(it)) }
             WaniKaniAction("Sync WaniKani", { controller.sync() }, enabled = !state.busy)
             TextButton(onClick = { disconnect = true }, enabled = !state.busy,
-                colors = ButtonDefaults.textButtonColors(contentColor = JournalStyle.Red), contentPadding = PaddingValues(vertical = 8.dp)) {
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFAE513F)), contentPadding = PaddingValues(vertical = 8.dp)) {
                 Text("Disconnect WaniKani", style = JournalStyle.Body)
             }
         } else WaniKaniConnect(state.busy, controller)
         Text("Furigana stays visible unless every kanji in a word is in your synced known-kanji set. Your WaniKani API token is used to connect your account and is never saved on this device.",
-            style = MaterialTheme.typography.bodySmall, color = JournalBrand.Ink.copy(alpha = .6f))
-        WaniKaniAction("Refresh connection", { controller.reload() }, enabled = !state.busy)
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = JournalBrand.Ink.copy(alpha = .6f))
+        if (state.error != null) WaniKaniAction("Refresh connection", { controller.reload() }, enabled = !state.busy)
     }
     if (disconnect) AlertDialog(onDismissRequest = { disconnect = false }, title = { Text("Disconnect WaniKani?") },
         text = { Text("Your known kanji will be kept. You can reconnect later.") },
@@ -40,7 +46,7 @@ private fun WaniKaniConnect(busy: Boolean, controller: SettingsController) {
     val token = remember { TextFieldState() }
     val clear = { token.edit { replace(0, length, "") } }
     DisposableEffect(token) { onDispose(clear) }
-    AuthPasswordField("WaniKani API token", token, !busy)
+    SettingsPasswordField("WaniKani API token", token, !busy, placeholder = true)
     if (token.text.length > 512) Text("API tokens must be 512 characters or fewer.", color = MaterialTheme.colorScheme.error)
     WaniKaniAction("Connect and Sync", onClick = { controller.connect(token.text.toString(), clear) },
         enabled = !busy && token.text.isNotBlank() && token.text.length <= 512,
@@ -54,3 +60,17 @@ private fun WaniKaniAction(text: String, onClick: () -> Unit, modifier: Modifier
         Text(text, style = JournalStyle.Body)
     }
 }
+
+@Composable
+private fun ConnectionValue(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(label, Modifier.weight(1f))
+        Text(value, Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            color = JournalBrand.Ink.copy(alpha = .6f))
+    }
+}
+
+internal fun connectionDate(value: String): String = runCatching {
+    OffsetDateTime.parse(value).atZoneSameInstant(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT))
+}.getOrDefault(value)
