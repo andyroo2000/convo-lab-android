@@ -31,6 +31,24 @@ class ConversationUiTest {
     private lateinit var repository: JournalRepository
     @After fun stop() { scope.cancel() }
 
+    @Test fun conversationRetryOnlyAppearsAfterAFailureAndPreservesTheAnswer() {
+        launchNotebook()
+        val reply = composer()
+        compose.onNodeWithText("Reload conversation").assertDoesNotExist()
+        compose.onNodeWithText("Retry conversation").assertDoesNotExist()
+        write(reply, "残したい答え。")
+        device.pressBack()
+        compose.runOnIdle { transport.failConversationRead = true; current().refresh() }
+        compose.waitUntil(5_000) { current().state.value.error != null }
+        compose.onNodeWithText("Retry conversation").performScrollTo().assertIsDisplayed()
+        capture(TestOutput.file("conversation-read-retry.png"))
+        compose.runOnIdle { transport.failConversationRead = false }
+        compose.onNodeWithText("Retry conversation").performClick()
+        compose.waitUntil(5_000) { !current().state.value.busy }
+        compose.onNodeWithText("Retry conversation").assertDoesNotExist()
+        assertEquals("残したい答え。", composer().state.value.text)
+    }
+
     @Test fun answerKeyboardAndNestedFeedbackSupportAnotherTurn() {
         launchNotebook()
         val first = composer()
@@ -45,7 +63,7 @@ class ConversationUiTest {
         assertNotEquals(first.state.value.record.id, next.state.value.record.id)
         val reply = current().state.value.replies.single().controller
         compose.waitUntil(5_000) { reply.workflow.state.value.snapshot?.analysis?.status == WorkStatus.Ready }
-        compose.onNodeWithText("Edit answer").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("conversation-feedback-${reply.state.value.record.id}").performScrollTo().assertIsDisplayed()
         capture(TestOutput.file("conversation-reply-feedback.png"))
         write(next, "とても面白かったです。")
         capture(TestOutput.file("conversation-second-turn-keyboard.png"))

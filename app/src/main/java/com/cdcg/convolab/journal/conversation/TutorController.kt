@@ -42,8 +42,8 @@ class TutorController(private val api: TutorGateway, private val scope: Coroutin
         workflow.state.map { current ->
             val entry = current.entry
             val analysis = current.snapshot?.analysis
-            if (entry == null || analysis?.status != WorkStatus.Ready) null
-            else QuestionSource(JournalId(entry.id), JournalId(analysis.id), analysis.currentReplyId?.let(::JournalId))
+            if (entry == null || !current.readyForConversation) null
+            else QuestionSource(JournalId(entry.id), JournalId(requireNotNull(analysis).id), analysis.currentReplyId?.let(::JournalId))
         }.distinctUntilChanged().collect { source -> if (source == null) close() else open(source) }
     }
 

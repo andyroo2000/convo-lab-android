@@ -6,6 +6,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextAlign
 import com.cdcg.convolab.journal.NotebookPaperShape
+import com.cdcg.convolab.journal.NotebookReplyPaperShape
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -40,8 +41,9 @@ fun FeedbackContent(presentation: FeedbackPresentation) {
     val state = presentation.state
     if (state.recovery != null) { WorkflowRecoveryCard(presentation); return }
     val analysis = state.snapshot?.analysis
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when {
+            state.missingEntry -> Unit
             analysis?.status == WorkStatus.Ready -> FeedbackDocument(presentation, analysis)
             state.busy -> JournalThinking(lastAnswer = state.lastAnswer ?: state.snapshot?.pendingAnswer?.text, returnToDraft = presentation.controller::cancel)
             state.snapshot?.clarification?.status == WorkStatus.Waiting -> {
@@ -62,22 +64,30 @@ private fun FeedbackDocument(presentation: FeedbackPresentation, analysis: Analy
     val final = saved?.get(entryId) ?: fallback
     val choose: (Boolean) -> Unit = { fallback = it; if (entryId.isNotEmpty()) preferences?.select(entryId, it) }
     Column {
-    FeedbackToolbar(final, choose, presentation, analysis)
-    if (final) FinalAudio(presentation, analysis, header = true)
-    Surface(color = JournalBrand.Paper, shape = NotebookPaperShape, shadowElevation = 3.dp, border = androidx.compose.foundation.BorderStroke(.6.dp, Color(0xFFE6DECC))) {
+        FeedbackToolbar(final, choose, presentation, analysis)
+        if (final) FinalAudio(presentation, analysis, header = true)
+        FeedbackPaper(presentation, analysis, final)
+    }
+}
+
+@Composable
+private fun FeedbackPaper(presentation: FeedbackPresentation, analysis: Analysis, showFinal: Boolean) {
+    val entry = presentation.state.entry
+    val nested = entry?.rootEntryId != null
+    val paperShape = if (nested) NotebookReplyPaperShape else NotebookPaperShape
+    Surface(color = JournalBrand.Paper, shape = paperShape, shadowElevation = 3.dp, border = androidx.compose.foundation.BorderStroke(.6.dp, Color(0xFFE6DECC))) {
         Column(Modifier.fillMaxWidth().drawBehind {
             drawLine(Color(0xFFD58B78), Offset(14.dp.toPx(), 0f), Offset(14.dp.toPx(), size.height), 1.dp.toPx())
-        }.padding(start = 28.dp, end = 14.dp, top = 20.dp, bottom = 36.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                Text(journalDate(presentation.state.entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 17.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
-                Text(analysis.feedback?.title ?: presentation.state.entry?.title.orEmpty(), fontFamily = LocalJournalTypography.current.family, fontSize = 27.sp, color = Color(0xFF4B1800))
+        }.padding(start = 28.dp, end = 14.dp, top = if (nested) 24.dp else 20.dp, bottom = 36.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            if (!nested) Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Text(journalDate(entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 17.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
+                Text(entry?.title ?: "Untitled entry", fontFamily = LocalJournalTypography.current.family, fontSize = 27.sp, color = Color(0xFF4B1800))
             }
-            FeedbackPaperBody(includeBottomRule = final) {
-                if (final) FinalAudio(presentation, analysis, header = false)
-                else DraftFeedback(analysis, presentation.state.entry?.body.orEmpty())
+            FeedbackPaperBody(includeBottomRule = showFinal) {
+                if (showFinal) FinalAudio(presentation, analysis, header = false)
+                else DraftFeedback(analysis, entry?.body.orEmpty())
             }
         }
-    }
     }
 }
 

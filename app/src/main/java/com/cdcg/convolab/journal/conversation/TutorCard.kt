@@ -56,8 +56,9 @@ fun TeacherQuestion(question: TutorQuestion, parentId: JournalId? = null) {
     var english by rememberSaveable(question.id) { mutableStateOf(false) }
     Surface(color = Color.White, contentColor = JournalBrand.Ink, shape = RoundedCornerShape(12.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9E6F2))) {
         Column {
-            Row(Modifier.fillMaxWidth().background(Color(0xFFE4EFFC)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                question.tutor?.let { TutorPortrait(it, Modifier.size(80.dp)) }
+            Row(Modifier.fillMaxWidth().background(Color(0xFFE4EFFC)).padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                question.tutor?.let { TutorPortrait(it, Modifier.size(88.dp)) }
+                Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) { if (source != null) AudioControls(source) }
                 TextButton(onClick = { english = !english }, modifier = Modifier.semantics { contentDescription = if (english) "Hide English" else "Show English" }) { Text("En", fontSize = 13.sp, color = Color(0xFF6393EF)) }
             }

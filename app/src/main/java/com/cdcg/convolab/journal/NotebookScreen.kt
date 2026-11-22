@@ -81,7 +81,7 @@ private fun NotebookOverlays(presentation: NotebookPresentation) {
 private fun NotebookPage(state: NotebookState, controller: NotebookController, panels: NotebookPanels) {
     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
     if (panels.feedback?.visible == true) {
-        if (state.busy) Text("Updating journal…") else NotebookFeedback(panels)
+        if (state.busy) Text("Updating journal…") else NotebookFeedback(state, controller, panels)
     } else {
         state.draft.title?.let { Text(it, fontFamily = JournalBrand.Serif, fontSize = 24.sp) }
         key(state.draft.id) { NotebookPaper(state, controller::edit) }
@@ -90,7 +90,11 @@ private fun NotebookPage(state: NotebookState, controller: NotebookController, p
 }
 
 @Composable
-private fun NotebookFeedback(panels: NotebookPanels) {
+private fun NotebookFeedback(state: NotebookState, controller: NotebookController, panels: NotebookPanels) {
+    if (panels.feedback?.state?.missingEntry == true) {
+        JournalMissingEntry(state.draft.body, { controller.showContents(true) }, { controller.recoverCopy() })
+        return
+    }
     panels.feedback?.let { FeedbackContent(it) }
     if (panels.conversation != null) ConversationContent(panels.conversation, panels.tutor, true)
     else if (panels.tutor?.state?.source != null) TutorCard(panels.tutor)

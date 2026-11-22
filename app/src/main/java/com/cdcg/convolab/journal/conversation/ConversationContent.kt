@@ -31,11 +31,12 @@ class ConversationPresentation(val state: ConversationState, val session: Conver
 @Composable
 fun ConversationContent(presentation: ConversationPresentation, tutor: TutorPresentation?, enabled: Boolean) {
     val state = presentation.state
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
         state.replies.forEach { binding -> key(binding.controller) {
-            Surface(color = Color.Transparent) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Surface(color = Color(0xFFFAFCFF), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0x1F007AFF))) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     binding.node?.question?.let { TeacherQuestion(it, binding.node?.parentId?.let(::JournalId)) }
+                    HorizontalDivider()
                     ReplyContent(binding.controller, enabled)
                 }
             }
@@ -43,8 +44,8 @@ fun ConversationContent(presentation: ConversationPresentation, tutor: TutorPres
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            TextButton(onClick = { presentation.session.refresh() }, enabled = enabled && !state.busy) { Text("Retry conversation") }
         }
-        TextButton(onClick = { presentation.session.refresh() }, enabled = enabled && !state.busy) { Text("Reload conversation") }
         if (tutor?.state?.source != null) TutorCard(tutor)
         state.composer?.let { key(it.controller) { ReplyContent(it.controller, enabled) } }
     }
@@ -58,8 +59,7 @@ fun ReplyContent(controller: ReplyController, enabled: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (state.showsEditor(feedback)) ReplyEditor(state, controller, enabled)
         else {
-            FeedbackContent(feedback)
-            TextButton(onClick = controller::beginEditing, enabled = enabled && !work.busy) { Text("Edit answer") }
+            Box(Modifier.testTag("conversation-feedback-${state.record.id}")) { FeedbackContent(feedback) }
         }
         ReplyMessages(state, controller, enabled)
     }

@@ -31,6 +31,49 @@ class WorkflowSessionTest {
     private fun analysis(text: String = "今日は晴れでした。") = Analysis(analysisId, 1, WorkStatus.Ready,
         null, null, CorrectedDocument(text, text), 1, null, "updated", "{}")
 
+    @Test fun missingEntryPreservesCachedFeedbackAndNeverEnablesConversation() = runTest {
+        val snapshot = WorkflowSnapshot(JournalId(entry.id), entry.version, analysis = analysis(),
+            pendingFinalEdit = FinalEdit(analysisId, 1, "保存する修正。"))
+        val storage = MemoryWorkflow().apply { record = snapshot }
+        val response = CompletableDeferred<AnalysisResponse>()
+        val api = FakeFeedback().apply { analysisResult = { response.await() } }
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        assertNotNull(controller.state.value.snapshot?.analysis)
+        assertFalse(controller.state.value.readyForConversation)
+        response.completeExceptionally(ApiFailure(404))
+        runCurrent()
+        assertTrue(controller.state.value.missingEntry)
+        assertFalse(controller.state.value.readyForConversation)
+        assertEquals(snapshot, storage.record)
+        assertEquals(0, api.starts)
+        controller.dismissFinalEdit()
+        runCurrent()
+        assertTrue(controller.state.value.missingEntry)
+        assertFalse(controller.state.value.readyForConversation)
+        api.analysisResult = { AnalysisResponse(it, analysis()) }
+        controller.retry()
+        runCurrent()
+        assertFalse(controller.state.value.missingEntry)
+        assertTrue(controller.state.value.readyForConversation)
+    }
+
+    @Test fun failedReadAndMissingClarificationAreNotTreatedAsDeletedEntries() = runTest {
+        val api = FakeFeedback().apply {
+            analysisResult = { throw ApiFailure(503) }
+            startResult = { throw ApiFailure(404) }
+        }
+        val controller = WorkflowController(WorkflowAccess(api, MemoryWorkflow(), StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.open(entry)
+        runCurrent()
+        assertFalse(controller.state.value.missingEntry)
+        assertFalse(controller.state.value.readyForConversation)
+        controller.submit(entry)
+        runCurrent()
+        assertFalse(controller.state.value.missingEntry)
+    }
+
     @Test fun lostAnswerResponseRetriesTheExactQuestionAndTextAfterReopen() = runTest {
         val storage = MemoryWorkflow()
         val api = FakeFeedback().apply {

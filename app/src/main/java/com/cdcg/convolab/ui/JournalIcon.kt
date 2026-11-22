@@ -31,6 +31,7 @@ enum class JournalSymbol(val path: String) {
     Settings("M9 2h6l1 4l4 1l3 5l-3 5l-4 1l-1 4H9l-1 -4l-4 -1l-3 -5l3 -5l4 -1zM16 12a4 4 0 1 1 -8 0a4 4 0 0 1 8 0"),
     Play("M6 3L21 12L6 21z"),
     Pause("M8 4v16M16 4v16"),
+    Speaker("M3 9h4l5 -5v16l-5 -5H3zM16 8q4 4 0 8M19 4q8 8 0 16"),
     Compose("M14 4H5a2 2 0 0 0 -2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2 -2v-8M21 2l2 2L12 15l-4 1l1 -4z"),
     Check("M4 12L10 18L21 5")
 }

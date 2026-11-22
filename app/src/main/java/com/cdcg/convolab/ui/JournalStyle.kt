@@ -98,7 +98,9 @@ fun JournalDraftButton(text: String, action: () -> Unit, modifier: Modifier = Mo
     Button(onClick = action, enabled = enabled, modifier = modifier.heightIn(min = 44.dp), shape = CircleShape,
         border = BorderStroke(1.dp, ink.copy(alpha = .5f)),
         colors = ButtonDefaults.buttonColors(containerColor = if (filled) ink else JournalStyle.Paper,
-            contentColor = if (filled) JournalStyle.Paper else ink), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)) {
+            contentColor = if (filled) JournalStyle.Paper else ink,
+            disabledContainerColor = if (filled) ink.copy(alpha = .4f) else JournalStyle.Paper,
+            disabledContentColor = (if (filled) JournalStyle.Paper else ink).copy(alpha = .4f)), contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)) {
         Text(text, style = JournalStyle.Body)
     }
 }

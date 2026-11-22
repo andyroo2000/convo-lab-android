@@ -11,7 +11,7 @@ class ConversationController(private val access: ConversationAccess) {
     val session = mutableSession.asStateFlow()
 
     suspend fun follow(root: WorkflowController) {
-        root.state.map { state -> state.entry?.takeIf { state.snapshot?.analysis?.status == WorkStatus.Ready } }
+        root.state.map { state -> state.entry?.takeIf { state.readyForConversation } }
             .distinctUntilChanged().collectLatest { entry ->
                 mutableSession.value = null
                 access.tutor.close()

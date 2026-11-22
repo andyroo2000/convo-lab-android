@@ -12,6 +12,7 @@ internal class ConversationFixture : ApiTransport {
     val children = linkedMapOf<String, JournalEntry>()
     val sent = mutableListOf<String>()
     var loseNextAnswer = false
+    var failConversationRead = false
     private val questions = mutableMapOf<String, JSONObject>()
     private val analyses = mutableMapOf<String, String>()
     private val parents = mutableMapOf<String, String>()
@@ -23,7 +24,7 @@ internal class ConversationFixture : ApiTransport {
         val entry = children[id] ?: root
         return when {
             path.endsWith("/conversation") && method == "POST" -> createAnswer(JournalId(id), JSONObject(requireNotNull(body)))
-            path.endsWith("/conversation") -> JSONObject().put("data", JSONArray(children.values.map(::node))).toString()
+            path.endsWith("/conversation") -> loadConversation()
             path.endsWith("/analysis") -> JSONObject().put("entry", entryJson(entry)).put("data", analysis(entry)).toString()
             path.endsWith("/clarification") -> data(JSONObject().put("id", JournalIds.newId()).put("sourceVersion", entry.version)
                 .put("revision", 1).put("status", "resolved").put("updatedAt", "updated"))
@@ -32,6 +33,11 @@ internal class ConversationFixture : ApiTransport {
             method == "PUT" -> updateEntry(entry, JSONObject(requireNotNull(body)))
             else -> data(entryJson(entry))
         }
+    }
+
+    private fun loadConversation(): String {
+        if (failConversationRead) throw IOException("fixture read failure")
+        return JSONObject().put("data", JSONArray(children.values.map(::node))).toString()
     }
 
     private fun createAnswer(parent: JournalId, body: JSONObject): String {

@@ -19,6 +19,22 @@ class JournalRepositoryTest {
     private fun saved(source: JournalDraft) = JournalEntry(source.id, source.title, source.body, source.entryDate,
         source.expectedVersion + 1, "created", "updated", source.rootEntryId)
 
+    @Test fun recoveringACachedEntryKeepsTheOriginalAndCreatesAnUnsentDraft() = runTest {
+        val entry = saved(draft)
+        val original = JournalRecord(entry = entry)
+        val storage = MemoryJournal().apply { records[entry.id] = original }
+        val api = FakeJournal()
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val copy = repository.saveAsNew(JournalId(entry.id))
+        assertNotEquals(entry.id, copy.id)
+        assertEquals(entry.body, copy.body)
+        assertEquals(0, copy.expectedVersion)
+        assertNull(copy.rootEntryId)
+        assertEquals(original, storage.records[entry.id])
+        assertNull(storage.records[copy.id]?.entry)
+        assertTrue(api.saved.isEmpty())
+    }
+
     @Test fun acknowledgementKeepsNewerLocalWritingAndAdvancesItsVersion() = runTest {
         val response = CompletableDeferred<JournalEntry>()
         val storage = MemoryJournal()

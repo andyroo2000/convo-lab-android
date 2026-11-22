@@ -3,6 +3,8 @@ package com.cdcg.convolab.journal.feedback
 import android.animation.ValueAnimator
 import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -35,13 +37,15 @@ fun JournalThinking(lastAnswer: String? = null, returnToDraft: (() -> Unit)? = n
     val elapsed = thinkingElapsed(reducedMotion)
     Surface(color = Color(0xFFFFFDF6), contentColor = Color(0xFF542006), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFD8E4F2))) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp).testTag("journal-thinking"), horizontalAlignment = Alignment.CenterHorizontally) {
-            TextButton(onClick = { english = !english }, modifier = Modifier.align(Alignment.End), colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF542006))) { Text(if (english) "Hide English" else "Show English", fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif) }
+            Text(if (english) "Hide English" else "Show English", fontSize = 13.sp, fontFamily = FontFamily.SansSerif,
+                modifier = Modifier.align(Alignment.End).clickable(role = Role.Button) { english = !english })
+            Spacer(Modifier.height(18.dp))
             ThinkingOrnament(elapsed, reducedMotion)
             Spacer(Modifier.height(28.dp))
             WaitingTutorPortrait(Modifier.size(80.dp))
-            Spacer(Modifier.height(20.dp))
-            Text(phrase.first, fontSize = 21.sp, textAlign = TextAlign.Center)
-            if (english) Text(phrase.second, fontFamily = JournalBrand.Serif, fontSize = 19.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+            Spacer(Modifier.height(18.dp))
+            Text(phrase.first, fontFamily = FontFamily.SansSerif, fontSize = 21.sp, textAlign = TextAlign.Center)
+            if (english) Text(phrase.second, fontFamily = JournalBrand.Serif, fontSize = 19.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 18.dp))
             Spacer(Modifier.height(24.dp))
             Box(Modifier.semantics { contentDescription = "Your tutor is preparing your feedback. Your writing is saved."; liveRegion = LiveRegionMode.Polite }) {
                 ThinkingDots(elapsed, reducedMotion)
@@ -64,7 +68,7 @@ fun WaitingTutorPortrait(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SavedThinkingAnswer(answer: String) {
-    HorizontalDivider(Modifier.padding(top = 36.dp, bottom = 20.dp), color = Color(0xFFDDD8C9))
+    HorizontalDivider(Modifier.padding(top = 36.dp, bottom = 18.dp), thickness = .5.dp, color = Color(0xFFDDD8C9))
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         JournalIcon(JournalSymbol.Check, Modifier.size(16.dp), Color(0xFF6A8267))
         Text(answer, fontFamily = JournalBrand.Serif, fontSize = 17.sp, color = Color(0xFF594C44))

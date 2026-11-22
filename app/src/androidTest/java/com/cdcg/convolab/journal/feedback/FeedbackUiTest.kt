@@ -15,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.journal.*
+import com.cdcg.convolab.journal.audio.LocalJournalAudio
+import com.cdcg.convolab.network.ApiFailure
 import com.cdcg.convolab.journal.appearance.JournalTypography
 import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 import com.cdcg.convolab.typing.TestOutput
@@ -35,8 +37,41 @@ class FeedbackUiTest {
     private val entry = JournalEntry(JournalIds.newId(), "A movie night", "映画を見た。", "2026-11-12", 1, "created", "updated")
     private val api = UiFeedbackGateway()
     private lateinit var workflow: WorkflowController
+    private lateinit var notebook: NotebookController
 
     @After fun stop() { scope.cancel() }
+
+    @Test fun missingCachedEntryCanBeRecoveredAsANewLocalDraft() {
+        val cached = runBlocking { api.analysis(entry).analysis }
+        api.missingEntry = true
+        launchNotebook(submit = false, saved = WorkflowSnapshot(JournalId(entry.id), entry.version, analysis = cached))
+        compose.onNodeWithText("404 · Entry Not Found").assertIsDisplayed()
+        screenshot("feedback-missing-entry")
+        compose.onNodeWithText("Save as a new entry").performScrollTo().performClick()
+        compose.waitUntil(5_000) { notebook.state.value.draft.id != entry.id }
+        assertEquals(entry.body, notebook.state.value.draft.body)
+        assertEquals(0, notebook.state.value.draft.expectedVersion)
+        assertTrue(notebook.state.value.records.any { it.entry == entry })
+        assertEquals(cached, workflow.state.value.snapshot?.analysis)
+    }
+
+    @Test fun missingEntryKeepsCachedWritingAndOffersRecoveryAtLargeText() {
+        val cached = runBlocking { api.analysis(entry).analysis }
+        api.missingEntry = true
+        launchNotebook(submit = false, saved = WorkflowSnapshot(JournalId(entry.id), entry.version, analysis = cached), scale = 2f)
+        compose.onNodeWithText("404 · Entry Not Found").assertIsDisplayed()
+        compose.onNodeWithText("The service is unavailable. Please try again.").assertDoesNotExist()
+        compose.onNodeWithText("Save as a new entry").performScrollTo().assertIsDisplayed()
+        screenshot("feedback-missing-entry-large-text")
+        compose.onNodeWithText("Copy saved writing").performScrollTo().performClick()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+        compose.runOnIdle { assertEquals(entry.body, clipboard.primaryClip?.getItemAt(0)?.text.toString()) }
+        assertEquals(cached, workflow.state.value.snapshot?.analysis)
+        assertFalse(workflow.state.value.readyForConversation)
+        compose.onNodeWithText("Back to Journal").performScrollTo().performClick()
+        compose.onAllNodesWithText("Contents", substring = false).assertCountEquals(2)
+    }
 
     @Test fun customClarificationAnswerStaysReachableAboveTheKeyboard() {
         launchNotebook(submit = true)
@@ -146,8 +181,9 @@ class FeedbackUiTest {
             compose.activity.enableEdgeToEdge()
             compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
+        val audio = feedbackAudioFixture(InstrumentationRegistry.getInstrumentation().targetContext, scope)
         val storage = FeedbackNotebookStorage(JournalRecord(entry, JournalDraft.from(entry)))
-        val notebook = NotebookController(JournalRepository(FeedbackNotebookGateway(), storage), scope)
+        notebook = NotebookController(JournalRepository(FeedbackNotebookGateway(), storage), scope)
         workflow = WorkflowController(WorkflowAccess(api, UiWorkflowStorage(saved)), scope)
         compose.setContent {
             val state by notebook.state.collectAsState()
@@ -155,7 +191,7 @@ class FeedbackUiTest {
             val density = LocalDensity.current
             val arguments = InstrumentationRegistry.getArguments()
             val typography = JournalTypography.restored(arguments.getString("journalFont"), arguments.getString("journalSize")?.toIntOrNull() ?: 20)
-            CompositionLocalProvider(LocalDensity provides Density(density.density, scale), LocalJournalTypography provides typography) {
+            CompositionLocalProvider(LocalDensity provides Density(density.density, scale), LocalJournalTypography provides typography, LocalJournalAudio provides audio) {
                 ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
             }
         }
@@ -188,6 +224,7 @@ private class UiFeedbackGateway : FeedbackGateway {
     private val questionId = JournalIds.newId()
     private val analysisId = JournalIds.newId()
     var finishFeedback: CompletableDeferred<Unit>? = null
+    var missingEntry = false
     var answerText: String? = null
     var editedText: String? = null
     private fun clarification(status: WorkStatus) = Clarification(clarificationId, 1, 1, status,
@@ -204,6 +241,7 @@ private class UiFeedbackGateway : FeedbackGateway {
     override suspend fun answer(entry: JournalEntry, answer: ClarificationAnswer): Clarification { answerText = answer.text; return clarification(WorkStatus.Resolved) }
     override suspend fun submit(entry: JournalEntry, clarificationId: String) = analysis().let { if (finishFeedback == null) it else it.copy(status = WorkStatus.Queued) }
     override suspend fun analysis(entry: JournalEntry): AnalysisResponse {
+        if (missingEntry) throw ApiFailure(404)
         finishFeedback?.await()
         return AnalysisResponse(if (finishFeedback == null) entry else entry.copy(title = "A generated title", version = entry.version + 1), analysis())
     }
