@@ -15,6 +15,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.journal.*
+import com.cdcg.convolab.journal.appearance.JournalTypography
+import com.cdcg.convolab.journal.appearance.LocalJournalTypography
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.AccountMenu
 import com.cdcg.convolab.ui.ConvoLabTheme
@@ -151,7 +153,9 @@ class FeedbackUiTest {
             val state by notebook.state.collectAsState()
             val feedback by workflow.state.collectAsState()
             val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
+            val arguments = InstrumentationRegistry.getArguments()
+            val typography = JournalTypography.restored(arguments.getString("journalFont"), arguments.getString("journalSize")?.toIntOrNull() ?: 20)
+            CompositionLocalProvider(LocalDensity provides Density(density.density, scale), LocalJournalTypography provides typography) {
                 ConvoLabTheme { NotebookScreen(state, notebook, NotebookPanels(FeedbackPresentation(feedback, workflow))) { AccountMenu("Naomi", {}, null) } }
             }
         }

@@ -39,6 +39,7 @@ fun CorrectionPopover(segment: FeedbackSegment, anchor: Rect, dismiss: () -> Uni
     val width = with(density) { screen.width.toDp() }
     val height = with(density) { screen.height.toDp() }
     Popup(popupPositionProvider = position, onDismissRequest = dismiss, properties = PopupProperties(focusable = true)) {
+        CompositionLocalProvider(LocalRubyOnPaper provides false) {
         Box(Modifier.width(minOf(340.dp, width - 32.dp)).heightIn(max = height * .75f).testTag("correction-popover")) {
             Column(Modifier.padding(vertical = 8.dp).shadow(7.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp))
                 .background(Color.White).verticalScroll(rememberScrollState()).testTag("correction-scroll")) {
@@ -46,6 +47,7 @@ fun CorrectionPopover(segment: FeedbackSegment, anchor: Rect, dismiss: () -> Uni
                 CorrectionExplanation(segment)
             }
             CorrectionPointer(pointer, segment.replacement != null, Modifier.matchParentSize())
+        }
         }
     }
 }

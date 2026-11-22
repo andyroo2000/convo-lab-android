@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import com.cdcg.convolab.journal.text.RubyText
 import com.cdcg.convolab.journal.text.RubyParagraph
 import com.cdcg.convolab.journal.text.RubyRun
+import com.cdcg.convolab.journal.text.RubyUnderline
 
 @Composable
 fun CorrectionText(segments: List<FeedbackSegment>, fallback: String) {
@@ -23,7 +24,12 @@ fun CorrectionText(segments: List<FeedbackSegment>, fallback: String) {
                 SegmentKind.Plain -> Color.Transparent
             }
             val action: (() -> Unit)? = if (segment.kind == SegmentKind.Plain) null else { { selected = index } }
-            RubyRun(segment.reading.ifEmpty { segment.text }, color, onClick = action)
+            val underline = when (segment.kind) {
+                SegmentKind.Optional -> RubyUnderline(Color(0xFFC89B31), dashed = true)
+                SegmentKind.Correction -> RubyUnderline(Color(0xFFC96B64))
+                else -> null
+            }
+            RubyRun(segment.reading.ifEmpty { segment.text }, color, underline = underline, onClick = action)
         }
         RubyParagraph(runs, onRunBounds = { index, bounds -> anchors[index] = bounds })
         selected?.let { index ->
