@@ -28,7 +28,7 @@ class NotebookControllerTest {
         assertTrue(controller.state.value.savedLocally)
     }
 
-    @Test fun failedKeepAndCloseKeepsTheEditorAndDurableDraft() = runTest {
+    @Test fun offlineKeepAndCloseQueuesTheDurableDraft() = runTest {
         val storage = NotebookMemory()
         val api = NotebookGateway().apply { failSaves = true }
         val controller = NotebookController(JournalRepository(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
@@ -36,9 +36,9 @@ class NotebookControllerTest {
         controller.edit("書いた文章。")
         controller.requestClose()
         controller.keepAndClose().join()
-        assertTrue(controller.state.value.closePrompt)
-        assertEquals("書いた文章。", controller.state.value.draft.body)
-        assertNotNull(controller.state.value.error)
+        assertFalse(controller.state.value.closePrompt)
+        assertEquals("", controller.state.value.draft.body)
+        assertNull(controller.state.value.error)
         assertEquals("書いた文章。", storage.records.values.single().pendingSave?.body)
     }
 

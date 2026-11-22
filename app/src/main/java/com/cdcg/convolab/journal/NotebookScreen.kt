@@ -148,14 +148,17 @@ private fun NotebookMessage(state: NotebookState, controller: NotebookController
         Text("Deletion is awaiting confirmation. Your local copy is kept until it succeeds.")
         TextButton(onClick = { controller.delete(state.draft) }, enabled = !state.busy) { Text("Retry deletion") }
     }
-    if (state.savedLocally) Text("Saved on this device", color = Color(0xFF586556), fontSize = 12.sp)
+    state.syncStatus?.let { Text(it, color = Color(0xFF586556), fontSize = 12.sp, modifier = Modifier.testTag("journal-sync-status")) }
+    if (state.canRecoverCopy) {
+        Text("This entry changed or was deleted elsewhere. Your writing is saved on this device.")
+        TextButton(onClick = { controller.recoverCopy() }, enabled = !state.busy) { Text("Save as new") }
+    }
     if (state.recoveryCount > 0) Text("${state.recoveryCount} saved records need recovery. Their files have been kept.", color = Color(0xFF974634))
     state.error?.let {
         Text(it, color = Color(0xFF974634), fontWeight = FontWeight.Medium,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         Row {
             TextButton(onClick = { controller.flush() }, enabled = !state.busy) { Text("Retry local save") }
-            if (state.canRecoverCopy) TextButton(onClick = { controller.recoverCopy() }) { Text("Save as new") }
         }
     }
 }

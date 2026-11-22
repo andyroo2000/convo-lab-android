@@ -13,9 +13,16 @@ data class NotebookState(
     val closePrompt: Boolean = false,
     val pendingDelete: Boolean = false,
     val canRecoverCopy: Boolean = false,
+    val syncingId: String? = null,
     val archive: JournalArchive? = null,
     val localWorkRoots: Set<String> = emptySet(),
 ) {
+    val syncStatus: String? get() = when {
+        syncingId == draft.id -> "Syncing…"
+        savedLocally -> "Saved on this device"
+        records.any { it.id == draft.id && it.entry?.body == draft.body && it.entry.version == draft.expectedVersion } -> "Synced"
+        else -> null
+    }
     val canEdit: Boolean get() = !busy && !loading && !pendingDelete
     val contentsRecords: List<JournalRecord> get() {
         val listing = archive ?: return records

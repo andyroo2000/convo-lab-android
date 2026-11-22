@@ -61,8 +61,9 @@ class JournalRepository(
         val version = maxOf(draft.expectedVersion, previous?.acknowledgedVersion ?: 0)
         val rebased = draft.copy(expectedVersion = version)
         val record = previous?.copy(draft = rebased) ?: JournalRecord(draft = rebased)
-        storage.write(record)
-        record
+        val saved = if (record.syncRejection in setOf(400, 422)) record.copy(syncRejection = null) else record
+        storage.write(saved)
+        saved
     }
 
     suspend fun refresh(cursor: String? = null): JournalPage {
@@ -87,9 +88,13 @@ class JournalRepository(
         }
     }
 
-    suspend fun save(key: JournalId): JournalEntry = saves.withLock {
+    suspend fun save(key: JournalId, automatic: Boolean = false): JournalEntry = saves.withLock {
         val id = key.value
-        val sent = disk { prepareSave(requireNotNull(storage.read(id))) } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
+        val sent = disk {
+            val record = requireNotNull(storage.read(id))
+            if (automatic) record.syncRejection?.let { throw ApiFailure(it) }
+            prepareSave(record)
+        } ?: return@withLock disk { requireNotNull(storage.read(id)?.entry) }
         val origin = disk { storage.read(id)?.takeIf { sent.expectedVersion == 0 }?.answerOrigin }
         val received = saveRequest(sent, origin)
         disk {
@@ -129,7 +134,7 @@ class JournalRepository(
         catch (failure: ApiFailure) {
             if (failure.isDefinitiveRejection()) disk {
                 val current = requireNotNull(storage.read(sent.id))
-                storage.write(current.copy(pendingSave = null))
+                storage.write(current.copy(pendingSave = null, syncRejection = failure.status))
             }
             throw failure
         }
