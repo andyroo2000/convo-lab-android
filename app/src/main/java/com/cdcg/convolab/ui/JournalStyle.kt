@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +45,7 @@ fun JournalCloseButton(label: String, close: () -> Unit) {
 fun JournalHeading(title: String, close: () -> Unit, label: String = "Close $title") {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(title, fontFamily = JournalBrand.Serif, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, modifier = Modifier.weight(1f))
-        JournalCloseButton(label, close)
+        CompositionLocalProvider(LocalContentColor provides JournalStyle.Green) { JournalCloseButton(label, close) }
     }
 }
 
@@ -63,9 +65,11 @@ fun JournalSheet(title: String, close: () -> Unit, content: @Composable ColumnSc
     }
 }
 
+val LocalJournalButtonInk = compositionLocalOf { JournalStyle.Green }
+
 @Composable
 fun JournalButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val ink = JournalStyle.Green
+    val ink = LocalJournalButtonInk.current
     Button(onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 44.dp), shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(containerColor = JournalStyle.Sage, contentColor = ink,
             disabledContainerColor = JournalStyle.Sage.copy(alpha = .5f), disabledContentColor = ink.copy(alpha = .5f)),

@@ -26,7 +26,8 @@ import java.time.format.DateTimeFormatter
 fun NotebookContents(state: NotebookState, controller: NotebookController) {
     var editing by remember { mutableStateOf<JournalRecord?>(null) }
     var deleting by remember { mutableStateOf<JournalRecord?>(null) }
-    ModalBottomSheet(onDismissRequest = { controller.showContents(false) }, containerColor = JournalBrand.Paper) {
+    ModalBottomSheet(onDismissRequest = { controller.showContents(false) }, containerColor = JournalBrand.Paper,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Black.copy(alpha = .2f)) }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 CompositionLocalProvider(LocalContentColor provides JournalStyle.Green) { JournalCloseButton("Close contents") { controller.showContents(false) } }

@@ -32,6 +32,9 @@ No entry was deleted or resubmitted as part of this recovery check.
   code and passes with the fix.
 - Notebook line spacing, first-line alignment, four-line minimum writing area,
   paper padding, and shallow torn edge follow iOS.
+- Profile/password actions align to the right with navy text; form spacing,
+  Journal sheet close icons, Contents handle, WaniKani action colors, and smaller
+  connection help text follow iOS.
 - Account menu order, labels, cream background, caption spacing, and pointer now
   match the iOS popover. Appearance preview/cards use brown ink; radio choices use
   Journal green; writing placeholders use neutral gray.
@@ -51,9 +54,10 @@ Pixel tests overall). A separate waiting
 flow also passes with the device animation scale disabled; the original setting
 is restored afterward. The final ruby-layout check also passes all 3 visual parity tests, 10 feedback/
 conversation tests, and the correction test with the Pixel system font scale at
-1.6 (restored to 1.0 afterward). PR CI runs the complete emulator suite.
+1.6 (restored to 1.0 afterward). Another 10/10 Pixel checks cover the final
+Settings, notebook, tutor, and popover changes. PR CI runs the complete emulator suite.
 
-CodeScene MCP covers all 33 changed Kotlin files with no findings or declines.
+CodeScene MCP covers all 37 changed Kotlin files with no findings or declines.
 `AccountMenu` and the static illustration table return no numeric score.
 
 The screenshots below use isolated fixtures. iOS appearance captures use Serif
@@ -74,3 +78,9 @@ it labels its action “Save draft”; the production Journal action is “Submi
 ![Correction without clipped kanji](submission-followup/parity-correction-popover.png)
 
 ![Correction at larger device text size](submission-followup/correction-device-large.png)
+
+![Profile action alignment](submission-followup/settings-profile-keyboard.png)
+
+![WaniKani settings](submission-followup/settings-wanikani-connected.png)
+
+![Tutor sheet close control](submission-followup/tutor-picker.png)
