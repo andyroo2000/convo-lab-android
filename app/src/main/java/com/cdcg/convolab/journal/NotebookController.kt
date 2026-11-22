@@ -34,12 +34,19 @@ class NotebookController(private val repository: JournalRepository, private val 
 
     fun stopSync() { syncJob?.cancel(); syncJob = null }
     fun reconnect() = scope.launch {
+        if (syncJob?.isActive != true) return@launch
         automaticSync.reconnect()
         if (!state.value.loading && !state.value.busy) synchronize()
     }
 
     suspend fun synchronize() {
-        try { writer.flush(); automaticSync.synchronize() }
+        try {
+            writer.flush()
+            val snapshot = state.value
+            if (snapshot.savedLocally || snapshot.records.any { it.hasPendingWriting }) {
+                automaticSync.synchronize()
+            }
+        }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* A failed local write must never be sent or discarded. */ }
     }
@@ -48,8 +55,8 @@ class NotebookController(private val repository: JournalRepository, private val 
         try {
             val local = repository.load()
             val records = sorted(local.records)
-            val resume = records.firstOrNull { it.draft != null }
-            mutableState.update { it.copy(records = records, draft = resume?.draft ?: it.draft,
+            val resume = records.firstOrNull { it.hasPendingWriting }
+            mutableState.update { it.copy(records = records, draft = resume?.editableDraft() ?: it.draft,
                 pendingDelete = resume?.pendingDelete ?: false,
                 loading = false, savedLocally = resume != null, recoveryCount = local.recoveryFiles.size,
                 archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
@@ -97,7 +104,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         val id = selected.id
         writer.flush()
         val record = requireNotNull(repository.record(JournalId(id)))
-        mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = record.draft != null, pendingDelete = record.pendingDelete, canRecoverCopy = record.syncRejection in setOf(404, 409)) }
+        mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = record.hasPendingWriting, pendingDelete = record.pendingDelete, canRecoverCopy = record.syncRejection in setOf(404, 409)) }
     }
 
     fun keepAndClose() = action(recoveryFor = state.value.draft.id) {
@@ -117,11 +124,11 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private suspend fun saveLatest(draft: JournalDraft): JournalEntry {
-        var entry = repository.save(draft.key)
-        while (repository.record(draft.key)?.draft != null) {
-            entry = repository.save(draft.key)
+        repeat(3) {
+            val entry = repository.save(draft.key)
+            if (repository.record(draft.key)?.draft == null) return entry
         }
-        return entry
+        error("Writing is still changing. It is kept on this device; try Save again.")
     }
 
     fun rename(selected: JournalRecord, title: String) = action(recoveryFor = selected.id) {
@@ -189,7 +196,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         val id = source.id
         reload()
         val record = requireNotNull(repository.record(JournalId(id)))
-        if (state.value.draft.id == id) mutableState.update { it.copy(draft = record.editableDraft(), savedLocally = record.draft != null) }
+        if (state.value.draft.id == id) mutableState.update { it.copy(draft = record.editableDraft(), savedLocally = record.hasPendingWriting) }
     }
 
     private suspend fun reload() {
@@ -215,7 +222,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         mutableState.update { current ->
             if (current.draft.id != record.id) current else current.copy(
                 draft = current.draft.copy(expectedVersion = maxOf(current.draft.expectedVersion, record.acknowledgedVersion)),
-                savedLocally = record.draft != null,
+                savedLocally = record.hasPendingWriting,
                 canRecoverCopy = record.syncRejection in setOf(404, 409))
         }
     }

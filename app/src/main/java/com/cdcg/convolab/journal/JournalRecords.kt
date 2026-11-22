@@ -36,6 +36,7 @@ data class JournalRecord(val entry: JournalEntry? = null, val draft: JournalDraf
         require(entry == null || draft == null || entry.id == draft.id)
         require(pendingSave == null || pendingSave.id == (draft?.id ?: entry?.id))
     }
+    val hasPendingWriting: Boolean get() = draft != null || pendingSave != null
     val id: String get() = draft?.id ?: entry!!.id
     val rootEntryId: String? get() = draft?.rootEntryId ?: entry?.rootEntryId
 

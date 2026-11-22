@@ -5,6 +5,7 @@ import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -112,6 +113,55 @@ class JournalAutomaticSyncTest {
         assertNull(storage.records[saved?.id]?.draft)
     }
 
+    @Test fun reconnectDoesNotSendWhenTheJournalLifecycleIsStopped() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway()
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Offline writing")
+        controller.flush().join()
+        controller.reconnect().join()
+        assertTrue(api.attempts.isEmpty())
+        controller.startSync()
+        runCurrent()
+        assertEquals(1, api.attempts.size)
+        controller.stopSync()
+        controller.edit("More writing while stopped")
+        controller.reconnect().join()
+        assertEquals(1, api.attempts.size)
+    }
+
+    @Test fun cancellingASaveClearsTheSpinnerButKeepsTheDurableRequest() = runTest {
+        val storage = NotebookMemory()
+        val response = CompletableDeferred<Unit>()
+        val api = SyncGateway().apply { beforeResponse = { response.await() } }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Keep after cancellation")
+        val saving = launch { controller.synchronize() }
+        runCurrent()
+        assertNotNull(controller.state.value.syncingId)
+        saving.cancelAndJoin()
+        assertNull(controller.state.value.syncingId)
+        assertNotNull(storage.records[controller.state.value.draft.id]?.pendingSave)
+        assertEquals("Saved on this device", controller.state.value.syncStatus)
+    }
+
+    @Test fun pendingPayloadWithoutANewerDraftRemainsVisibleAndSavedLocally() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway()
+        val draft = JournalDraft.blank().edited("Pending payload")
+        val original = JournalEntry(draft.id, null, "Original", draft.entryDate, 1, "now", "now")
+        storage.records[draft.id] = JournalRecord(entry = original, pendingSave = draft.copy(expectedVersion = 1))
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        assertEquals("Pending payload", controller.state.value.draft.body)
+        assertEquals("Saved on this device", controller.state.value.syncStatus)
+    }
+
     @Test fun blankRepliesAndPendingDeletionsAreNotAutomaticallySaved() = runTest {
         val storage = NotebookMemory()
         val api = SyncGateway()
@@ -137,7 +187,6 @@ class JournalAutomaticSyncTest {
         assertEquals(422, storage.records[draft.id]?.syncRejection)
         repository.edit(draft.edited("Corrected writing"))
         api.fail = null
-        sync.reconnect()
         sync.synchronize(0)
         assertNull(storage.records[draft.id]?.draft)
         assertEquals("Corrected writing", storage.records[draft.id]?.entry?.body)

@@ -32,4 +32,4 @@ data class NotebookState(
 
 fun JournalRecord.displayTitle(): String = draft?.title ?: entry?.title ?: "Untitled entry"
 fun JournalRecord.displayDate(): String = draft?.entryDate ?: entry!!.entryDate
-fun JournalRecord.editableDraft(): JournalDraft = draft ?: JournalDraft.from(requireNotNull(entry))
+fun JournalRecord.editableDraft(): JournalDraft = draft ?: pendingSave ?: JournalDraft.from(requireNotNull(entry))

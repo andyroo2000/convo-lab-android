@@ -10,6 +10,15 @@ class JournalConnectionMonitor(context: Context, private val connected: () -> Un
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) { connected() }
     }
-    fun start() { manager.registerDefaultNetworkCallback(callback) }
-    fun stop() { manager.unregisterNetworkCallback(callback) }
+    private var registered = false
+    fun start() {
+        if (registered) return
+        manager.registerDefaultNetworkCallback(callback)
+        registered = true
+    }
+    fun stop() {
+        if (!registered) return
+        manager.unregisterNetworkCallback(callback)
+        registered = false
+    }
 }

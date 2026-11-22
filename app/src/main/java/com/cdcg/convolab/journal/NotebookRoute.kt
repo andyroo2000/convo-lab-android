@@ -70,10 +70,9 @@ private fun FlushOnStop(controller: NotebookController, conversation: Conversati
     val context = LocalContext.current.applicationContext
     DisposableEffect(lifecycle, controller, conversation) {
         val connection = JournalConnectionMonitor(context) { controller.reconnect() }
-        connection.start()
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) { controller.startSync(); controller.reconnect(); controller.refreshVisibleContents() }
-            if (event == Lifecycle.Event.ON_STOP) { controller.stopSync(); controller.flush(); scope.launch { conversation?.flush() } }
+            if (event == Lifecycle.Event.ON_START) { controller.startSync(); connection.start(); controller.refreshVisibleContents() }
+            if (event == Lifecycle.Event.ON_STOP) { connection.stop(); controller.stopSync(); controller.flush(); scope.launch { conversation?.flush() } }
         }
         lifecycle.addObserver(observer)
         onDispose { connection.stop(); lifecycle.removeObserver(observer); controller.stopSync() }
