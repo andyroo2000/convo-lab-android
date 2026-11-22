@@ -47,13 +47,19 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
     val (size, font, knownKanji) = appearance
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val metrics = RubyTextMetrics(measurer, density, LocalFontFamilyResolver.current)
+    val fonts = LocalFontFamilyResolver.current
+    val metrics = remember(measurer, density, fonts) { RubyTextMetrics(measurer, density, fonts) }
     val onPaper = LocalRubyOnPaper.current && !appearance.compact
     val pitch = when { appearance.compact -> 1.4; onPaper -> 2.7; else -> 1.8 }
     val style = TextStyle(fontFamily = font, fontSize = size.sp, letterSpacing = 0.sp, lineHeight = (size * pitch).sp,
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None), color = appearance.color)
     val parsed = runs.map { run -> remember(run.reading, knownKanji) { RubyDocument.parse(run.reading, knownKanji) } }
     val inline = mutableMapOf<String, InlineTextContent>()
+    runs.forEachIndexed { index, run ->
+        parsed[index].forEachIndexed { tokenIndex, token ->
+            if (token.reading != null) inline["$index-$tokenIndex"] = rubyInlineContent(token, run, appearance, metrics)
+        }
+    }
     val text = buildAnnotatedString {
         runs.forEachIndexed { index, run ->
             if (run.onClick != null) pushLink(LinkAnnotation.Clickable("correction-$index", TextLinkStyles(style = SpanStyle(color = style.color, textDecoration = TextDecoration.None))) { run.onClick.invoke() })
@@ -62,7 +68,6 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
             parsed[index].forEachIndexed { tokenIndex, token ->
                 if (token.reading == null) append(token.text) else {
                     val key = "$index-$tokenIndex"
-                    inline[key] = rubyInlineContent(token, run, appearance, metrics)
                     appendInlineContent(key, token.text)
                 }
             }
@@ -72,8 +77,9 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
         }
     }
     var highlights by remember { mutableStateOf(RubyHighlightLayout()) }
-    val ink = metrics.ink("国", style)
-    Text(text, modifier.drawBehind { if (highlights.text == text.text) drawRubyHighlights(highlights, runs, ink) }, style = style, inlineContent = inline, onTextLayout = { layout ->
+    val typeface = metrics.typeface(style)
+    val ink = remember(metrics, style, typeface) { metrics.ink("国", style) }
+    Text(text, modifier.drawBehind { if (highlights.matches(text)) drawRubyHighlights(highlights, runs, ink) }, style = style, inlineContent = inline, onTextLayout = { layout ->
         // Store geometry only: fresh link callbacks must not trigger another layout.
         highlights = rubyHighlightLayout(layout)
         text.getLinkAnnotations(0, text.length).forEach { link ->

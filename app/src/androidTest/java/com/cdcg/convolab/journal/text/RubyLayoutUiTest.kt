@@ -86,6 +86,30 @@ class RubyLayoutUiTest {
         assertTrue(coloredRows(sample.captureToImage().toPixelMap()) { it.isReading() }.isEmpty())
     }
 
+    @Test fun singleWideAndDistributedReadingsStayCenteredOverTheirWord() {
+        val words = listOf("見[み]", "駅[えきまえ]", "映画[えいが]")
+        var em = 0f
+        compose.setContent {
+            ConvoLabTheme {
+                em = with(LocalDensity.current) { 20.sp.toPx() }
+                Column(Modifier.fillMaxSize().background(Color.White).safeDrawingPadding().padding(24.dp)) {
+                    words.forEach { word -> RubyText(word, Modifier.testTag(word), RubyAppearance(color = Color.Black, readingColor = Color.Red)) }
+                }
+            }
+        }
+        words.forEach { word ->
+            val pixels = compose.onNodeWithTag(word).captureToImage().toPixelMap()
+            assertGap(pixels, em, word)
+            assertEquals("Visible reading must stay centered: $word", horizontalCenter(pixels) { it.isBase() },
+                horizontalCenter(pixels) { it.isReading() }, em * .1f)
+        }
+    }
+
+    private fun horizontalCenter(pixels: PixelMap, matches: (Color) -> Boolean): Float {
+        val columns = (0 until pixels.width).filter { x -> (0 until pixels.height).any { y -> matches(pixels[x, y]) } }
+        return (columns.first() + columns.last()) / 2f
+    }
+
     private fun assertGap(pixels: PixelMap, em: Float, description: String) {
         val rubyRows = coloredRows(pixels) { it.isReading() }
         val baseRows = coloredRows(pixels) { it.isBase() }

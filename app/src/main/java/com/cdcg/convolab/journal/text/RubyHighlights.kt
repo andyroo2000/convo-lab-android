@@ -3,19 +3,24 @@ package com.cdcg.convolab.journal.text
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 
-internal data class RubyHighlightBounds(val run: Int, val rect: androidx.compose.ui.geometry.Rect, val baseline: Float)
-internal data class RubyHighlightLayout(val text: String = "", val lines: List<RubyHighlightBounds> = emptyList())
+internal data class RubyHighlightBounds(val run: Int, val rect: Rect, val baseline: Float)
+internal data class RubyHighlightLayout(val text: String = "", val ranges: List<AnnotatedString.Range<String>> = emptyList(), val lines: List<RubyHighlightBounds> = emptyList()) {
+    fun matches(value: AnnotatedString) = text == value.text && ranges == value.getStringAnnotations("ruby-run", 0, value.length)
+}
 
 internal fun rubyHighlightLayout(layout: TextLayoutResult): RubyHighlightLayout {
     val text = layout.layoutInput.text
+    val ranges = text.getStringAnnotations("ruby-run", 0, text.length)
     val lines = buildList {
-        text.getStringAnnotations("ruby-run", 0, text.length).filter { it.start < it.end }.forEach { range ->
+        ranges.filter { it.start < it.end }.forEach { range ->
             for (line in layout.getLineForOffset(range.start)..layout.getLineForOffset(range.end - 1)) {
                 val start = maxOf(range.start, layout.getLineStart(line))
                 val end = minOf(range.end, layout.getLineEnd(line, visibleEnd = true))
@@ -24,7 +29,7 @@ internal fun rubyHighlightLayout(layout: TextLayoutResult): RubyHighlightLayout 
             }
         }
     }
-    return RubyHighlightLayout(text.text, lines)
+    return RubyHighlightLayout(text.text, ranges, lines)
 }
 
 internal fun DrawScope.drawRubyHighlights(layout: RubyHighlightLayout, runs: List<RubyRun>, ink: android.graphics.Rect) {

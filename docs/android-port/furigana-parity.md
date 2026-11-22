@@ -46,11 +46,15 @@ blank space at Klee 16 on this emulator). It checks all three fonts at 16, 20,
 and 30 pt, at normal and 1.6× text scaling: visible readings, no collision,
 compact spacing, unclipped text, and a shared baseline with adjacent kana.
 A second check covers wrapped highlights, inline taps, and known-kanji hiding.
+A third checks visible centering for single-character, wide, and distributed
+readings. Inline measurements are cached by token, styles, density and resolved
+typefaces; changing a callback or highlight does not repeat glyph measurement.
+Highlight geometry also tracks run boundaries when the visible text is unchanged.
 Existing tests exercise compact correction popovers, large text, keyboard bounds,
 feedback, audio, conversation replies, appearance, and settings.
 
-Debug/release builds, lint, and 155 JVM tests pass. All 23 targeted API 36
-emulator tests pass. Five iOS simulator reference tests pass; iOS source is
+Debug/release builds, lint, and 155 JVM tests pass. The initial 23 targeted API 36 emulator tests pass, with focused follow-up
+coverage for cached layout and the additional centering regression. Five iOS simulator reference tests pass; iOS source is
 unchanged. CodeScene MCP covers all 12 changed Kotlin files with score 10.0,
 no findings, no declines, and no unsupported files.
 
