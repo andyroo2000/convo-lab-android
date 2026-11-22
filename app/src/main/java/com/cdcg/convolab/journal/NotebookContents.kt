@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter
 fun NotebookContents(state: NotebookState, controller: NotebookController) {
     var editing by remember { mutableStateOf<JournalRecord?>(null) }
     var deleting by remember { mutableStateOf<JournalRecord?>(null) }
+    val records = state.contentsRecords
     ModalBottomSheet(onDismissRequest = { controller.showContents(false) }, containerColor = JournalBrand.Paper,
         dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Black.copy(alpha = .2f)) }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
@@ -38,8 +39,8 @@ fun NotebookContents(state: NotebookState, controller: NotebookController) {
             state.error?.let { Text(it, color = Color(0xFF974634)) }
             Spacer(Modifier.height(18.dp))
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (state.records.isEmpty()) item { Text("Your entries will appear here.", modifier = Modifier.padding(vertical = 28.dp)) }
-                items(state.records, key = { it.id }) { record ->
+                if (records.isEmpty()) item { Text("Your entries will appear here.", modifier = Modifier.padding(vertical = 28.dp)) }
+                items(records, key = { it.id }) { record ->
                     ContentsRow(record, state, { controller.select(record) }) { command ->
                         if (command == "Rename") editing = record else deleting = record
                     }

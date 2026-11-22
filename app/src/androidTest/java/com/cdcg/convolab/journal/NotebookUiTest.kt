@@ -23,6 +23,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class NotebookUiTest {
@@ -33,6 +34,26 @@ class NotebookUiTest {
     private lateinit var controller: NotebookController
 
     @After fun stop() { scope.cancel() }
+
+    @Test fun refreshingContentsRemovesARemoteDeletionAndKeepsLocalWriting() {
+        launchNotebook()
+        compose.onNodeWithTag("journal-editor").performClick().performTextInput("端末に残す文章。")
+        device.pressBack()
+        compose.onNodeWithText("Contents").performClick()
+        compose.onNodeWithText("A movie night").assertIsDisplayed()
+        compose.runOnIdle { api.entries = emptyList() }
+        compose.onNodeWithText("Refresh").performScrollTo().performClick()
+        compose.waitUntil(5_000) { !controller.state.value.busy }
+        compose.onNodeWithText("A movie night").assertDoesNotExist()
+        compose.onNodeWithText("Untitled entry").assertIsDisplayed()
+        screenshot("contents-after-remote-deletion")
+        compose.runOnIdle { api.offline = true }
+        compose.onNodeWithText("Refresh").performScrollTo().performClick()
+        compose.waitUntil(5_000) { !controller.state.value.busy }
+        compose.onNodeWithText("A movie night").assertDoesNotExist()
+        compose.onNodeWithText("Untitled entry").performClick()
+        compose.onNodeWithTag("journal-editor").assertTextContains("端末に残す文章。")
+    }
 
     @Test fun writingAndActionsRemainAboveKeyboardForLongEntries() {
         launchNotebook()
@@ -99,6 +120,7 @@ class NotebookUiTest {
         val id = JournalIds.newId()
         storage.records[id] = JournalRecord(entry = JournalEntry(id, "A movie night", "昨日は映画を見ました。",
             "2026-11-12", 1, "2026-11-12T12:00:00Z", "2026-11-12T12:00:00Z"))
+        api.entries = listOf(requireNotNull(storage.records[id]?.entry))
         controller = NotebookController(JournalRepository(api, storage), scope)
         compose.setContent {
             val state by controller.state.collectAsState()
@@ -140,7 +162,12 @@ private class UiJournalStorage : JournalStorage {
 
 private class UiJournalGateway : JournalGateway {
     var response: CompletableDeferred<JournalEntry>? = null
-    override suspend fun archive(cursor: String?) = JournalPage(emptyList(), null)
+    var entries = emptyList<JournalEntry>()
+    var offline = false
+    override suspend fun archive(cursor: String?): JournalPage {
+        if (offline) throw IOException("fixture offline")
+        return JournalPage(entries, null)
+    }
     override suspend fun unfinished() = archive(null)
     override suspend fun entry(id: String): JournalEntry = error("Unexpected fixture fetch")
     override suspend fun save(draft: JournalDraft) = response?.await() ?: JournalEntry(draft.id, draft.title, draft.body, draft.entryDate,

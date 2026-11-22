@@ -23,7 +23,8 @@ class NotebookController(private val repository: JournalRepository, private val 
             val resume = records.firstOrNull { it.draft != null }
             mutableState.update { it.copy(records = records, draft = resume?.draft ?: it.draft,
                 pendingDelete = resume?.pendingDelete ?: false,
-                loading = false, savedLocally = resume != null, recoveryCount = local.recoveryFiles.size) }
+                loading = false, savedLocally = resume != null, recoveryCount = local.recoveryFiles.size,
+                archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
             refresh()
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { report(failure); mutableState.update { it.copy(loading = false) } }
@@ -56,6 +57,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         catch (failure: Exception) { report(failure) }
     }
     fun refreshContents() = action { writer.flush(); refresh() }
+    fun refreshVisibleContents() { if (state.value.contents && !state.value.loading) refreshContents() }
     fun more() = action { refresh(state.value.nextCursor) }
 
     fun newEntry() = action {
@@ -132,9 +134,8 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private suspend fun refresh(cursor: String? = null) {
-        val page = repository.refresh(cursor)
+        repository.refresh(cursor)
         reload()
-        mutableState.update { it.copy(nextCursor = page.nextCursor) }
     }
 
     private suspend fun reloadCurrent(source: JournalDraft) {
@@ -146,7 +147,8 @@ class NotebookController(private val repository: JournalRepository, private val 
 
     private suspend fun reload() {
         val local = repository.load()
-        mutableState.update { it.copy(records = sorted(local.records), recoveryCount = local.recoveryFiles.size) }
+        mutableState.update { it.copy(records = sorted(local.records), recoveryCount = local.recoveryFiles.size,
+            archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
     }
 
     private fun action(recoveryFor: String? = null, block: suspend () -> Unit) = scope.launch {
