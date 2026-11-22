@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.ui.LocalJournalButtonInk
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.ui.JournalButton
@@ -36,7 +38,9 @@ fun PasswordEditor(state: SettingsState, controller: SettingsController, done: (
         SettingsPasswordField("New password", form.password, !state.busy)
         SettingsPasswordField("Confirm password", form.confirmation, !state.busy)
         SettingsSubmitButton("Update password", onClick = { controller.updatePassword(form.change()) { form.clear(); done() } }, enabled = !state.busy && form.valid,
-            modifier = Modifier.align(Alignment.End).padding(top = 6.dp).testTag("settings-save-password"))
+            modifier = Modifier.align(Alignment.End).padding(top = 6.dp).testTag("settings-save-password").semantics {
+                if (!form.valid) stateDescription = "Enter your current password and matching new passwords with at least 8 characters."
+            })
     }
 }
 

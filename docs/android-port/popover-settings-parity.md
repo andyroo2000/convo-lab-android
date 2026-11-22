@@ -29,9 +29,9 @@ Noto Serif JP is the Android counterpart to iOS's Hiragino Mincho. Glyph outline
 Changes:
 
 - Use the actual medium-weight Crimson Pro variation for headings; match smaller row icons, account action spacing, and destructive-action color.
-- Use 44-dp minimum rounded fields with the iOS padding and border. Fields grow with accessibility text. Retain secure password input, validation, and field-state clearing.
+- Use 44-dp minimum rounded fields with the iOS padding and border. Fields grow with accessibility text. Retain secure password input, validation, visible focus outlines, and field-state clearing. The disabled password action announces its requirements.
 - Remove the always-visible password hint to match the reference form; validity still controls submission.
-- Keep WaniKani inline, with right/down disclosure chevrons, label/value connection rows, a localized last-sync date, and a placeholder token field. Show Refresh connection when an error needs recovery.
+- Keep WaniKani inline, with right/down disclosure chevrons, label/value connection rows, a localized last-sync date, and a placeholder token field. Reload when the disclosure opens, including while disconnected; show Refresh connection when an error needs recovery. Announce the disclosure state to accessibility services.
 
 Native sheet presentation, status/navigation bars, keyboard chrome, and different fixture account names remain platform/content differences. Android keeps its existing success/error messages.
 

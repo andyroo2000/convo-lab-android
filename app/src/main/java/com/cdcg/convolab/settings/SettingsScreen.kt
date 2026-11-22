@@ -39,6 +39,7 @@ fun SettingsScreen(state: SettingsState, controller: SettingsController, actions
         containerColor = JournalStyle.Paper, contentColor = JournalBrand.Ink, dragHandle = {
             Box(Modifier.padding(top = 6.dp, bottom = 10.dp).size(width = 36.dp, height = 5.dp).background(JournalBrand.Ink.copy(alpha = .25f), CircleShape))
         }) {
+        // Modal sheets create another window; preserve the caller's inherited text scale.
         CompositionLocalProvider(LocalDensity provides density) {
         ProvideTextStyle(JournalStyle.Body) {
             Column(Modifier.fillMaxHeight(.96f).imePadding().padding(horizontal = 24.dp)) {
@@ -87,7 +88,8 @@ private fun SettingsOverview(state: SettingsState, controller: SettingsControlle
     }
     SettingsChapter("Connections", JournalSymbol.Link, expanded, { expanded = it }) {
         var wanikani by rememberSaveable { mutableStateOf(false) }
-        Row(Modifier.fillMaxWidth().clickable { wanikani = !wanikani }.heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { wanikani = !wanikani; if (wanikani) controller.reload() }
+            .semantics { stateDescription = if (wanikani) "Expanded" else "Collapsed" }.heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("WaniKani", Modifier.weight(1f))
             JournalIcon(if (wanikani) JournalSymbol.Down else JournalSymbol.Chevron, Modifier.size(13.dp), JournalBrand.Ink.copy(alpha = .5f))
         }

@@ -5,12 +5,14 @@ import android.os.Build
 import android.view.View
 import android.view.inspector.WindowInspector
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.*
@@ -53,6 +55,8 @@ class SettingsUiTest {
         // Successful form replacement dismisses its input; Back can navigate away after that.
         device.waitForIdle()
         compose.onNodeWithText("Change Password").performScrollTo().performClick()
+        compose.onNodeWithTag("settings-save-password").assertIsNotEnabled().assert(SemanticsMatcher.expectValue(
+            SemanticsProperties.StateDescription, "Enter your current password and matching new passwords with at least 8 characters."))
         screenshot(TestOutput.file("settings-password.png"))
         compose.onNodeWithTag("auth-Current password").performClick().performTextInput("fixture-current")
         compose.onNodeWithTag("auth-New password").performScrollTo().performClick().performTextInput("fixture-new-password")
@@ -69,7 +73,13 @@ class SettingsUiTest {
         launchSettings()
         compose.onNodeWithText("Connections").performClick()
         screenshot(TestOutput.file("settings-connections.png"))
-        compose.onNodeWithText("WaniKani").performClick()
+        val disclosure = compose.onNodeWithText("WaniKani")
+        disclosure.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed")).performClick()
+        disclosure.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded"))
+        compose.waitUntil(5_000) { api.knownReads.get() >= 2 && !controller.state.value.busy }
+        val reads = api.knownReads.get()
+        disclosure.performClick().performClick()
+        compose.waitUntil(5_000) { api.knownReads.get() > reads && !controller.state.value.busy }
         screenshot(TestOutput.file("settings-wanikani-empty.png"))
         compose.onNodeWithTag("auth-WaniKani API token").performScrollTo().performClick().performTextInput("fixture-provider-token")
         screenshot(TestOutput.file("settings-wanikani-focus.png"))
@@ -157,9 +167,10 @@ class SettingsUiTest {
 private class UiSettingsGateway(var account: Account) : SettingsGateway {
     private var snapshot = KnownKanjiSnapshot()
     var passwordChanged = false
+    val knownReads = AtomicInteger()
     override suspend fun profile(change: ProfileChange): Account { account = account.copy(name = change.name, email = change.email); return account }
     override suspend fun password(change: PasswordChange) { passwordChanged = true }
-    override suspend fun knownKanji() = snapshot
+    override suspend fun knownKanji(): KnownKanjiSnapshot { knownReads.incrementAndGet(); return snapshot }
     override suspend fun connect(token: String): KnownKanjiSnapshot { snapshot = KnownKanjiSnapshot(1, setOf('映'.code, '画'.code), true, "2026-11-22T16:30:00Z"); return snapshot }
     override suspend fun sync() = Unit
     override suspend fun disconnect() { snapshot = snapshot.copy(connected = false) }
