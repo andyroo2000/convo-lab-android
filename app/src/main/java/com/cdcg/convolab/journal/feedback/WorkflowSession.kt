@@ -190,4 +190,4 @@ private fun WorkflowSnapshot?.requiresRecovery(version: Int): Boolean {
     return sourceVersion != version && hasPendingWriting()
 }
 
-class MissingJournalEntry : java.io.IOException("This entry is no longer available on the server. Your saved writing is kept on this device.")
+class MissingJournalEntry : Exception("This entry is no longer available on the server. Your saved writing is kept on this device.")

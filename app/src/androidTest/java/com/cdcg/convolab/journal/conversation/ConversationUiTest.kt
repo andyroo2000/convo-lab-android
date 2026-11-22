@@ -31,6 +31,19 @@ class ConversationUiTest {
     private lateinit var repository: JournalRepository
     @After fun stop() { scope.cancel() }
 
+    @Test fun failedReplySubmissionCanReturnToItsSavedWriting() {
+        launchNotebook()
+        val reply = composer()
+        write(reply, "残しておく答え。")
+        transport.failFeedback = true
+        submit(reply)
+        compose.waitUntil(5_000) { reply.workflow.state.value.error != null }
+        compose.onNodeWithText("Back to draft").performScrollTo().performClick()
+        compose.onNodeWithTag("conversation-answer-${reply.state.value.record.id}").performScrollTo().assertTextEquals("残しておく答え。")
+        assertNull(reply.workflow.state.value.entry)
+        assertEquals("残しておく答え。", reply.state.value.record.entry?.body)
+    }
+
     @Test fun conversationRetryOnlyAppearsAfterAFailureAndPreservesTheAnswer() {
         launchNotebook()
         val reply = composer()

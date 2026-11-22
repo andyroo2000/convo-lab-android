@@ -13,7 +13,7 @@ Previously, Android rendered cached feedback, launched conversation/tutor reques
 - Clarification choices now match the iOS row padding, radio size, plain multiline answer field, disabled Answer color, and underlined Back to draft link. Custom-answer selection focuses the field.
 - Waiting cards use the system Japanese face and iOS spacing around the language control, artwork, translation, and saved answer.
 - Corrected entries retain the saved entry title, including renames. The audio header has a speaker icon, a 44-point minimum Listen button, and an idle position strip.
-- Follow-up replies use the pale blue rounded container, divider, and torn upper paper edge. They omit the root entry's date/title and the extra Edit answer control. Final-text editing remains in the version menu.
+- Follow-up replies use the pale blue rounded container, divider, and torn upper paper edge. They omit the root entry's date/title and the extra Edit answer control. Final-text editing remains in the version menu; a failed non-final reply retains Back to draft recovery.
 
 The fixtures exercise the same features but are not pixel-diff inputs: phone widths differ, iOS fixtures use placeholder portraits, waiting illustrations rotate, and the reply text differs. Compare the content regions and spacing rather than system bars or scroll position.
 
@@ -31,6 +31,6 @@ Large-text recovery: ![](submission-parity/pixel-missing-large.png)
 
 ## Verification
 
-Local build, lint, and 164 JVM tests passed. Pixel checks cover clarification submission and custom answers, illustrated waiting, generated titles, corrected-version audio controls, final editing with the keyboard and double-size text, local recovery of missing entries, conversation retries without losing writing, additional reply turns, and audio playback. CodeScene MCP reviewed all 23 changed source files clean; staged and branch checks passed. Review follow-up adds a Ready-to-404 regression, production NotebookViewModel recovery coverage, and a Pixel tap 20 dp above the language label’s center to verify its expanded touch target. The missing-entry Pixel test also confirms that recovery reveals the copied draft.
+Local build, lint, and 165 JVM tests passed. All 18 focused Pixel checks passed and cover clarification submission and custom answers, illustrated waiting, generated titles, corrected-version audio controls, final editing with the keyboard and double-size text, local recovery of missing entries, conversation retries without losing writing, additional reply turns, failed-reply recovery back to saved writing, and audio playback. CodeScene MCP reviewed all 23 changed source files clean; staged and branch checks passed. Review follow-up adds a Ready-to-404 regression, production NotebookViewModel recovery coverage, and a Pixel tap 20 dp above the language label’s center to verify its expanded touch target. The missing-entry Pixel test also confirms that recovery reveals the copied draft. A polling regression verifies that a 404 stops after one read without discarding pending work, and a fresh offline session clears the old missing-entry state.
 
 The account diagnostic only read existing entries. Submission and recovery mutations use isolated fake gateways and storage, not the personal account.

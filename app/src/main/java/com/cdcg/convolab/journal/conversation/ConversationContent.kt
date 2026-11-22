@@ -60,6 +60,7 @@ fun ReplyContent(controller: ReplyController, enabled: Boolean) {
         if (state.showsEditor(feedback)) ReplyEditor(state, controller, enabled)
         else {
             Box(Modifier.testTag("conversation-feedback-${state.record.id}")) { FeedbackContent(feedback) }
+            if (work.canReturnToDraft) TextButton(onClick = controller::beginEditing, enabled = enabled && !work.busy) { Text("Back to draft") }
         }
         ReplyMessages(state, controller, enabled)
     }

@@ -18,6 +18,8 @@ data class WorkflowState(
     val recovery: WorkflowRecovery? = null, val lastAnswer: String? = null,
     val verified: Boolean = false, val missingEntry: Boolean = false,
 ) {
+    val canReturnToDraft: Boolean get() = error != null && canRetry && snapshot?.analysis?.status != WorkStatus.Ready
+    // Verified during this opened entry session; transient failures retain offline feedback.
     val readyForConversation: Boolean get() = verified && !missingEntry && snapshot?.analysis?.status == WorkStatus.Ready
 }
 

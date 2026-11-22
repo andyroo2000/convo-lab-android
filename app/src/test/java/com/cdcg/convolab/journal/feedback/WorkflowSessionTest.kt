@@ -13,6 +13,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.*
@@ -57,6 +58,31 @@ class WorkflowSessionTest {
         runCurrent()
         assertFalse(controller.state.value.missingEntry)
         assertTrue(controller.state.value.readyForConversation)
+    }
+
+    @Test fun missingEntryDuringPollingStopsAfterOneReadAndKeepsPendingWork() = runTest {
+        val api = FakeFeedback().apply {
+            startResult = { clarification(WorkStatus.Resolved) }
+            submitResult = { analysis().copy(status = WorkStatus.Queued) }
+            analysisResult = { throw ApiFailure(404) }
+        }
+        val storage = MemoryWorkflow()
+        val controller = WorkflowController(WorkflowAccess(api, storage, StandardTestDispatcher(testScheduler)), backgroundScope)
+        controller.submit(entry)
+        runCurrent()
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertTrue(controller.state.value.missingEntry)
+        assertFalse(controller.state.value.busy)
+        assertEquals(1, api.analysisReads)
+        assertEquals(1, api.starts)
+        assertTrue(storage.record!!.submissionRequested)
+        api.analysisResult = { throw IOException("offline") }
+        controller.open(entry.copy(id = JournalIds.newId()))
+        runCurrent()
+        assertFalse(controller.state.value.missingEntry)
+        assertFalse(controller.state.value.readyForConversation)
+        assertNotNull(controller.state.value.error)
     }
 
     @Test fun readyEntryBecomingMissingStopsConversationWithoutErasingFeedback() = runTest {

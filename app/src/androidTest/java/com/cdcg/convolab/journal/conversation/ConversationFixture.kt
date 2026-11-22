@@ -13,6 +13,7 @@ internal class ConversationFixture : ApiTransport {
     val sent = mutableListOf<String>()
     var loseNextAnswer = false
     var failConversationRead = false
+    var failFeedback = false
     private val questions = mutableMapOf<String, JSONObject>()
     private val analyses = mutableMapOf<String, String>()
     private val parents = mutableMapOf<String, String>()
@@ -28,11 +29,16 @@ internal class ConversationFixture : ApiTransport {
             path.endsWith("/analysis") -> JSONObject().put("entry", entryJson(entry)).put("data", analysis(entry)).toString()
             path.endsWith("/clarification") -> data(JSONObject().put("id", JournalIds.newId()).put("sourceVersion", entry.version)
                 .put("revision", 1).put("status", "resolved").put("updatedAt", "updated"))
-            path.endsWith("/submit") -> data(analysis(entry))
+            path.endsWith("/submit") -> submitFeedback(entry)
             path.endsWith("/question") -> data(question(JournalId(entry.id)))
             method == "PUT" -> updateEntry(entry, JSONObject(requireNotNull(body)))
             else -> data(entryJson(entry))
         }
+    }
+
+    private fun submitFeedback(entry: JournalEntry): String {
+        if (failFeedback) throw IOException("fixture feedback failure")
+        return data(analysis(entry))
     }
 
     private fun loadConversation(): String {
