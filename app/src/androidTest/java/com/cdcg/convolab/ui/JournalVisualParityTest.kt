@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.cdcg.convolab.journal.feedback.*
@@ -30,6 +31,7 @@ class JournalVisualParityTest {
         showCorrection(1f, "**見ました** is the ***polite*** past form.")
         openCorrection()
         assertInsideWindow()
+        assertReadingTextFits()
         capture("parity-correction-popover.png")
         compose.onNodeWithText("Got it").assertDoesNotExist()
         compose.onNodeWithText("***", substring = true).assertDoesNotExist()
@@ -42,6 +44,7 @@ class JournalVisualParityTest {
         showCorrection(1.6f, "This explanation remains readable at larger text sizes. ".repeat(35) + "End of explanation.")
         openCorrection()
         assertInsideWindow()
+        assertReadingTextFits()
         capture("parity-correction-large.png")
         compose.onNodeWithTag("correction-scroll").performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
         compose.waitForIdle()
@@ -97,6 +100,16 @@ class JournalVisualParityTest {
         val bounds = compose.onNodeWithTag("correction-popover").fetchSemanticsNode().boundsInWindow
         assertTrue(bounds.left >= 0 && bounds.top >= 0)
         assertTrue(bounds.right <= device.displayWidth && bounds.bottom <= device.displayHeight)
+    }
+
+    private fun assertReadingTextFits() {
+        for (text in listOf("映画", "見", "えいが", "み")) {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithText(text, useUnmergedTree = true)
+                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            assertTrue("$text must have a measured layout", layouts.isNotEmpty())
+            assertTrue("$text must not be clipped", layouts.all { !it.didOverflowHeight })
+        }
     }
 
     private fun capture(name: String) {

@@ -27,6 +27,9 @@ No entry was deleted or resubmitted as part of this recovery check.
 - Reduced Motion displays static art. Animation updates pause in the background.
 - Waiting and clarification replace the draft, matching iOS; submission dismisses
   the keyboard so the response is not hidden behind it.
+- Correction reading guides and kanji use their measured font heights, preventing
+  clipped glyphs in compact serif passages. The Pixel regression fails on the old
+  code and passes with the fix.
 - Notebook line spacing, first-line alignment, four-line minimum writing area,
   paper padding, and shallow torn edge follow iOS.
 - Account menu order, labels, cream background, caption spacing, and pointer now
@@ -46,9 +49,11 @@ notebook, keyboard bounds, appearance, and tutor selection. A further 11/11
 checks cover feedback, conversation replies, and process recovery (26 distinct
 Pixel tests overall). A separate waiting
 flow also passes with the device animation scale disabled; the original setting
-is restored afterward. PR CI runs the complete emulator suite.
+is restored afterward. The final ruby-layout check also passes all 3 visual parity tests, 10 feedback/
+conversation tests, and the correction test with the Pixel system font scale at
+1.6 (restored to 1.0 afterward). PR CI runs the complete emulator suite.
 
-CodeScene MCP covers all 32 changed Kotlin files with no findings or declines.
+CodeScene MCP covers all 33 changed Kotlin files with no findings or declines.
 `AccountMenu` and the static illustration table return no numeric score.
 
 The screenshots below use isolated fixtures. iOS appearance captures use Serif
@@ -65,3 +70,7 @@ it labels its action “Save draft”; the production Journal action is “Submi
 ![Notebook](submission-followup/notebook-empty.png)
 ![Account menu](submission-followup/parity-account-menu.png)
 ![Appearance](submission-followup/parity-appearance.png)
+
+![Correction without clipped kanji](submission-followup/parity-correction-popover.png)
+
+![Correction at larger device text size](submission-followup/correction-device-large.png)
