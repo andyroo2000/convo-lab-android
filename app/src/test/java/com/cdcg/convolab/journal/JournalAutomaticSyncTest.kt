@@ -207,6 +207,21 @@ class JournalAutomaticSyncTest {
         assertEquals("Keep through server outage", storage.records.values.single().draft?.body)
     }
 
+    @Test fun keepAndCloseDoesNotHideAConflictingDraft() = runTest {
+        val storage = NotebookMemory()
+        val api = SyncGateway().apply { fail = ApiFailure(409) }
+        val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Preserve conflicting writing")
+        controller.requestClose()
+        controller.keepAndClose().join()
+        assertTrue(controller.state.value.closePrompt)
+        assertEquals("Preserve conflicting writing", controller.state.value.draft.body)
+        assertEquals("Preserve conflicting writing", storage.records.values.single().draft?.body)
+        assertNotNull(controller.state.value.error)
+    }
+
     @Test fun pendingOnlyWritingCanCloseDuringAnOutage() = runTest {
         val storage = NotebookMemory()
         val api = SyncGateway().apply { fail = IOException("offline") }
