@@ -49,7 +49,7 @@ class RubyCorrectionInteractionTest {
 
     private fun assertAccessibleCorrections(taps: List<Int>) {
         for ((label, expected) in listOf("日曜い" to 0, "そのこと" to 1, "たくさん" to 3)) {
-            compose.onAllNodesWithContentDescription("Show correction for $label").onFirst()
+            compose.onAllNodesWithContentDescription("Correction: $label").assertCountEquals(1).onFirst()
                 .performSemanticsAction(SemanticsActions.OnClick) { it() }
             assertEquals("Accessible actions open their own correction", expected, taps.last())
         }
@@ -61,6 +61,10 @@ class RubyCorrectionInteractionTest {
         sample.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         val layout = results.single()
         val ranges = layout.layoutInput.text.getStringAnnotations("ruby-run", 0, layout.layoutInput.text.length)
+        val plain = ranges.single { it.item == "3" }
+        val beforePlainTap = taps.size
+        sample.performTouchInput { click(layout.getBoundingBox(plain.start).center) }
+        assertEquals("Uncorrected text must not open a correction", beforePlainTap, taps.size)
         for (run in listOf(1, 2, 4)) {
             val range = ranges.single { it.item == run.toString() }
             for (offset in range.start until range.end) {
@@ -93,6 +97,7 @@ class RubyCorrectionInteractionTest {
         for (hideReadings in listOf(false, true)) {
             compose.runOnIdle { if (hideReadings) known = "映画見笑美味食楽時間来週".map { it.code }.toSet() }
             val sample = compose.onNodeWithTag("correction-sample")
+            compose.onAllNodes(hasContentDescription("Correction:", substring = true)).assertCountEquals(1)
             val results = mutableListOf<TextLayoutResult>()
             sample.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
             val layout = results.single()

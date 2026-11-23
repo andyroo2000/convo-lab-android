@@ -1,10 +1,12 @@
 package com.cdcg.convolab.journal.audio
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.cdcg.convolab.R
 
@@ -20,5 +22,5 @@ fun VoicePortrait(voice: NarrationVoice, modifier: Modifier = Modifier) {
         "female-03-v2" -> R.drawable.voice_female_03_v2
         else -> null
     }
-    if (image != null) Image(painterResource(image), null, modifier.clip(CircleShape))
+    if (image != null) Image(painterResource(image), null, modifier.background(Color.White, CircleShape).clip(CircleShape))
 }
