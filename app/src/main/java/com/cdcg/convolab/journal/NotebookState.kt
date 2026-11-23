@@ -10,6 +10,7 @@ data class NotebookState(
     val nextCursor: String? = null,
     val recoveryCount: Int = 0,
     val contents: Boolean = false,
+    val selectionRevision: Long = 0,
     val closePrompt: Boolean = false,
     val pendingDelete: Boolean = false,
     val canRecoverCopy: Boolean = false,

@@ -13,6 +13,7 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Until
 import com.cdcg.convolab.journal.*
+import com.cdcg.convolab.journal.feedback.*
 import com.cdcg.convolab.typing.TestOutput
 import com.cdcg.convolab.ui.AccountMenu
 import com.cdcg.convolab.ui.ConvoLabTheme
@@ -33,6 +34,7 @@ class JournalKeyboardUiTest {
     private lateinit var notebook: NotebookController
     private lateinit var preferences: KeyboardPreference
     private val engine = KeyboardFixtureEngine()
+    private val feedbackApi = KeyboardFeedbackFixture()
     private var native: NativeJournalTyping? = null
     private lateinit var directory: File
     @After fun stop() {
@@ -120,7 +122,30 @@ class JournalKeyboardUiTest {
         compose.waitUntil(5_000) { learned.isFile }
         assertTrue(learned.readText().contains("日本語"))
     }
-    private fun launchNotebook(realEngine: Boolean = false) {
+    @Test fun automaticSaveKeepsKanjiChoicesFocusAndCompositionUntilConfirmed() {
+        launchNotebook(withFeedback = true)
+        type("nihongo")
+        compose.onNodeWithText("日本語").assertIsDisplayed()
+        val synced = compose.runOnIdle { scope.launch { notebook.synchronize() } }
+        compose.waitUntil(5_000) { synced.isCompleted }
+        compose.waitForIdle()
+        assertEquals(1, notebook.state.value.draft.expectedVersion)
+        assertEquals(0, feedbackApi.reads)
+        compose.onNodeWithTag("journal-editor").assertIsFocused().assertIsEnabled().assertTextContains("にほんご")
+        compose.onNodeWithText("日本語").assertIsDisplayed().performClick()
+        assertEquals("日本語", notebook.state.value.draft.body)
+        val secondSync = compose.runOnIdle { scope.launch { notebook.synchronize() } }
+        compose.waitUntil(5_000) { secondSync.isCompleted }
+        compose.onNodeWithTag("journal-editor").assertIsFocused().assertTextContains("日本語")
+        type("nihongo")
+        compose.onNodeWithText("日本語").assertIsDisplayed()
+        assertEquals("日本語にほんご", notebook.state.value.draft.body)
+        assertEquals(0, feedbackApi.reads)
+        assertDockVisible()
+        screenshot(TestOutput.file("journal-autosave-keeps-candidates.png"))
+    }
+
+    private fun launchNotebook(realEngine: Boolean = false, withFeedback: Boolean = false) {
         compose.runOnUiThread {
             compose.activity.enableEdgeToEdge()
             compose.activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -132,10 +157,13 @@ class JournalKeyboardUiTest {
         session = JournalInputSession(preferences, native ?: engine)
         directory = File(context.noBackupFilesDir, "keyboard-ui-${UUID.randomUUID()}")
         notebook = NotebookController(JournalRepository(KeyboardFixtureGateway(), JournalDiskStore(directory, 101)), scope)
+        val feedback = if (withFeedback) WorkflowController(WorkflowAccess(feedbackApi, feedbackApi), scope) else null
+        if (feedback != null) scope.launch { notebook.followFeedback(feedback) }
         compose.setContent {
             val state by notebook.state.collectAsState()
+            val workflow = feedback?.state?.collectAsState()?.value
             ConvoLabTheme { CompositionLocalProvider(LocalJournalInput provides session) {
-                NotebookScreen(state, notebook) { AccountMenu("Naomi", {}, null) }
+                NotebookScreen(state, notebook, NotebookPanels(feedback = workflow?.let { FeedbackPresentation(it, requireNotNull(feedback)) })) { AccountMenu("Naomi", {}, null) }
             } }
         }
         compose.runOnIdle { notebook.start() }
