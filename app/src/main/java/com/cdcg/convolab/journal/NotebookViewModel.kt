@@ -46,7 +46,7 @@ class NotebookViewModel(sessions: SessionController,
                         mutableBinding.value = NotebookBinding(session.account.id, notebook, feedback, teacher, replies, preferences?.invoke(session, this))
                         notebook.start()
                         if (feedback != null) {
-                            launch { followEntry(notebook, feedback) }
+                            launch { notebook.followFeedback(feedback) }
                             if (replies != null) launch { replies.follow(feedback) }
                             else if (teacher != null) launch { teacher.follow(feedback) }
                         }
@@ -55,17 +55,6 @@ class NotebookViewModel(sessions: SessionController,
                 }
         }
     }
-
-    private suspend fun followEntry(notebook: NotebookController, feedback: WorkflowController) {
-        notebook.state.map { it.savedEntry() }.distinctUntilChanged().collect { entry ->
-            if (entry == null) feedback.cancel()
-            else if (feedback.state.value.entry != entry) feedback.open(entry)
-        }
-    }
 }
 
 class NotebookBinding(val accountId: Long, val controller: NotebookController, val workflow: WorkflowController? = null, val tutor: TutorController? = null, val conversation: ConversationController? = null, val preferences: JournalViewPreferences? = null)
-
-private fun NotebookState.savedEntry(): JournalEntry? = records.firstOrNull { it.id == draft.id }?.entry?.takeIf {
-    !pendingDelete && it.version == draft.expectedVersion && it.body == draft.body && it.title == draft.title
-}

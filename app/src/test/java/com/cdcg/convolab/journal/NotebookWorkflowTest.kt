@@ -29,6 +29,7 @@ class NotebookWorkflowTest {
     private val record = JournalRecord(entry = entry, draft = JournalDraft.from(entry))
     private val storage = NotebookMemory().apply { records[entry.id] = record }
     private val api = BoundFeedbackGateway()
+    private val journalApi = NotebookGateway()
     private val workflows = BoundWorkflowStorage()
     private lateinit var sessions: SessionController
     private lateinit var model: NotebookViewModel
@@ -64,13 +65,116 @@ class NotebookWorkflowTest {
         assertNull(model.binding.value)
     }
 
+    @Test fun automaticSavesDoNotReloadFeedbackForNewOrEditedEntries() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        assertEquals(1, api.analysisReads)
+        binding.controller.edit("書き続ける文章。")
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        assertEquals(2, binding.controller.state.value.draft.expectedVersion)
+        assertNull(feedback.state.value.entry)
+        assertEquals(1, api.analysisReads)
+        binding.controller.newEntry().join()
+        binding.controller.edit("新しい日記。")
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        assertEquals(1, binding.controller.state.value.draft.expectedVersion)
+        assertNull(feedback.state.value.entry)
+        assertEquals(1, api.analysisReads)
+        assertEquals(0, api.submissions)
+    }
+
+    @Test fun reconnectingAnOfflineDraftDoesNotOpenFeedback() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        journalApi.failSaves = true
+        binding.controller.edit("オフラインでも書き続ける。")
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        assertNull(feedback.state.value.entry)
+        assertTrue(binding.controller.state.value.savedLocally)
+        journalApi.failSaves = false
+        binding.controller.startSync()
+        binding.controller.reconnect().join()
+        binding.controller.stopSync()
+        runCurrent()
+        assertEquals(2, binding.controller.state.value.draft.expectedVersion)
+        assertEquals("オフラインでも書き続ける。", binding.controller.state.value.draft.body)
+        assertFalse(binding.controller.state.value.savedLocally)
+        assertNull(feedback.state.value.entry)
+        assertEquals(1, api.analysisReads)
+    }
+
+    @Test fun selectingTheSameEntryRestoresFeedbackAfterEditingAndSyncing() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        binding.controller.edit("保存した文章。")
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        val saved = binding.controller.state.value.records.single { it.id == entry.id }
+        binding.controller.select(saved).join()
+        runCurrent()
+        assertEquals(2, api.analysisReads)
+        assertEquals("保存した文章。", feedback.state.value.entry?.body)
+        assertEquals(0, api.submissions)
+    }
+
+    @Test fun explicitSubmissionStillWorksAfterRepeatedAutomaticSaves() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        repeat(2) {
+            binding.controller.edit("続きの文章 $it。")
+            runCurrent()
+            binding.controller.synchronize()
+            runCurrent()
+        }
+        binding.controller.save { feedback.submit(it) }.join()
+        runCurrent()
+        assertEquals(1, api.submissions)
+        assertEquals(WorkStatus.Ready, feedback.state.value.snapshot?.analysis?.status)
+        assertEquals(binding.controller.state.value.draft.body, feedback.state.value.entry?.body)
+        binding.controller.edit("さらに書き直す。")
+        runCurrent()
+        assertNull(feedback.state.value.entry)
+    }
+
+    @Test fun selectingAnUnsavedDraftKeepsWritingOpenAfterAcknowledgement() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        binding.controller.edit("まだ書きかけの日記。")
+        binding.controller.flush().join()
+        val unsaved = requireNotNull(storage.records[entry.id])
+        binding.controller.select(unsaved).join()
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        assertEquals("まだ書きかけの日記。", binding.controller.state.value.draft.body)
+        assertNull(feedback.state.value.entry)
+        assertEquals(1, api.analysisReads)
+    }
+
+    @Test fun explicitlyRenamingTheOpenEntryRefreshesItsFeedback() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        binding.controller.rename(record, "新しい題名").join()
+        runCurrent()
+        assertEquals("新しい題名", feedback.state.value.entry?.title)
+        assertEquals(2, api.analysisReads)
+        assertEquals(0, api.submissions)
+    }
+
     private suspend fun openNotebook(missing: Boolean = false): NotebookBinding {
         api.missing = missing
         val session = Session("fixture-token", Account(1, "Sample", "sample@example.invalid"))
         sessions = SessionController(FakeAuth().apply { loginResult = { session } }, MemoryStorage(), dispatcher)
         val factory = viewModelFactory { initializer {
             NotebookViewModel(sessions, workflow = { _, scope, repository -> WorkflowController(WorkflowAccess(api, workflows, dispatcher, repository::acceptFeedbackMetadata), scope) }) {
-                JournalRepository(NotebookGateway(), storage, dispatcher)
+                JournalRepository(journalApi, storage, dispatcher)
             }
         } }
         model = ViewModelProvider(owner, factory)["active-journal", NotebookViewModel::class.java]
@@ -90,6 +194,7 @@ private class BoundWorkflowStorage : WorkflowStorage {
 
 private class BoundFeedbackGateway : FeedbackGateway {
     var submissions = 0
+    var analysisReads = 0
     var missing = false
     private fun result(entry: JournalEntry) = Analysis(JournalIds.newId(), entry.version, WorkStatus.Ready,
         null, null, CorrectedDocument(entry.body, entry.body), 0, null, "updated", "{}")
@@ -99,6 +204,7 @@ private class BoundFeedbackGateway : FeedbackGateway {
     override suspend fun answer(entry: JournalEntry, answer: ClarificationAnswer): Clarification = error("Unexpected answer")
     override suspend fun submit(entry: JournalEntry, clarificationId: String): Analysis { submissions++; return result(entry) }
     override suspend fun analysis(entry: JournalEntry): AnalysisResponse {
+        analysisReads++
         if (missing) throw ApiFailure(404)
         return AnalysisResponse(entry, result(entry))
     }

@@ -124,7 +124,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         val id = selected.id
         writer.flush()
         val record = requireNotNull(repository.record(JournalId(id)))
-        mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = record.hasPendingWriting, pendingDelete = record.pendingDelete, canRecoverCopy = record.syncRejection in setOf(404, 409)) }
+        mutableState.update { it.copy(draft = record.editableDraft(), selectionRevision = it.selectionRevision + 1, contents = false, closePrompt = false, savedLocally = record.hasPendingWriting, pendingDelete = record.pendingDelete, canRecoverCopy = record.syncRejection in setOf(404, 409)) }
     }
 
     fun keepAndClose() = action(recoveryFor = state.value.draft.id) {
@@ -161,6 +161,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         reload()
         if (renamed.body.isNotBlank()) repository.save(JournalId(id))
         reloadCurrent(renamed)
+        mutableState.update { if (it.draft.id == id) it.copy(selectionRevision = it.selectionRevision + 1) else it }
     }
 
     fun delete(selected: JournalDraft) = action {
