@@ -2,6 +2,7 @@ package com.cdcg.convolab.journal.text
 
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,7 +19,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.ui.JournalBrand
@@ -63,7 +64,6 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
     }
     val text = buildAnnotatedString {
         runs.forEachIndexed { index, run ->
-            if (run.onClick != null) pushLink(LinkAnnotation.Clickable("correction-$index", TextLinkStyles(style = SpanStyle(color = style.color, textDecoration = TextDecoration.None))) { run.onClick.invoke() })
             pushStringAnnotation("ruby-run", index.toString())
             pushStyle(SpanStyle(color = appearance.color).merge(run.style))
             parsed[index].forEachIndexed { tokenIndex, token ->
@@ -74,21 +74,23 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
             }
             pop()
             pop()
-            if (run.onClick != null) pop()
         }
     }
     var highlights by remember { mutableStateOf(RubyHighlightLayout()) }
     val typeface = metrics.typeface(style)
     val ink = remember(metrics, style, typeface) { metrics.ink("国", style) }
-    Text(text, modifier.drawBehind { if (highlights.matches(text)) drawRubyHighlights(highlights, runs, ink) }, style = style, inlineContent = inline, onTextLayout = { layout ->
-        // Store geometry only: fresh link callbacks must not trigger another layout.
-        highlights = rubyHighlightLayout(layout)
-        highlights.lines.distinctBy { it.run }.forEach { line ->
-            if (runs[line.run].onClick != null) {
-                val padding = with(density) { 2.dp.toPx() }
-                onRunBounds?.invoke(line.run, Rect(line.rect.left, line.baseline + ink.top - padding,
-                    line.rect.right, line.baseline + ink.bottom + padding))
+    Box(modifier.semantics(mergeDescendants = true) {}) {
+        Text(text, Modifier.drawBehind { if (highlights.matches(text)) drawRubyHighlights(highlights, runs, ink) }, style = style, inlineContent = inline, onTextLayout = { layout ->
+            // Store geometry only: fresh tap callbacks must not trigger another layout.
+            highlights = rubyHighlightLayout(layout)
+            highlights.lines.distinctBy { it.run }.forEach { line ->
+                if (runs[line.run].onClick != null) {
+                    val padding = with(density) { 2.dp.toPx() }
+                    onRunBounds?.invoke(line.run, Rect(line.rect.left, line.baseline + ink.top - padding,
+                        line.rect.right, line.baseline + ink.bottom + padding))
+                }
             }
-        }
-    })
+        })
+        if (highlights.matches(text)) RubyCorrectionTargets(highlights, runs, ink)
+    }
 }
