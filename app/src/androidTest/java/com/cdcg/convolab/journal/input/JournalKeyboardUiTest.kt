@@ -47,6 +47,7 @@ class JournalKeyboardUiTest {
     @Test fun kanaStaysImmediateWhileSuggestionsWaitAndCandidatesStayAboveTheKeyboard() {
         launchNotebook()
         engine.wait = CompletableDeferred()
+        engine.extraChoices = 12
         type("nihongo")
         assertEquals("にほんご", notebook.state.value.draft.body)
         compose.onNodeWithTag("journal-editor").assertTextContains("にほんご")
@@ -54,6 +55,10 @@ class JournalKeyboardUiTest {
         screenshot(TestOutput.file("journal-built-in-waiting.png"))
         engine.wait!!.complete(Unit)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("日本語").fetchSemanticsNodes().isNotEmpty() }
+        val firstChoice = compose.onNodeWithText("日本語").assertIsDisplayed().fetchSemanticsNode().boundsInWindow
+        val dock = compose.onNodeWithTag("journal-candidates").fetchSemanticsNode().boundsInWindow
+        assertTrue("The first suggestion must be visible when results arrive", firstChoice.left >= dock.left && firstChoice.right <= dock.right)
+        screenshot(TestOutput.file("journal-first-candidate-visible.png"))
         compose.onNodeWithText("日本語").performClick()
         assertEquals("日本語", notebook.state.value.draft.body)
         compose.waitUntil(5_000) { engine.confirmed.isNotEmpty() }
@@ -154,11 +159,15 @@ class JournalKeyboardUiTest {
 
 private class KeyboardFixtureEngine : JournalTypingEngine {
     var wait: CompletableDeferred<Unit>? = null
+    var extraChoices = 0
     val confirmed = mutableListOf<ConfirmedInput>()
     override suspend fun prepare() = Unit
     override suspend fun candidates(query: CompositionQuery, expanded: Boolean): List<JapaneseCandidate> {
         wait?.await()
-        return if (query.reading == "にほんご") listOf(JapaneseCandidate("日本語", query.reading, listOf(CandidatePart("日本語", query.reading)))) else emptyList()
+        if (query.reading != "にほんご") return emptyList()
+        return (listOf("日本語") + (1..extraChoices).map { "日本語候補$it" }).map {
+            JapaneseCandidate(it, query.reading, listOf(CandidatePart(it, query.reading)))
+        }
     }
     override suspend fun learn(choice: ConfirmedInput) { confirmed += choice }
     override suspend fun reset() { confirmed.clear() }

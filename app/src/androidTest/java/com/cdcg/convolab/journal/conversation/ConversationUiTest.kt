@@ -123,20 +123,16 @@ class ConversationUiTest {
         assertEquals(1, current().state.value.replies.size)
     }
 
-    @Test fun discardRequiresConfirmationAndKeepsTheOriginalOnCancel() {
+    @Test fun answerComposerKeepsWritingWithoutExtraActions() {
         launchNotebook()
         val first = composer()
         write(first, "残したい答え。")
-        device.pressBack()
-        compose.waitUntil(10_000) { !compose.activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) }
-        device.waitForIdle()
-        compose.onNodeWithText("Discard unsent answer").performScrollTo().performClick()
-        compose.onNodeWithText("Keep writing").performClick()
+        compose.onNodeWithText("Your answer").assertDoesNotExist()
+        compose.onNodeWithText("Copy answer").assertDoesNotExist()
+        compose.onNodeWithText("Discard unsent answer").assertDoesNotExist()
+        compose.onNodeWithTag("conversation-submit-${first.state.value.record.id}").assertIsDisplayed()
         assertEquals("残したい答え。", first.state.value.text)
-        compose.onNodeWithText("Discard unsent answer").performClick()
-        compose.onNodeWithText("Discard answer", substring = false).performClick()
-        compose.waitUntil(5_000) { current().state.value.composer?.controller?.state?.value?.record?.id != first.state.value.record.id }
-        assertNull(JournalDiskStore(directory, 101).read(first.state.value.record.id))
+        capture(TestOutput.file("conversation-simplified-answer.png"))
     }
 
     private fun launchNotebook() {

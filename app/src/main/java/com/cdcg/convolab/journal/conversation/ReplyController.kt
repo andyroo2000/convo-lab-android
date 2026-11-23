@@ -58,13 +58,6 @@ class ReplyController(initial: JournalRecord, private val repository: JournalRep
         repository.saveAsNew(draft.key)
         mutableState.update { it.copy(error = "A new draft is saved in Contents. Your original answer is also kept.", conflict = false) }
     }
-    fun discardUnsent() = action {
-        writer.flush()
-        check(state.value.record.entry == null) { "Only an unsent answer can be discarded here." }
-        repository.delete(draft.key)
-        workflow.cancel()
-        changed()
-    }
 
     suspend fun refreshRecord() {
         val editId = draft.editId
