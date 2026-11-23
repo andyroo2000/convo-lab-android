@@ -143,6 +143,31 @@ class NotebookWorkflowTest {
         assertNull(feedback.state.value.entry)
     }
 
+    @Test fun selectingAnUnsavedDraftKeepsWritingOpenAfterAcknowledgement() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        binding.controller.edit("まだ書きかけの日記。")
+        binding.controller.flush().join()
+        val unsaved = requireNotNull(storage.records[entry.id])
+        binding.controller.select(unsaved).join()
+        runCurrent()
+        binding.controller.synchronize()
+        runCurrent()
+        assertEquals("まだ書きかけの日記。", binding.controller.state.value.draft.body)
+        assertNull(feedback.state.value.entry)
+        assertEquals(1, api.analysisReads)
+    }
+
+    @Test fun explicitlyRenamingTheOpenEntryRefreshesItsFeedback() = runTest {
+        val binding = openNotebook()
+        val feedback = requireNotNull(binding.workflow)
+        binding.controller.rename(record, "新しい題名").join()
+        runCurrent()
+        assertEquals("新しい題名", feedback.state.value.entry?.title)
+        assertEquals(2, api.analysisReads)
+        assertEquals(0, api.submissions)
+    }
+
     private suspend fun openNotebook(missing: Boolean = false): NotebookBinding {
         api.missing = missing
         val session = Session("fixture-token", Account(1, "Sample", "sample@example.invalid"))

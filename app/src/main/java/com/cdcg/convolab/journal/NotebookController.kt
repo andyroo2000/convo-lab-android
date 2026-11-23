@@ -161,6 +161,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         reload()
         if (renamed.body.isNotBlank()) repository.save(JournalId(id))
         reloadCurrent(renamed)
+        mutableState.update { if (it.draft.id == id) it.copy(selectionRevision = it.selectionRevision + 1) else it }
     }
 
     fun delete(selected: JournalDraft) = action {
