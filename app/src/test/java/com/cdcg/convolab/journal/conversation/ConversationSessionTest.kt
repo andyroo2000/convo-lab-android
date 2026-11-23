@@ -101,17 +101,17 @@ class ConversationSessionTest {
         assertNotEquals(reply, session.state.value.composer?.controller)
     }
 
-    @Test fun discardedComposerStopsAcceptingWritesFromItsOldController() = runTest {
+    @Test fun closedComposerStopsAcceptingWritesFromItsOldController() = runTest {
         val fixture = ConversationFixture(this)
         fixture.start()
         val old = fixture.conversation.session.value!!.state.value.composer!!.controller
         old.edit("捨てる前の答え。")
-        old.discardUnsent().join()
+        fixture.rootWorkflow.cancel()
         runCurrent()
-        old.edit("Must not recreate the discarded file")
+        old.edit("Must not overwrite the saved answer after navigation")
         runCurrent()
-        assertNull(fixture.memory.records[old.state.value.record.id])
-        assertNotEquals(old, fixture.conversation.session.value?.state?.value?.composer?.controller)
+        assertEquals("捨てる前の答え。", fixture.memory.records[old.state.value.record.id]?.draft?.body)
+        assertNull(fixture.conversation.session.value)
     }
 
     @Test fun refreshCannotRollBackAKeystrokeArrivingDuringTheRecordRead() = runTest {

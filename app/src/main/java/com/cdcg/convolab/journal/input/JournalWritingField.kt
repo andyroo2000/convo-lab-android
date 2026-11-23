@@ -7,11 +7,11 @@ import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.text.SpanStyle
@@ -58,18 +58,18 @@ private fun rememberJournalEditor(text: String, changed: (String) -> Unit, sessi
 @Composable
 private fun InputEditorField(editor: JournalInputEditor, options: WritingOptions, modifier: Modifier, mode: JournalKeyboard) {
     val host = LocalInputHost.current
-    var textLayout by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
     val cursorSize = with(LocalDensity.current) { (options.style.fontSize.takeIf { it.isSpecified } ?: 20.sp).toPx() }
+    val cursor = remember(editor, cursorSize) { JournalCursorBrush(cursorSize) }
     BasicTextField(state = editor.field, inputTransformation = { editor.transform(this) }, enabled = options.enabled,
         outputTransformation = {
             editor.snapshot.composition?.let { addStyle(SpanStyle(textDecoration = TextDecoration.Underline), it.first, it.last.coerceAtMost(length)) }
             editor.snapshot.section?.let { addStyle(SpanStyle(background = JournalBrand.Blue.copy(alpha = 0.12f)), it.first, it.last.coerceAtMost(length)) }
         },
-        textStyle = options.style, cursorBrush = journalCursorBrush(textLayout?.invoke(), editor.field.selection.start, cursorSize),
-        onTextLayout = { textLayout = it },
+        textStyle = options.style, cursorBrush = cursor,
+        onTextLayout = { cursor.textLayout = it },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false,
             keyboardType = if (mode == JournalKeyboard.BuiltIn) KeyboardType.Ascii else KeyboardType.Text),
-        modifier = modifier.onFocusChanged { if (it.isFocused) host?.focus(editor) }
+        modifier = modifier.drawWithContent { cursor.align(editor.field.selection.start); drawContent() }.onFocusChanged { if (it.isFocused) host?.focus(editor) }
             .semantics { contentDescription = options.label },
         decorator = { inner ->
             Column {

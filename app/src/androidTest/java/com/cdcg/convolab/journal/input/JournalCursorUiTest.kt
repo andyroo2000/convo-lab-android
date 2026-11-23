@@ -34,10 +34,14 @@ class JournalCursorUiTest {
         compose.mainClock.autoAdvance = false
         assertCursorHeight(size)
         compose.onNodeWithTag("cursor-field").performTextInput("日本語\n次の行")
+        compose.onNodeWithTag("cursor-field").assert(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.TextSelectionRange, androidx.compose.ui.text.TextRange("日本語\n次の行".length)))
         assertCursorHeight(size)
         compose.onNodeWithTag("cursor-field").performTextInputSelection(androidx.compose.ui.text.TextRange(0))
         assertCursorHeight(size)
         compose.runOnIdle { size = 30 }
+        assertCursorHeight(size)
+        compose.onNodeWithTag("cursor-field").performTextReplacement("折り返しとスクロールの確認です。".repeat(30))
         assertCursorHeight(size)
         compose.mainClock.autoAdvance = true
     }
