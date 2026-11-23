@@ -81,7 +81,7 @@ private fun FeedbackPaper(presentation: FeedbackPresentation, analysis: Analysis
         }.padding(start = 28.dp, end = 14.dp, top = if (nested) 24.dp else 20.dp, bottom = 36.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
             if (!nested) Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Text(journalDate(entry?.entryDate.orEmpty()), textAlign = TextAlign.End, fontFamily = LocalJournalTypography.current.family, fontSize = 17.sp, color = Color(0xFF4B1800), modifier = Modifier.fillMaxWidth())
-                Text(entry?.title ?: "Untitled entry", fontFamily = LocalJournalTypography.current.family, fontSize = 27.sp, color = Color(0xFF4B1800))
+                Text(entry?.title?.takeIf { it.isNotBlank() } ?: analysis.feedback?.title?.takeIf { it.isNotBlank() } ?: "Untitled entry", fontFamily = LocalJournalTypography.current.family, fontSize = 27.sp, color = Color(0xFF4B1800))
             }
             FeedbackPaperBody(includeBottomRule = showFinal) {
                 if (showFinal) FinalAudio(presentation, analysis, header = false)

@@ -3,13 +3,11 @@ package com.cdcg.convolab.journal.feedback
 import android.animation.ValueAnimator
 import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,20 +30,16 @@ val LocalThinkingTutor = compositionLocalOf<Tutor?> { null }
 @Composable
 fun JournalThinking(lastAnswer: String? = null, returnToDraft: (() -> Unit)? = null) {
     val phrase = remember { ThinkingPhrases.next() }
-    var english by rememberSaveable { mutableStateOf(true) }
     val reducedMotion = !ValueAnimator.areAnimatorsEnabled()
     val elapsed = thinkingElapsed(reducedMotion)
     Surface(color = Color(0xFFFFFDF6), contentColor = Color(0xFF542006), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFD8E4F2))) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp).testTag("journal-thinking"), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (english) "Hide English" else "Show English", fontSize = 13.sp, fontFamily = FontFamily.SansSerif,
-                modifier = Modifier.align(Alignment.End).clickable(role = Role.Button) { english = !english })
-            Spacer(Modifier.height(18.dp))
             ThinkingOrnament(elapsed, reducedMotion)
             Spacer(Modifier.height(28.dp))
             WaitingTutorPortrait(Modifier.size(80.dp))
             Spacer(Modifier.height(18.dp))
             Text(phrase.first, fontFamily = FontFamily.SansSerif, fontSize = 21.sp, textAlign = TextAlign.Center)
-            if (english) Text(phrase.second, fontFamily = JournalBrand.Serif, fontSize = 19.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 18.dp))
+            Text(phrase.second, fontFamily = JournalBrand.Serif, fontSize = 19.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 18.dp).testTag("journal-thinking-english"))
             Spacer(Modifier.height(24.dp))
             Box(Modifier.semantics { contentDescription = "Your tutor is preparing your feedback. Your writing is saved."; liveRegion = LiveRegionMode.Polite }) {
                 ThinkingDots(elapsed, reducedMotion)
