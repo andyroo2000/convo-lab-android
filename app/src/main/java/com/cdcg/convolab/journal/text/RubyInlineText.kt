@@ -2,7 +2,6 @@ package com.cdcg.convolab.journal.text
 
 import android.graphics.Paint
 import android.graphics.Typeface
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.InlineTextContent
@@ -41,8 +40,7 @@ internal fun rubyInlineContent(token: RubyToken, run: RubyRun, appearance: RubyA
     val readingTypeface = metrics.typeface(styles.first)
     val layout = remember(token, styles, metrics, baseTypeface, readingTypeface) { measureRubyInline(token, styles, metrics) }
     return InlineTextContent(layout.placeholder) {
-        val click = run.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier
-        Box(Modifier.fillMaxSize().then(click)) {
+        Box(Modifier.fillMaxSize()) {
             Text(token.reading.orEmpty(), Modifier.align(Alignment.TopCenter), softWrap = false, style = layout.readingStyle)
             Text(token.text, Modifier.align(Alignment.BottomCenter), softWrap = false, style = layout.baseStyle)
         }

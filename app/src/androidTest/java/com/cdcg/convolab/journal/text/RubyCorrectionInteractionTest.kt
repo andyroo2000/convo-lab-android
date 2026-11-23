@@ -2,6 +2,8 @@ package com.cdcg.convolab.journal.text
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -19,6 +21,58 @@ import org.junit.Test
 
 class RubyCorrectionInteractionTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun adjacentCorrectionsAndKanaOnlyCorrectionsOpenTheirOwnExplanation() {
+        val taps = mutableListOf<Int>()
+        var width by mutableStateOf(210.dp)
+        compose.setContent {
+            ConvoLabTheme {
+                CompositionLocalProvider(LocalRubyOnPaper provides true) {
+                    Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
+                        RubyParagraph(listOf(
+                            RubyRun("わたしはげんきです。".repeat(4)),
+                            RubyRun("日曜[にちよう]い", Color.Red, onClick = { taps += 0 }),
+                            RubyRun("そのこと", Color.Red, onClick = { taps += 1 }),
+                            RubyRun("。人[ひと]が"),
+                            RubyRun("たくさん", Color.Red, onClick = { taps += 3 }),
+                            RubyRun("来[き]た。" + "ひとがたくさんいました。".repeat(10))), Modifier.width(width).testTag("adjacent-corrections"), RubyAppearance(size = 28, knownKanji = setOf('人'.code, '来'.code)))
+                    }
+                }
+            }
+        }
+        for (size in listOf(336, 350)) {
+            compose.runOnIdle { width = size.dp }
+            assertAccessibleCorrections(taps)
+            assertCorrectionCharacters(taps)
+        }
+    }
+
+    private fun assertAccessibleCorrections(taps: List<Int>) {
+        for ((label, expected) in listOf("日曜い" to 0, "そのこと" to 1, "たくさん" to 3)) {
+            compose.onAllNodesWithContentDescription("Show correction for $label").onFirst()
+                .performSemanticsAction(SemanticsActions.OnClick) { it() }
+            assertEquals("Accessible actions open their own correction", expected, taps.last())
+        }
+    }
+
+    private fun assertCorrectionCharacters(taps: List<Int>) {
+        val sample = compose.onNodeWithTag("adjacent-corrections")
+        val results = mutableListOf<TextLayoutResult>()
+        sample.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
+        val layout = results.single()
+        val ranges = layout.layoutInput.text.getStringAnnotations("ruby-run", 0, layout.layoutInput.text.length)
+        for (run in listOf(1, 2, 4)) {
+            val range = ranges.single { it.item == run.toString() }
+            for (offset in range.start until range.end) {
+                val box = layout.getBoundingBox(offset)
+                val baseline = layout.getLineBaseline(layout.getLineForOffset(offset))
+                val before = taps.size
+                sample.performTouchInput { click(Offset(box.center.x, baseline - 30)) }
+                assertEquals("Run $run at offset $offset must receive one tap", before + 1, taps.size)
+                assertEquals("Adjacent corrections must not steal taps", run - 1, taps.last())
+            }
+        }
+    }
 
     @Test fun everyWrappedHighlightLineMatchesItsTextAndRespondsToTaps() {
         var known by mutableStateOf(emptySet<Int>())
