@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /** One controller belongs to one account; network callbacks never share another account's state. */
 class NotebookController(private val repository: JournalRepository, private val scope: CoroutineScope,
@@ -16,13 +19,57 @@ class NotebookController(private val repository: JournalRepository, private val 
     val state = mutableState.asStateFlow()
     private val writer = DraftWriter(repository, ::writeResult).also { it.start(scope) }
 
+    private val syncMessages = mapOf(
+        400 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
+        422 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
+        403 to "This account cannot sync right now. Your writing is kept on this device; try Save after signing in again.")
+    private var syncJob: Job? = null
+    private val automaticSync = JournalAutomaticSync(repository, ::syncChanged)
+
+    fun startSync() {
+        if (syncJob?.isActive == true) return
+        syncJob = scope.launch {
+            while (isActive) {
+                if (!state.value.loading && !state.value.busy) synchronize()
+                delay(3000)
+            }
+        }
+    }
+
+    fun stopSync() { syncJob?.cancel(); syncJob = null }
+    fun reconnect() = scope.launch {
+        if (syncJob?.isActive != true) return@launch
+        automaticSync.reconnect()
+        if (!state.value.loading && !state.value.busy) synchronize()
+    }
+
+    suspend fun synchronize() {
+        try {
+            writer.flush()
+            val snapshot = state.value
+            if (hasSyncWork(snapshot)) {
+                automaticSync.synchronize()
+            }
+        }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { /* A failed local write must never be sent or discarded. */ }
+    }
+
+    private fun hasSyncWork(snapshot: NotebookState): Boolean {
+        if (snapshot.records.any { it.isAutomaticSyncCandidate }) return true
+        if (!snapshot.savedLocally || snapshot.draft.body.isBlank()) return false
+        val recorded = snapshot.records.firstOrNull { it.id == snapshot.draft.id }
+        return recorded?.draft?.editId != snapshot.draft.editId
+    }
+
     fun start() = scope.launch {
         try {
             val local = repository.load()
             val records = sorted(local.records)
-            val resume = records.firstOrNull { it.draft != null }
-            mutableState.update { it.copy(records = records, draft = resume?.draft ?: it.draft,
+            val resume = records.firstOrNull { it.hasPendingWriting }
+            mutableState.update { it.copy(records = records, draft = resume?.editableDraft() ?: it.draft,
                 pendingDelete = resume?.pendingDelete ?: false,
+                canRecoverCopy = resume?.syncRejection in setOf(404, 409),
                 loading = false, savedLocally = resume != null, recoveryCount = local.recoveryFiles.size,
                 archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
             refresh()
@@ -69,7 +116,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         val id = selected.id
         writer.flush()
         val record = requireNotNull(repository.record(JournalId(id)))
-        mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = true, pendingDelete = record.pendingDelete, canRecoverCopy = false) }
+        mutableState.update { it.copy(draft = record.editableDraft(), contents = false, closePrompt = false, savedLocally = record.hasPendingWriting, pendingDelete = record.pendingDelete, canRecoverCopy = record.syncRejection in setOf(404, 409)) }
     }
 
     fun keepAndClose() = action(recoveryFor = state.value.draft.id) {
@@ -83,10 +130,17 @@ class NotebookController(private val repository: JournalRepository, private val 
     fun save(onSaved: (JournalEntry) -> Unit = {}) = action(recoveryFor = state.value.draft.id) {
         writer.flush()
         val sent = state.value.draft
-        repository.save(sent.key)
+        val saved = saveLatest(sent)
         reloadCurrent(sent)
-        val saved = requireNotNull(repository.record(sent.key)?.entry)
         onSaved(saved)
+    }
+
+    private suspend fun saveLatest(draft: JournalDraft): JournalEntry {
+        repeat(3) {
+            val entry = repository.save(draft.key)
+            if (repository.record(draft.key)?.draft == null) return entry
+        }
+        error("Writing is still changing. It is kept on this device; try Save again.")
     }
 
     fun rename(selected: JournalRecord, title: String) = action(recoveryFor = selected.id) {
@@ -127,10 +181,22 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private suspend fun persistForClose(draft: JournalDraft) {
-        if (draft.body.isNotBlank()) { repository.save(draft.key); return }
+        if (draft.body.isNotBlank()) {
+            saveOrQueue(draft)
+            return
+        }
         val current = repository.record(draft.key)
         check(current?.entry == null) { "A saved entry cannot be empty. Keep writing or delete the entry." }
         if (current != null) repository.delete(draft.key)
+    }
+
+    private suspend fun saveOrQueue(draft: JournalDraft) {
+        try { repository.save(draft.key) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: java.io.IOException) {
+            if (failure is ApiFailure && failure.status in setOf(400, 401, 403, 404, 409, 422)) throw failure
+            check(repository.record(draft.key)?.hasPendingWriting == true) { "Keep the entry open until it is saved on this device." }
+        }
     }
 
     private suspend fun refresh(cursor: String? = null) {
@@ -142,7 +208,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         val id = source.id
         reload()
         val record = requireNotNull(repository.record(JournalId(id)))
-        if (state.value.draft.id == id) mutableState.update { it.copy(draft = record.editableDraft(), savedLocally = true) }
+        if (state.value.draft.id == id) mutableState.update { it.copy(draft = record.editableDraft(), savedLocally = record.hasPendingWriting) }
     }
 
     private suspend fun reload() {
@@ -158,6 +224,31 @@ class NotebookController(private val repository: JournalRepository, private val 
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { report(failure, recoveryFor) }
         finally { mutableState.update { it.copy(busy = false) } }
+    }
+
+    private suspend fun syncChanged(id: String?) {
+        mutableState.update { it.copy(syncingId = id) }
+        if (id != null) return
+        reload()
+        val record = repository.record(state.value.draft.key) ?: return
+        mutableState.update { current ->
+            if (current.draft.id != record.id) current else current.copy(
+                draft = current.draft.copy(expectedVersion = maxOf(current.draft.expectedVersion, record.acknowledgedVersion)),
+                savedLocally = localSaveStatus(current, record),
+                error = syncError(current, record),
+                canRecoverCopy = record.syncRejection in setOf(404, 409))
+        }
+    }
+
+    private fun localSaveStatus(current: NotebookState, record: JournalRecord): Boolean {
+        val pending = record.draft ?: record.pendingSave
+        if (pending != null) return pending.editId == current.draft.editId || current.savedLocally
+        return if (record.entry?.body == current.draft.body) false else current.savedLocally
+    }
+
+    private fun syncError(current: NotebookState, record: JournalRecord): String? {
+        if (current.error != null && current.error !in syncMessages.values) return current.error
+        return syncMessages[record.syncRejection]
     }
 
     private fun writeResult(editId: String, success: Boolean) {

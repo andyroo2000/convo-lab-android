@@ -67,13 +67,15 @@ fun NotebookRoute(account: Account, sessions: SessionController, menu: @Composab
 private fun FlushOnStop(controller: NotebookController, conversation: ConversationController?) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val context = LocalContext.current.applicationContext
     DisposableEffect(lifecycle, controller, conversation) {
+        val connection = JournalConnectionMonitor(context) { controller.reconnect() }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) controller.refreshVisibleContents()
-            if (event == Lifecycle.Event.ON_STOP) { controller.flush(); scope.launch { conversation?.flush() } }
+            if (event == Lifecycle.Event.ON_START) { controller.startSync(); connection.start(); controller.refreshVisibleContents() }
+            if (event == Lifecycle.Event.ON_STOP) { connection.stop(); controller.stopSync(); controller.flush(); scope.launch { conversation?.flush() } }
         }
         lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
+        onDispose { connection.stop(); lifecycle.removeObserver(observer); controller.stopSync() }
     }
 }
 

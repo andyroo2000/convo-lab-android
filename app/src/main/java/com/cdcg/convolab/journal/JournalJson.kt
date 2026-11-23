@@ -24,6 +24,7 @@ object JournalJson {
         .put("draft", record.draft?.let(::encodeDraft) ?: JSONObject.NULL)
         .put("pendingSave", record.pendingSave?.let(::encodeDraft) ?: JSONObject.NULL)
         .put("answerOrigin", record.answerOrigin?.let { JSONObject().put("parentId", it.parentId.value).put("questionId", it.questionId.value) } ?: JSONObject.NULL)
+        .put("syncRejection", record.syncRejection ?: JSONObject.NULL)
         .put("pendingDelete", record.pendingDelete).put("acknowledgedVersion", record.acknowledgedVersion).toString()
 
     fun decode(text: String): JournalRecord {
@@ -31,7 +32,8 @@ object JournalJson {
         require(json.getInt("schemaVersion") == 1) { "Unsupported Journal record version" }
         return JournalRecord(json.optJSONObject("entry")?.let(::entry), json.optJSONObject("draft")?.let(::draft),
             json.optJSONObject("pendingSave")?.let(::draft), json.optBoolean("pendingDelete", false), json.optInt("acknowledgedVersion", 0),
-            json.optJSONObject("answerOrigin")?.let { AnswerOrigin(JournalId(it.getString("parentId")), JournalId(it.getString("questionId"))) })
+            json.optJSONObject("answerOrigin")?.let { AnswerOrigin(JournalId(it.getString("parentId")), JournalId(it.getString("questionId"))) },
+            if (json.isNull("syncRejection")) null else json.getInt("syncRejection"))
     }
 
     private fun encodeEntry(entry: JournalEntry): JSONObject = JSONObject()
