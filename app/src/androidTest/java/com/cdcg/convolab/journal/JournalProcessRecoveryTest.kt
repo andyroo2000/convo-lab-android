@@ -54,7 +54,7 @@ class JournalProcessRecoveryTest {
         assertEquals(sent, pending)
         marker.writeText(JSONObject().put("pid", Process.myPid()).put("id", sent.id).put("editId", sent.editId)
             .put("version", sent.expectedVersion).toString())
-        compose.onNodeWithText("Saved on this device").assertIsDisplayed()
+        compose.onNodeWithText("Saved on this device").performScrollTo().assertIsDisplayed()
         screenshot("journal-before-process-stop")
     }
     private fun resume(requireNewProcess: Boolean) {
@@ -75,7 +75,7 @@ class JournalProcessRecoveryTest {
         val acknowledged = requireNotNull(JournalDiskStore(root, 101).read(sent.id))
         assertNull(acknowledged.pendingSave)
         assertEquals(text, acknowledged.entry?.body)
-        compose.onNodeWithText("Synced").assertIsDisplayed()
+        compose.onNodeWithText("Synced").performScrollTo().assertIsDisplayed()
         screenshot("journal-automatically-synced-after-process-restart")
         runBlocking { scope.cancel(); scope.coroutineContext.job.join() }
         root.deleteRecursively()
