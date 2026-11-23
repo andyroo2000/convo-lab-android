@@ -60,13 +60,15 @@ class JournalProcessRecoveryTest {
     private fun resume(requireNewProcess: Boolean) {
         val expected = JSONObject(marker.readText())
         if (requireNewProcess) assertNotEquals(expected.getInt("pid"), Process.myPid())
-        val api = RestartGateway(offline = false)
+        val api = RestartGateway(offline = true)
         val controller = launch(api)
         compose.onNodeWithTag("journal-editor").assertTextContains(text)
         assertEquals(expected.getString("id"), controller.state.value.draft.id)
         screenshot("journal-after-process-restart")
-        compose.runOnIdle { controller.startSync() }
+        assertNotNull(controller.state.value.error)
+        compose.runOnIdle { api.offline = false; controller.startSync() }
         compose.waitUntil(5_000) { controller.state.value.syncStatus == "Synced" }
+        assertNull(controller.state.value.error)
         val sent = api.sent.single()
         assertEquals(expected.getString("id"), sent.id)
         assertEquals(expected.getString("editId"), sent.editId)
@@ -94,7 +96,7 @@ class JournalProcessRecoveryTest {
         assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).takeScreenshot(TestOutput.file("$name.png")))
     }
 }
-private class RestartGateway(val offline: Boolean) : JournalGateway {
+private class RestartGateway(var offline: Boolean) : JournalGateway {
     val sent = mutableListOf<JournalDraft>()
     override suspend fun archive(cursor: String?): JournalPage {
         if (offline) throw IOException("Fixture network unavailable")

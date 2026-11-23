@@ -23,6 +23,7 @@ class NotebookController(private val repository: JournalRepository, private val 
         400 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
         422 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
         403 to "This account cannot sync right now. Your writing is kept on this device; try Save after signing in again.")
+    private var startupWarning: String? = null
     private var syncJob: Job? = null
     private val automaticSync = JournalAutomaticSync(repository, ::syncChanged)
 
@@ -74,7 +75,14 @@ class NotebookController(private val repository: JournalRepository, private val 
                 archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
             refresh()
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { report(failure); mutableState.update { it.copy(loading = false) } }
+        catch (failure: Exception) { reportStartupFailure(failure) }
+    }
+
+    private fun reportStartupFailure(failure: Exception) {
+        val restoredWriting = !state.value.loading && state.value.savedLocally
+        report(failure)
+        if (restoredWriting) startupWarning = state.value.error
+        mutableState.update { it.copy(loading = false) }
     }
 
     fun edit(text: String) {
@@ -219,6 +227,7 @@ class NotebookController(private val repository: JournalRepository, private val 
 
     private fun action(recoveryFor: String? = null, block: suspend () -> Unit) = scope.launch {
         if (state.value.busy) return@launch
+        startupWarning = null
         mutableState.update { it.copy(busy = true, error = null) }
         try { block() }
         catch (cancelled: CancellationException) { throw cancelled }
@@ -247,6 +256,8 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private fun syncError(current: NotebookState, record: JournalRecord): String? {
+        val acknowledged = !record.hasPendingWriting && record.entry?.body == current.draft.body
+        if (acknowledged && current.error == startupWarning) return null
         if (current.error != null && current.error !in syncMessages.values) return current.error
         return syncMessages[record.syncRejection]
     }
@@ -259,6 +270,7 @@ class NotebookController(private val repository: JournalRepository, private val 
     }
 
     private fun report(failure: Exception, recoveryFor: String? = null) {
+        startupWarning = null
         val conflict = failure is ApiFailure && failure.status in setOf(404, 409)
         val recover = conflict && recoveryFor == state.value.draft.id
         val message = when {
