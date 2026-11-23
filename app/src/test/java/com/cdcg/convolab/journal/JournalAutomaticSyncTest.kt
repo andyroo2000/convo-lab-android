@@ -182,6 +182,36 @@ class JournalAutomaticSyncTest {
         assertTrue(controller.state.value.error.orEmpty().contains("could not be saved on this device"))
     }
 
+    @Test fun completedSyncPreservesAnUnrelatedValidationError() = runTest {
+        val response = CompletableDeferred<Unit>()
+        val api = SyncGateway().apply { beforeResponse = { response.await() } }
+        val repository = JournalRepository(api, NotebookMemory(), StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        controller.edit("Valid durable writing")
+        val saving = launch { controller.synchronize() }
+        runCurrent()
+        controller.edit("a".repeat(20_001))
+        val validationError = controller.state.value.error
+        assertNotNull(validationError)
+        response.complete(Unit)
+        saving.join()
+        assertEquals("Synced", controller.state.value.syncStatus)
+        assertEquals(validationError, controller.state.value.error)
+    }
+
+    @Test fun restartOffersRecoveryForAConflictAndNewEntryClearsIt() = runTest {
+        val storage = NotebookMemory()
+        val draft = JournalDraft.blank().edited("Conflicting writing")
+        storage.records[draft.id] = JournalRecord(draft = draft, syncRejection = 409)
+        val repository = JournalRepository(SyncGateway(), storage, StandardTestDispatcher(testScheduler))
+        val controller = NotebookController(repository, backgroundScope)
+        controller.start().join()
+        assertTrue(controller.state.value.canRecoverCopy)
+        controller.newEntry().join()
+        assertFalse(controller.state.value.canRecoverCopy)
+    }
+
     @Test fun rejectedWritingShowsWhyAutomaticSyncPaused() = runTest {
         val api = SyncGateway().apply { fail = ApiFailure(422) }
         val repository = JournalRepository(api, NotebookMemory(), StandardTestDispatcher(testScheduler))

@@ -19,6 +19,10 @@ class NotebookController(private val repository: JournalRepository, private val 
     val state = mutableState.asStateFlow()
     private val writer = DraftWriter(repository, ::writeResult).also { it.start(scope) }
 
+    private val syncMessages = mapOf(
+        400 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
+        422 to "This writing could not sync. Edit it or try Save again. It is kept on this device.",
+        403 to "This account cannot sync right now. Your writing is kept on this device; try Save after signing in again.")
     private var syncJob: Job? = null
     private val automaticSync = JournalAutomaticSync(repository, ::syncChanged)
 
@@ -65,6 +69,7 @@ class NotebookController(private val repository: JournalRepository, private val 
             val resume = records.firstOrNull { it.hasPendingWriting }
             mutableState.update { it.copy(records = records, draft = resume?.editableDraft() ?: it.draft,
                 pendingDelete = resume?.pendingDelete ?: false,
+                canRecoverCopy = resume?.syncRejection in setOf(404, 409),
                 loading = false, savedLocally = resume != null, recoveryCount = local.recoveryFiles.size,
                 archive = local.archive, nextCursor = local.archive?.nextCursor, localWorkRoots = local.localWorkRoots) }
             refresh()
@@ -241,11 +246,9 @@ class NotebookController(private val repository: JournalRepository, private val 
         return if (record.entry?.body == current.draft.body) false else current.savedLocally
     }
 
-    private fun syncError(current: NotebookState, record: JournalRecord): String? = when (record.syncRejection) {
-        400, 422 -> "This writing could not sync. Edit it or try Save again. It is kept on this device."
-        403 -> "This account cannot sync right now. Your writing is kept on this device; try Save after signing in again."
-        null -> if (!record.hasPendingWriting && record.entry?.body == current.draft.body) null else current.error
-        else -> current.error
+    private fun syncError(current: NotebookState, record: JournalRecord): String? {
+        if (current.error != null && current.error !in syncMessages.values) return current.error
+        return syncMessages[record.syncRejection]
     }
 
     private fun writeResult(editId: String, success: Boolean) {
