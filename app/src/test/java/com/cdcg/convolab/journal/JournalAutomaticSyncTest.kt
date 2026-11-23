@@ -182,6 +182,26 @@ class JournalAutomaticSyncTest {
         assertTrue(controller.state.value.error.orEmpty().contains("could not be saved on this device"))
     }
 
+    @Test fun automaticSyncClearsStartupWarningsButPreservesLaterActionFailures() = runTest {
+        for (explicitRefresh in listOf(false, true)) {
+            val storage = NotebookMemory()
+            val draft = JournalDraft.blank().edited("Writing kept through restart")
+            storage.records[draft.id] = JournalRecord(draft = draft)
+            val api = SyncGateway().apply { archiveFailure = IOException("offline") }
+            val repository = JournalRepository(api, storage, StandardTestDispatcher(testScheduler))
+            val controller = NotebookController(repository, backgroundScope)
+            controller.start().join()
+            assertNotNull(controller.state.value.error)
+            if (explicitRefresh) controller.refreshContents().join()
+            val expectedError = if (explicitRefresh) controller.state.value.error else null
+            api.archiveFailure = null
+            controller.synchronize()
+            assertEquals("Synced", controller.state.value.syncStatus)
+            assertEquals(expectedError, controller.state.value.error)
+            assertEquals(draft.body, controller.state.value.draft.body)
+        }
+    }
+
     @Test fun completedSyncPreservesAnUnrelatedValidationError() = runTest {
         val response = CompletableDeferred<Unit>()
         val api = SyncGateway().apply { beforeResponse = { response.await() } }
@@ -343,8 +363,12 @@ class JournalAutomaticSyncTest {
 private class SyncGateway : JournalGateway {
     val attempts = mutableListOf<JournalDraft>()
     var fail: Exception? = null
+    var archiveFailure: Exception? = null
     var beforeResponse: suspend () -> Unit = {}
-    override suspend fun archive(cursor: String?) = JournalPage(emptyList(), null)
+    override suspend fun archive(cursor: String?): JournalPage {
+        archiveFailure?.let { throw it }
+        return JournalPage(emptyList(), null)
+    }
     override suspend fun unfinished() = archive(null)
     override suspend fun entry(id: String): JournalEntry = error("Unexpected read")
     override suspend fun save(draft: JournalDraft): JournalEntry {
