@@ -48,7 +48,7 @@ class JournalProcessRecoveryTest {
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).waitForIdle()
         compose.waitForIdle()
         compose.runOnIdle { controller.startSync() }
-        compose.waitUntil(5_000) { !controller.state.value.busy && api.sent.isNotEmpty() }
+        compose.waitUntil(5_000) { controller.state.value.syncStatus == "Saved on this device" && api.sent.isNotEmpty() }
         val sent = api.sent.first()
         val pending = requireNotNull(JournalDiskStore(root, 101).read(sent.id)?.pendingSave)
         assertEquals(sent, pending)
