@@ -60,7 +60,7 @@ fun TeacherQuestion(question: TutorQuestion, parentId: JournalId? = null) {
                 question.tutor?.let { TutorPortrait(it, Modifier.size(88.dp)) }
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) { if (source != null) AudioControls(source) }
-                TextButton(onClick = { english = !english }, modifier = Modifier.semantics { contentDescription = if (english) "Hide English" else "Show English" }) { Text("En", fontSize = 13.sp, color = Color(0xFF6393EF)) }
+                TextButton(onClick = { english = !english }, modifier = Modifier.sizeIn(minWidth = 56.dp, minHeight = 48.dp).semantics { contentDescription = if (english) "Hide English" else "Show English" }) { Text("En", fontSize = 20.sp, color = Color(0xFF6393EF)) }
             }
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (source == null) RubyText(question.reading.ifBlank { question.text })

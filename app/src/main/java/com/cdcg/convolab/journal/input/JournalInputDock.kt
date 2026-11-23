@@ -61,8 +61,8 @@ private fun CompactCandidates(editor: JournalInputEditor) {
 private fun CandidateChoices(editor: JournalInputEditor, modifier: Modifier = Modifier) {
     val list = rememberLazyListState()
     val selection = editor.snapshot.highlighted
-    LaunchedEffect(selection, editor.snapshot.section, editor.snapshot.query?.reading) {
-        list.scrollToItem(selection.coerceAtLeast(0))
+    LaunchedEffect(selection, editor.snapshot.section, editor.snapshot.query, editor.snapshot.choices) {
+        list.requestScrollToItem(selection.coerceAtLeast(0))
     }
     LazyRow(modifier.fillMaxWidth(), state = list) {
         itemsIndexed(editor.snapshot.choices, key = { _, text -> text }) { index, text ->
