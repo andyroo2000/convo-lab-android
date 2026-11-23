@@ -83,14 +83,11 @@ fun RubyParagraph(runs: List<RubyRun>, modifier: Modifier = Modifier, appearance
     Text(text, modifier.drawBehind { if (highlights.matches(text)) drawRubyHighlights(highlights, runs, ink) }, style = style, inlineContent = inline, onTextLayout = { layout ->
         // Store geometry only: fresh link callbacks must not trigger another layout.
         highlights = rubyHighlightLayout(layout)
-        text.getLinkAnnotations(0, text.length).forEach { link ->
-            val index = (link.item as? LinkAnnotation.Clickable)?.tag?.removePrefix("correction-")?.toIntOrNull()
-            if (index != null && link.start < link.end) {
-                val selection = layout.getPathForRange(link.start, link.end).getBounds()
-                val baseline = layout.getLineBaseline(layout.getLineForOffset(link.start))
+        highlights.lines.distinctBy { it.run }.forEach { line ->
+            if (runs[line.run].onClick != null) {
                 val padding = with(density) { 2.dp.toPx() }
-                onRunBounds?.invoke(index, Rect(selection.left, baseline + ink.top - padding,
-                    selection.right, baseline + ink.bottom + padding))
+                onRunBounds?.invoke(line.run, Rect(line.rect.left, line.baseline + ink.top - padding,
+                    line.rect.right, line.baseline + ink.bottom + padding))
             }
         }
     })

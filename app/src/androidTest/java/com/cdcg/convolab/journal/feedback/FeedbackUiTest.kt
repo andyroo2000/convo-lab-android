@@ -24,7 +24,6 @@ import com.cdcg.convolab.ui.AccountMenu
 import com.cdcg.convolab.ui.ConvoLabTheme
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import androidx.compose.ui.geometry.Offset
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -36,7 +35,7 @@ class FeedbackUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-    private val entry = JournalEntry(JournalIds.newId(), "A movie night", "映画を見た。", "2026-11-12", 1, "created", "updated")
+    private var entry = JournalEntry(JournalIds.newId(), "A movie night", "映画を見た。", "2026-11-12", 1, "created", "updated")
     private val api = UiFeedbackGateway()
     private lateinit var workflow: WorkflowController
     private lateinit var notebook: NotebookController
@@ -149,15 +148,15 @@ class FeedbackUiTest {
     }
 
     @Test fun generatedTitleCompletesSubmissionAfterIllustratedWaiting() {
+        entry = entry.copy(title = null)
         api.finishFeedback = CompletableDeferred()
         launchNotebook(submit = true)
         compose.onNodeWithText("I did").performClick()
         compose.onNodeWithTag("clarification-send").performScrollTo().performClick()
         compose.onNodeWithTag("journal-thinking").assertIsDisplayed()
-        val toggle = compose.onNodeWithText("Hide English").performScrollTo().fetchSemanticsNode().boundsInRoot
-        val targetInset = 20 * compose.activity.resources.displayMetrics.density
-        compose.onRoot().performTouchInput { click(Offset(toggle.center.x, toggle.center.y - targetInset)) }
-        compose.onNodeWithText("Show English").assertIsDisplayed()
+        compose.onNodeWithText("Hide English").assertDoesNotExist()
+        compose.onNodeWithText("Show English").assertDoesNotExist()
+        compose.onNodeWithTag("journal-thinking-english").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("I did").performScrollTo().assertIsDisplayed()
         screenshot("feedback-illustrated-waiting")
         compose.runOnIdle { api.finishFeedback!!.complete(Unit) }
@@ -165,16 +164,19 @@ class FeedbackUiTest {
         assertNull(workflow.state.value.error)
         compose.onNodeWithTag("journal-thinking").assertDoesNotExist()
         compose.onNodeWithText("Final").performScrollTo().performClick()
+        compose.onNodeWithText("A generated title").assertIsDisplayed()
+        compose.onNodeWithText("Untitled entry").assertDoesNotExist()
         screenshot("feedback-generated-title-final")
         assertEquals("映画を見ました。", workflow.state.value.snapshot?.analysis?.finalText)
     }
 
-    @Test fun waitingAtDoubleTextSizeKeepsTheAnswerAndLanguageControlReachable() {
+    @Test fun waitingAtDoubleTextSizeKeepsEnglishAndTheAnswerReachable() {
         api.finishFeedback = CompletableDeferred()
         launchNotebook(submit = true, scale = 2f)
         compose.onNodeWithText("I did").performScrollTo().performClick()
         compose.onNodeWithTag("clarification-send").performScrollTo().performClick()
-        compose.onNodeWithText("Hide English").performScrollTo().performClick()
+        compose.onNodeWithText("Hide English").assertDoesNotExist()
+        compose.onNodeWithTag("journal-thinking-english").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("I did").performScrollTo().assertIsDisplayed()
         screenshot("feedback-waiting-double-text")
         compose.runOnIdle { api.finishFeedback!!.complete(Unit) }
@@ -244,7 +246,7 @@ private class UiFeedbackGateway : FeedbackGateway {
     private fun analysis(): Analysis {
         val segment = FeedbackSegment("映画を見た。", "映画[えいが]を見[み]た。", SegmentKind.Optional,
             "映画を見ました。", "映画[えいが]を見[み]ました。", "Use the polite form when writing to your tutor.", null, null, null)
-        val feedback = Feedback("A movie night", "映画を見ました。", "映画[えいが]を見[み]ました。", "", "", "", listOf(segment), null, null, null)
+        val feedback = Feedback(if (finishFeedback == null) "A movie night" else "A generated title", "映画を見ました。", "映画[えいが]を見[み]ました。", "", "", "", listOf(segment), null, null, null)
         return Analysis(analysisId, 1, WorkStatus.Ready, feedback, null,
             editedText?.let { CorrectedDocument(it, it) }, 0, null, "updated", "{}")
     }

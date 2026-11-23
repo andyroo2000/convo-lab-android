@@ -25,11 +25,23 @@ internal fun rubyHighlightLayout(layout: TextLayoutResult): RubyHighlightLayout 
                 val start = maxOf(range.start, layout.getLineStart(line))
                 val end = minOf(range.end, layout.getLineEnd(line, visibleEnd = true))
                 if (start < end) add(RubyHighlightBounds(range.item.toInt(),
-                    layout.getPathForRange(start, end).getBounds(), layout.getLineBaseline(line)))
+                    rubyLineBounds(layout, start, end), layout.getLineBaseline(line)))
             }
         }
     }
     return RubyHighlightLayout(text.text, ranges, lines)
+}
+
+// Android selection paths can include the next line's leading edge at a wrap boundary.
+// Character bounds keep the painted area aligned with the actual clickable text.
+private fun rubyLineBounds(layout: TextLayoutResult, start: Int, end: Int): Rect {
+    var bounds = layout.getBoundingBox(start)
+    for (offset in start + 1 until end) {
+        val next = layout.getBoundingBox(offset)
+        bounds = Rect(minOf(bounds.left, next.left), minOf(bounds.top, next.top),
+            maxOf(bounds.right, next.right), maxOf(bounds.bottom, next.bottom))
+    }
+    return bounds
 }
 
 internal fun DrawScope.drawRubyHighlights(layout: RubyHighlightLayout, runs: List<RubyRun>, ink: android.graphics.Rect) {
