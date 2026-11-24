@@ -45,10 +45,10 @@ private fun rubyLineBounds(layout: TextLayoutResult, start: Int, end: Int): Rect
 }
 
 internal fun DrawScope.drawRubyHighlights(layout: RubyHighlightLayout, runs: List<RubyRun>, ink: android.graphics.Rect) {
-    layout.lines.forEach { bounds ->
-        runs.getOrNull(bounds.run)?.takeIf { it.background != Color.Transparent }?.let { run ->
-            drawRubyHighlight(bounds, run, ink)
-        }
+    val painted = layout.lines.filter { runs.getOrNull(it.run)?.background?.let { color -> color != Color.Transparent } == true }
+    painted.forEach { bounds ->
+        val rect = rubyHighlightRect(bounds, painted, 1.dp.toPx(), 6.dp.toPx())
+        drawRubyHighlight(bounds.copy(rect = rect), runs[bounds.run], ink)
     }
 }
 
@@ -56,8 +56,8 @@ private fun DrawScope.drawRubyHighlight(bounds: RubyHighlightBounds, run: RubyRu
     val rect = bounds.rect
     val top = bounds.baseline + ink.top - 2.dp.toPx()
     val bottom = bounds.baseline + ink.bottom + 2.dp.toPx()
-    drawRoundRect(run.background, Offset(rect.left - 1.dp.toPx(), top),
-        Size(rect.width + 2.dp.toPx(), bottom - top), CornerRadius(4.dp.toPx()))
+    drawRoundRect(run.background, Offset(rect.left, top),
+        Size(rect.width, bottom - top), CornerRadius(4.dp.toPx()))
     run.underline?.let { underline ->
         drawLine(underline.color, Offset(rect.left, bottom), Offset(rect.right, bottom), 1.dp.toPx(),
             pathEffect = if (underline.dashed) PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx())) else null)
