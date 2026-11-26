@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.dp
 import com.cdcg.convolab.ui.JournalBrand
 import com.cdcg.convolab.ui.JournalStyle
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -22,14 +23,7 @@ fun WaniKaniSettings(state: SettingsState, controller: SettingsController) {
     var disconnect by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         if (state.known.connected) {
-            ConnectionValue("WaniKani", "Connected")
-            ConnectionValue("Known kanji", state.known.kanji.size.toString())
-            state.known.lastSyncedAt?.let { ConnectionValue("WaniKani synced", connectionDate(it)) }
-            WaniKaniAction("Sync WaniKani", { controller.sync() }, enabled = !state.busy)
-            TextButton(onClick = { disconnect = true }, enabled = !state.busy,
-                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFAE513F)), contentPadding = PaddingValues(vertical = 8.dp)) {
-                Text("Disconnect WaniKani", style = JournalStyle.Body)
-            }
+            ConnectedWaniKani(state, onSync = { controller.sync() }, onDisconnect = { disconnect = true })
         } else WaniKaniConnect(state.busy, controller)
         Text("Furigana stays visible unless every kanji in a word is in your synced known-kanji set. Your WaniKani API token is used to connect your account and is never saved on this device.",
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp), color = JournalBrand.Ink.copy(alpha = .6f))
@@ -39,6 +33,27 @@ fun WaniKaniSettings(state: SettingsState, controller: SettingsController) {
         text = { Text("Your known kanji will be kept. You can reconnect later.") },
         confirmButton = { TextButton(onClick = { disconnect = false; controller.disconnect() }, enabled = !state.busy) { Text("Disconnect") } },
         dismissButton = { TextButton(onClick = { disconnect = false }) { Text("Cancel") } })
+}
+
+@Composable
+private fun ConnectedWaniKani(state: SettingsState, onSync: () -> Unit, onDisconnect: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(shape = CircleShape, color = JournalStyle.Sage, contentColor = JournalStyle.Green) {
+            Text("Connected", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = JournalStyle.Body.copy(fontSize = 16.sp))
+        }
+        Text("via API key", style = JournalStyle.Body, color = JournalBrand.Ink.copy(alpha = .7f))
+    }
+    ConnectionValue("Last sync", state.known.lastSyncedAt?.let(::connectionDate) ?: "Waiting for first sync")
+    ConnectionValue("Known kanji", state.known.kanji.size.toString())
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onSync, enabled = !state.busy, colors = ButtonDefaults.buttonColors(containerColor = JournalStyle.Green)) {
+            Text("Sync now", style = JournalStyle.Body)
+        }
+        OutlinedButton(onClick = onDisconnect, enabled = !state.busy, border = BorderStroke(1.dp, JournalStyle.Border),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = JournalStyle.Green)) {
+            Text("Disconnect", style = JournalStyle.Body)
+        }
+    }
 }
 
 @Composable
