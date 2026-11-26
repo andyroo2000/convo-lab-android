@@ -102,7 +102,7 @@ class SettingsUiTest {
         compose.onNodeWithText("Cancel").performClick()
         assertTrue(controller.state.value.known.connected)
         compose.onNodeWithText("Disconnect").performClick()
-        compose.onNode(hasText("Disconnect") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(hasText("Disconnect") and hasAnyAncestor(isDialog() and hasAnyDescendant(hasText("Disconnect WaniKani?")))).performClick()
         compose.waitUntil(5_000) { !controller.state.value.known.connected && !controller.state.value.busy }
         assertEquals(2, controller.state.value.known.kanji.size)
     }
